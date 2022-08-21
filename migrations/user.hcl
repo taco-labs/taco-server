@@ -41,6 +41,11 @@ table "user" {
     null = false
   }
 
+  column "os_version" {
+    type = text
+    null = false
+  }
+
   column "app_version" {
     type = text
     null = false
