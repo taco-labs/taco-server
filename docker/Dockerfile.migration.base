@@ -1,0 +1,16 @@
+FROM arigaio/atlas:0.6.1
+
+WORKDIR /migrations
+
+COPY ./migrations/* ./
+
+COPY ./docker/entrypoint.sh /entrypoint.sh
+
+ENV POSTGRES_HOST ""
+ENV POSTGRES_PORT ""
+ENV POSTGRES_USER ""
+ENV POSTGRES_PASSWORD ""
+ENV POSTGRES_DATABASE ""
+
+# postgresql://postgres:postgres@localhost:25432/taco
+ENTRYPOINT [ "/entrypoint.sh", "atlas", "schema", "apply" ]
