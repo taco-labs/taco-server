@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 
@@ -25,6 +26,9 @@ func (u *userServer) initMiddleware() error {
 }
 
 func (u *userServer) initController() error {
+	u.echo.GET("/healthz", func(c echo.Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
 	u.echo.POST("/signup", u.Signup)
 	return nil
 }

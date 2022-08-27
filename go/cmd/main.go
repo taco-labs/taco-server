@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"flag"
 	"fmt"
 	"os"
 
@@ -20,10 +21,12 @@ import (
 
 func main() {
 	// TODO (taekyeom) Config
+	dsn := "postgres://postgres:postgres@localhost:25432/taco?sslmode=disable&search_path=taco"
+	dbDsnPtr := flag.String("dsn", dsn, "dsn of database")
+	flag.Parse()
 	ctx := context.Background()
 
-	dsn := "postgres://postgres:postgres@localhost:25432/taco?sslmode=disable&search_path=taco"
-	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
+	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(*dbDsnPtr)))
 
 	db := bun.NewDB(sqldb, pgdialect.New())
 	bundebug.NewQueryHook(bundebug.WithVerbose(true))
@@ -59,7 +62,7 @@ func main() {
 	}
 
 	userServer, err := server.NewUserServer(
-		"localhost",
+		"0.0.0.0",
 		18881,
 		userApp,
 	)

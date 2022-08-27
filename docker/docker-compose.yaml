@@ -1,0 +1,49 @@
+version: "2.4"
+services:
+  postgres:
+    container_name: "taco_postgres"
+    image: "postgis/postgis:14-3.2"
+    restart: "always"
+    ports:
+      - "25432:5432"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: "trust"
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: pg_isready -U postgres -d postgres
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - taconet
+  init_taco:
+    image: "taco_init:dev"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: taco
+      POSTGRES_HOST: taco_postgres
+      POSTGRES_PORT: 5432
+    networks:
+      - taconet
+  server:
+    image: "taco_local:dev"
+    command: [ "-dsn", "postgres://postgres:postgres@taco_postgres:5432/taco?sslmode=disable&search_path=taco"]
+    ports:
+      - 18881:18881
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: taco
+      POSTGRES_HOST: taco_postgres
+      POSTGRES_PORT: 5432
+    networks:
+      - taconet
+    depends_on:
+      - init_taco
+networks:
+  taconet:
+    name: taconet
+    driver: bridge

@@ -1,0 +1,15 @@
+#!/bin/bash
+until pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT"
+do
+  sleep 2;
+done
+
+PGPASSWORD=$POSTGRES_PASSWORD psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d postgres << EOF
+CREATE DATABASE "$POSTGRES_DATABASE";
+EOF
+
+PGPASSWORD=$POSTGRES_PASSWORD psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DATABASE" << EOF
+CREATE EXTENSION IF NOT EXISTS postgis;
+EOF
+
+atlas schema apply --auto-approve -u "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}?sslmode=disable" --file .
