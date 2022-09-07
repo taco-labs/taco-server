@@ -11,16 +11,21 @@ import (
 )
 
 type userServer struct {
+	echo     *echo.Echo
 	endpoint string
 	port     int
-	echo     *echo.Echo
 	app      struct {
 		user UserApp
 	}
+	middlewares []echo.MiddlewareFunc
 }
 
 func (u *userServer) initMiddleware() error {
 	u.echo.Use(defaultRequestTimeMiddelware.Process)
+
+	for _, middleware := range u.middlewares {
+		u.echo.Use(middleware)
+	}
 
 	return nil
 }
@@ -29,7 +34,14 @@ func (u *userServer) initController() error {
 	u.echo.GET("/healthz", func(c echo.Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
-	u.echo.POST("/signup", u.Signup)
+	userGroup := u.echo.Group("/user")
+	userGroup.POST("/signup", u.Signup)
+	userGroup.GET("/:userId", u.GetUser)
+	userGroup.GET("/:userId/payment", u.ListCardPayment)
+
+	paymentGroup := u.echo.Group("/payment")
+	paymentGroup.POST("", u.RegisterCardPayment)
+	paymentGroup.DELETE("/:paymentId", u.DeleteCardPayment)
 	return nil
 }
 
@@ -56,16 +68,17 @@ func (u *userServer) Run(ctx context.Context) error {
 	return nil
 }
 
-func NewUserServer(endpoint string, port int, userApp UserApp) (userServer, error) {
+func NewUserServer(opts ...userServerOption) (userServer, error) {
 	e := echo.New()
 
 	server := userServer{
-		endpoint: endpoint,
-		port:     port,
-		echo:     e,
+		echo:        e,
+		middlewares: make([]echo.MiddlewareFunc, 0),
 	}
 
-	server.app.user = userApp
+	for _, opt := range opts {
+		opt(&server)
+	}
 
 	if err := server.initMiddleware(); err != nil {
 		return userServer{}, err

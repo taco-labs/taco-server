@@ -41,11 +41,6 @@ table "user" {
     null = false
   }
 
-  column "os_version" {
-    type = text
-    null = false
-  }
-
   column "app_version" {
     type = text
     null = false
@@ -128,7 +123,7 @@ table "user_payment" {
     null = false
   }
 
-  column "card_number" {
+  column "redacted_card_number" {
     type = text
     null = false
   }
@@ -143,12 +138,7 @@ table "user_payment" {
     null = false
   }
 
-  column "cardPassword" {
-    type = char(2)
-    null = false
-  }
-
-  column "customer_identity_number" {
+  column "billing_key" {
     type = text
     null = false
   }

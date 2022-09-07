@@ -35,6 +35,7 @@ func main() {
 
 	userRepository := repository.NewUserRepository()
 	userSessionRepository := repository.NewUserSessionRepository()
+	userPaymentRepository := repository.NewUserPaymentRepository()
 
 	// TODO(taekyeom) Replace mock to real one
 	mockIdentityService := service.NewMockIdentityService()
@@ -42,6 +43,13 @@ func main() {
 	userSessionApp, err := session.NewUserSessionApp(
 		session.WithTransactor(transactor),
 		session.WithUserSessionRepository(userSessionRepository),
+	)
+
+	userSessionMiddleware := server.NewSessionMiddleware(userSessionApp)
+
+	tossPaymentService := service.NewTossPaymentService(
+		"https://api.tosspayments.com",
+		"dGVzdF9za196WExrS0V5cE5BcldtbzUwblgzbG1lYXhZRzVSOg==",
 	)
 
 	if err != nil {
@@ -54,6 +62,8 @@ func main() {
 		user.WithUserRepository(userRepository),
 		user.WithSessionService(userSessionApp),
 		user.WithUserIdentityService(mockIdentityService),
+		user.WithUserPaymentRepository(userPaymentRepository),
+		user.WithCardPaymentService(tossPaymentService),
 	)
 
 	if err != nil {
@@ -62,9 +72,10 @@ func main() {
 	}
 
 	userServer, err := server.NewUserServer(
-		"0.0.0.0",
-		18881,
-		userApp,
+		server.WithEndpoint("0.0.0.0"),
+		server.WithPort(18881),
+		server.WithUserApp(userApp),
+		server.WithMiddleware(userSessionMiddleware.Get()),
 	)
 
 	if err != nil {

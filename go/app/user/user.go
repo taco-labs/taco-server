@@ -1,7 +1,6 @@
 package user
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -26,12 +25,14 @@ type SessionInterface interface {
 type userApp struct {
 	app.Transactor
 	repository struct {
-		user repository.UserRepository
+		user    repository.UserRepository
+		payment repository.UserPaymentRepository
 	}
 
 	service struct {
 		userIdentity service.UserIdentityService
 		session      SessionInterface
+		payment      service.CardPaymentService
 	}
 
 	actor struct {
@@ -69,7 +70,6 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			Phone:         userIdentity.Phone,
 			Gender:        userIdentity.Gender,
 			AppOs:         enum.OsTypeFromString(req.AppOs),
-			OsVersion:     req.OsVersion,
 			AppVersion:    req.AppVersion,
 			AppFcmToken:   req.AppFcmToken,
 			UserUniqueKey: userIdentity.UserUniqueKey,
@@ -96,7 +96,6 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 		// TODO(taekyeom) 모든 변경 사항은 method로 묶고 테스트 가능하도록 해야 함
 		user.Email = req.Email
 		user.AppOs = enum.OsTypeFromString(req.AppOs)
-		user.OsVersion = req.OsVersion
 		user.AppVersion = req.AppVersion
 		user.AppFcmToken = req.AppFcmToken
 		user.Phone = userIdentity.Phone
@@ -152,36 +151,6 @@ func (u userApp) UpdateUser(ctx context.Context, req request.UserUpdateRequest) 
 	return user, nil
 }
 
-func (u userApp) UpdateDefaultPayment(ctx context.Context, req request.DefaultPaymentUpdateRequest) (entity.User, error) {
-	requestTime := utils.GetRequestTimeOrNow(ctx)
-
-	ctx, err := u.Start(ctx)
-	if err != nil {
-		return entity.User{}, err
-	}
-	defer func() {
-		err = u.Done(ctx, err)
-	}()
-
-	user, err := u.repository.user.FindById(ctx, req.Id)
-	if err != nil {
-		return entity.User{}, fmt.Errorf("app.user.UpdateDefaultPayment: error while find user by id:\n %v", err)
-	}
-	user.DefaultPaymentId = sql.NullString{
-		String: req.DefaultPaymentId,
-		Valid:  true,
-	}
-	user.UpdateTime = requestTime
-
-	// TODO (payment existance check)
-
-	if err := u.repository.user.UpdateUser(ctx, user); err != nil {
-		return entity.User{}, fmt.Errorf("app.user.UpdateDefaultPayment: error while update default payment:\n %v", err)
-	}
-
-	return user, nil
-}
-
 func (u userApp) GetUser(ctx context.Context, userId string) (entity.User, error) {
 	ctx, err := u.Start(ctx)
 	if err != nil {
@@ -222,12 +191,20 @@ func (u userApp) validateApp() error {
 		return errors.New("user app need user repository")
 	}
 
+	if u.repository.payment == nil {
+		return errors.New("user app need user payment repository")
+	}
+
 	if u.service.session == nil {
 		return errors.New("user app need user session repository")
 	}
 
 	if u.service.userIdentity == nil {
 		return errors.New("user app need user identity service")
+	}
+
+	if u.service.payment == nil {
+		return errors.New("user app need card payment service")
 	}
 
 	return nil

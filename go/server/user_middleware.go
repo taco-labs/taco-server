@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ktk1012/taco/go/domain/entity"
 	"github.com/ktk1012/taco/go/utils"
@@ -25,10 +26,11 @@ func (s sessionMiddleware) Get() echo.MiddlewareFunc {
 }
 
 func (s sessionMiddleware) skipper(c echo.Context) bool {
-	return c.Path() != "/user/signup"
+	return c.Path() == "/user/signup"
 }
 
 func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, error) {
+	fmt.Println("Validate session key ", key)
 	ctx := c.Request().Context()
 	session, err := s.sessionApp.GetSession(ctx, key)
 	if err != nil {
@@ -48,4 +50,10 @@ func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, er
 	c.SetRequest(r)
 
 	return true, nil
+}
+
+func NewSessionMiddleware(sessionApp userSessionApp) sessionMiddleware {
+	return sessionMiddleware{
+		sessionApp: sessionApp,
+	}
 }

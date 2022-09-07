@@ -7,7 +7,6 @@ type UserSignupRequest struct {
 	Email       string `json:"email"`
 	IamUid      string `json:"iamUid"`
 	AppOs       string `json:"appOs"`
-	OsVersion   string `json:"osVersion"`
 	AppVersion  string `json:"appVersion"`
 	AppFcmToken string `json:"appFcmToken"`
 }

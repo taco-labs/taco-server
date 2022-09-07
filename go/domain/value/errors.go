@@ -10,4 +10,8 @@ var (
 	ErrDBInternal = errors.New("db internal error")
 
 	ErrUserNotFound = errors.New("user not found")
+
+	ErrExternal = errors.New("external error")
+
+	ErrUnAuthorized = errors.New("unauthorized")
 )

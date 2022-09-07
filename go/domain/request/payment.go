@@ -1,10 +1,11 @@
 package request
 
 type UserPaymentRegisterRequest struct {
-	Name                   string `bun:"name"`
-	CardNumber             string `bun:"card_number"`
-	CardExpirationYear     string `bun:"card_expiration_year"`
-	CardExpirationMonth    string `bun:"card_expiration_month"`
-	CardPassword           string `bun:"card_password"`
-	CustomerIdentityNumber string `bun:"customer_identity_number"`
+	Name                   string `json:"name"`
+	CardNumber             string `json:"cardNumber"`
+	CardExpirationYear     string `json:"cardExpirationYear"`
+	CardExpirationMonth    string `json:"cardExpirationMonth"`
+	CardPassword           string `json:"cardPassword"`
+	CustomerIdentityNumber string `json:"customerIdentityNumber"`
+	DefaultPayment         bool   `json:"defaultPayment"`
 }
