@@ -19,7 +19,8 @@ services:
     networks:
       - taconet
   init_taco:
-    image: "taco_init:dev"
+    container_name: "taco_migration"
+    image: "taco_migration:dev"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -29,6 +30,7 @@ services:
     networks:
       - taconet
   server:
+    container_name: "taco_server"
     image: "taco_local:dev"
     command: [ "-dsn", "postgres://postgres:postgres@taco_postgres:5432/taco?sslmode=disable&search_path=taco"]
     ports:

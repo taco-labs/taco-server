@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ktk1012/taco/go/domain/entity"
 	"github.com/ktk1012/taco/go/utils"
@@ -30,7 +29,6 @@ func (s sessionMiddleware) skipper(c echo.Context) bool {
 }
 
 func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, error) {
-	fmt.Println("Validate session key ", key)
 	ctx := c.Request().Context()
 	session, err := s.sessionApp.GetSession(ctx, key)
 	if err != nil {
@@ -40,12 +38,12 @@ func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, er
 
 	currentTime := utils.GetRequestTimeOrNow(ctx)
 
-	if session.ExpireTime.After(currentTime) {
+	if session.ExpireTime.Before(currentTime) {
 		return false, nil
 	}
 
 	// Set userId key
-	utils.SetUserId(ctx, session.UserId)
+	ctx = utils.SetUserId(ctx, session.UserId)
 	r := c.Request().WithContext(ctx)
 	c.SetRequest(r)
 
