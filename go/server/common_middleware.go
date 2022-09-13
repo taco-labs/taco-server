@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	defaultRequestTimeMiddelware = newRequestTimeMiddleware(defaultTimer{})
+	DefaultRequestTimeMiddelware = newRequestTimeMiddleware(defaultTimer{})
 )
 
 type timer interface {

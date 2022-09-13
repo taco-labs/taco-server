@@ -1,4 +1,4 @@
-package session
+package usersession
 
 import (
 	"github.com/ktk1012/taco/go/app"

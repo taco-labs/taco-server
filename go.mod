@@ -3,6 +3,7 @@ module github.com/ktk1012/taco
 go 1.19
 
 require (
+	github.com/cridenour/go-postgis v1.0.0
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/uuid v1.3.0
 	github.com/labstack/echo/v4 v4.8.0
@@ -11,6 +12,7 @@ require (
 	github.com/uptrace/bun/driver/pgdriver v1.1.7
 	github.com/uptrace/bun/extra/bundebug v1.1.7
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
+	golang.org/x/sync v0.0.0-20220907140024-f12130a52804
 )
 
 require (
@@ -18,6 +20,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/labstack/gommon v0.3.1 // indirect
+	github.com/lib/pq v1.10.7 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect

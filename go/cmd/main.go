@@ -8,15 +8,19 @@ import (
 	"os"
 
 	"github.com/ktk1012/taco/go/app"
-	"github.com/ktk1012/taco/go/app/session"
+	"github.com/ktk1012/taco/go/app/driver"
+	"github.com/ktk1012/taco/go/app/driversession"
 	"github.com/ktk1012/taco/go/app/user"
+	"github.com/ktk1012/taco/go/app/usersession"
 	"github.com/ktk1012/taco/go/repository"
-	"github.com/ktk1012/taco/go/server"
+	driverserver "github.com/ktk1012/taco/go/server/driver"
+	userserver "github.com/ktk1012/taco/go/server/user"
 	"github.com/ktk1012/taco/go/service"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/extra/bundebug"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -37,25 +41,38 @@ func main() {
 	userSessionRepository := repository.NewUserSessionRepository()
 	userPaymentRepository := repository.NewUserPaymentRepository()
 
+	driverRepository := repository.NewDriverRepository()
+	driverLocationRepository := repository.NewDriverLocationRepository()
+	driverSettlementAccountRepository := repository.NewDriverSettlementAccountRepository()
+	driverSessionRepository := repository.NewDriverSessionRepository()
+
 	// TODO(taekyeom) Replace mock to real one
 	mockIdentityService := service.NewMockIdentityService()
 
-	userSessionApp, err := session.NewUserSessionApp(
-		session.WithTransactor(transactor),
-		session.WithUserSessionRepository(userSessionRepository),
+	userSessionApp, err := usersession.NewUserSessionApp(
+		usersession.WithTransactor(transactor),
+		usersession.WithUserSessionRepository(userSessionRepository),
 	)
+	if err != nil {
+		fmt.Printf("Failed to setup user session app: %v\n", err)
+		os.Exit(1)
+	}
 
-	userSessionMiddleware := server.NewSessionMiddleware(userSessionApp)
+	driverSessionApp, err := driversession.NewDriverSessionApp(
+		driversession.WithTransactor(transactor),
+		driversession.WithDriverSessionRepository(driverSessionRepository),
+	)
+	if err != nil {
+		fmt.Printf("Failed to setup driver session app: %v\n", err)
+		os.Exit(1)
+	}
+
+	userSessionMiddleware := userserver.NewSessionMiddleware(userSessionApp)
 
 	tossPaymentService := service.NewTossPaymentService(
 		"https://api.tosspayments.com",
 		"dGVzdF9za196WExrS0V5cE5BcldtbzUwblgzbG1lYXhZRzVSOg==",
 	)
-
-	if err != nil {
-		fmt.Printf("Failed to setup user session app: %v\n", err)
-		os.Exit(1)
-	}
 
 	userApp, err := user.NewUserApp(
 		user.WithTransactor(transactor),
@@ -65,26 +82,63 @@ func main() {
 		user.WithUserPaymentRepository(userPaymentRepository),
 		user.WithCardPaymentService(tossPaymentService),
 	)
-
 	if err != nil {
 		fmt.Printf("Failed to setup user app: %v\n", err)
 		os.Exit(1)
 	}
 
-	userServer, err := server.NewUserServer(
-		server.WithEndpoint("0.0.0.0"),
-		server.WithPort(18881),
-		server.WithUserApp(userApp),
-		server.WithMiddleware(userSessionMiddleware.Get()),
+	driverApp, err := driver.NewDriverApp(
+		driver.WithTransactor(transactor),
+		driver.WithDriverRepository(driverRepository),
+		driver.WithDriverLocationRepository(driverLocationRepository),
+		driver.WithSettlementAccountRepository(driverSettlementAccountRepository),
+		driver.WithUserIdentityService(mockIdentityService),
+		driver.WithSessionService(driverSessionApp),
 	)
+	if err != nil {
+		fmt.Printf("Failed to setup driver app: %v\n", err)
+		os.Exit(1)
+	}
 
+	userServer, err := userserver.NewUserServer(
+		userserver.WithEndpoint("0.0.0.0"),
+		userserver.WithPort(18881),
+		userserver.WithUserApp(userApp),
+		userserver.WithMiddleware(userSessionMiddleware.Get()),
+	)
 	if err != nil {
 		fmt.Printf("Failed to setup user server: %v\n", err)
 		os.Exit(1)
 	}
 
-	if err = userServer.Run(ctx); err != nil {
-		fmt.Printf("Failed to start user server: %v\n", err)
+	driverServer, err := driverserver.NewDriverServer(
+		driverserver.WithEndpoint("0.0.0.0"),
+		driverserver.WithPort(18882),
+		driverserver.WithDriverApp(driverApp),
+	)
+	if err != nil {
+		fmt.Printf("Failed to setup driver server: %v\n", err)
+		os.Exit(1)
+	}
+
+	group, ctx := errgroup.WithContext(ctx)
+
+	group.Go(func() error {
+		if err = userServer.Run(ctx); err != nil {
+			return fmt.Errorf("failed to start user server:\n%v", err)
+		}
+		return nil
+	})
+
+	group.Go(func() error {
+		if err = driverServer.Run(ctx); err != nil {
+			return fmt.Errorf("failed to start driver server:\n%v", err)
+		}
+		return nil
+	})
+
+	if err := group.Wait(); err != nil {
+		fmt.Printf("Failed to start services: %v\n", err)
 		os.Exit(1)
 	}
 }

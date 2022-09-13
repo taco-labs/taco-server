@@ -1,0 +1,45 @@
+package driver
+
+import (
+	"github.com/ktk1012/taco/go/app"
+	"github.com/ktk1012/taco/go/repository"
+	"github.com/ktk1012/taco/go/service"
+)
+
+type driverOption func(*driverApp)
+
+func WithTransactor(transactor app.Transactor) driverOption {
+	return func(da *driverApp) {
+		da.Transactor = transactor
+	}
+}
+
+func WithDriverRepository(repo repository.DriverRepository) driverOption {
+	return func(da *driverApp) {
+		da.repository.driver = repo
+	}
+}
+
+func WithDriverLocationRepository(repo repository.DriverLocationRepository) driverOption {
+	return func(da *driverApp) {
+		da.repository.driverLocation = repo
+	}
+}
+
+func WithSettlementAccountRepository(repo repository.DriverSettlementAccountRepository) driverOption {
+	return func(da *driverApp) {
+		da.repository.settlementAccount = repo
+	}
+}
+
+func WithUserIdentityService(svc service.UserIdentityService) driverOption {
+	return func(da *driverApp) {
+		da.service.userIdentity = svc
+	}
+}
+
+func WithSessionService(svc sessionInterface) driverOption {
+	return func(da *driverApp) {
+		da.service.session = svc
+	}
+}

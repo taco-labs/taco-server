@@ -57,6 +57,11 @@ table "driver_session" {
     null = false
   }
 
+  column "activated" {
+    type = bool
+    null = false
+  }
+
   column "expire_time" {
     type = timestamp
     null = false

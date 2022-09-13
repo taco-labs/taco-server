@@ -139,11 +139,6 @@ table "driver" {
 table "driver_settlement_account" {
   schema = schema.taco
 
-  column "id" {
-    type = uuid
-    null = false
-  }
-
   column "driver_id" {
     type = uuid
     null = false
@@ -171,20 +166,17 @@ table "driver_settlement_account" {
     null = false
   }
 
+  column "update_time" {
+    type = timestamp
+    null = false
+  }
+
   column "delete_time" {
     type = timestamp
     null = false
   }
 
   primary_key {
-    columns = [
-      column.id,
-    ]
-  }
-
-  index "driver_id_idx" {
-    unique = false
-    type = HASH
     columns = [
       column.driver_id,
     ]

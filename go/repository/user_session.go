@@ -13,12 +13,6 @@ type UserSessionRepository interface {
 	DeleteSessionByUserId(context.Context, string) error
 }
 
-type DriverSessionRepository interface {
-	GetSession(context.Context, string) (entity.DriverSession, error)
-	DeleteSession(context.Context, string) error
-	CreateSession(context.Context, entity.DriverSession) error
-}
-
 type userSessionRepository struct{}
 
 func (u userSessionRepository) GetSession(ctx context.Context, sessionId string) (entity.UserSession, error) {

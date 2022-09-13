@@ -19,5 +19,6 @@ type DriverSession struct {
 
 	Id         string    `bun:"id,pk"`
 	DriverId   string    `bun:"driver_id"`
+	Activated  bool      `bun:"activated"`
 	ExpireTime time.Time `bun:"expire_time"`
 }

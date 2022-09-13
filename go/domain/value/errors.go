@@ -1,6 +1,9 @@
 package value
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrUnAuthenticated = errors.New("unauthenticated")
@@ -9,7 +12,11 @@ var (
 
 	ErrDBInternal = errors.New("db internal error")
 
-	ErrUserNotFound = errors.New("user not found")
+	ErrNotFound = errors.New("not found")
+
+	ErrUserNotFound = fmt.Errorf("%v: user", ErrNotFound)
+
+	ErrDriverNotFound = fmt.Errorf("%v: driver", ErrNotFound)
 
 	ErrExternal = errors.New("external error")
 

@@ -41,15 +41,15 @@ func (u userPaymentRepository) GetUserPayment(ctx context.Context, paymentId str
 func (u userPaymentRepository) ListUserPayment(ctx context.Context, userId string) ([]entity.UserPayment, error) {
 	db := GetQueryContext(ctx)
 
-	res := []entity.UserPayment{}
+	payments := []entity.UserPayment{}
 
-	err := db.NewSelect().Model(&res).Where("user_id = ?", userId).Scan(ctx)
+	err := db.NewSelect().Model(&payments).Where("user_id = ?", userId).Scan(ctx)
 
 	if err != nil {
 		return []entity.UserPayment{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
 	}
 
-	return res, nil
+	return payments, nil
 }
 
 func (u userPaymentRepository) CreateUserPayment(ctx context.Context, userPayment entity.UserPayment) error {

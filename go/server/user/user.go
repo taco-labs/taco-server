@@ -1,4 +1,4 @@
-package server
+package user
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/ktk1012/taco/go/server"
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,7 +22,7 @@ type userServer struct {
 }
 
 func (u *userServer) initMiddleware() error {
-	u.echo.Use(defaultRequestTimeMiddelware.Process)
+	u.echo.Use(server.DefaultRequestTimeMiddelware.Process)
 
 	for _, middleware := range u.middlewares {
 		u.echo.Use(middleware)
