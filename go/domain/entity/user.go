@@ -34,6 +34,7 @@ type UserPayment struct {
 	Id                  string    `bun:"id,pk"`
 	UserId              string    `bun:"user_id"`
 	Name                string    `bun:"name"`
+	CardCompany         string    `bun:"card_company"`
 	RedactedCardNumber  string    `bun:"redacted_card_number"`
 	CardExpirationYear  string    `bun:"card_expiration_year"`
 	CardExpirationMonth string    `bun:"card_expiration_month"`

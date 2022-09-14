@@ -123,6 +123,11 @@ table "user_payment" {
     null = false
   }
 
+  column "card_company" {
+    type = text
+    null = false
+  }
+
   column "redacted_card_number" {
     type = text
     null = false
