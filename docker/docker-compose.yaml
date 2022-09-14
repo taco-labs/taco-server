@@ -35,6 +35,7 @@ services:
     command: [ "-dsn", "postgres://postgres:postgres@taco_postgres:5432/taco?sslmode=disable&search_path=taco"]
     ports:
       - 18881:18881
+      - 18882:18882
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
