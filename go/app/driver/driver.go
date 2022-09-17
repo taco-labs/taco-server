@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ktk1012/taco/go/app"
-	"github.com/ktk1012/taco/go/domain/entity"
-	"github.com/ktk1012/taco/go/domain/request"
-	"github.com/ktk1012/taco/go/domain/value"
-	"github.com/ktk1012/taco/go/domain/value/enum"
-	"github.com/ktk1012/taco/go/repository"
-	"github.com/ktk1012/taco/go/service"
-	"github.com/ktk1012/taco/go/utils"
+	"github.com/taco-labs/taco/go/app"
+	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/request"
+	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/enum"
+	"github.com/taco-labs/taco/go/repository"
+	"github.com/taco-labs/taco/go/service"
+	"github.com/taco-labs/taco/go/utils"
 )
 
 type sessionInterface interface {

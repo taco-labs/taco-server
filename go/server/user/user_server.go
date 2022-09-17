@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ktk1012/taco/go/domain/entity"
-	"github.com/ktk1012/taco/go/domain/request"
-	"github.com/ktk1012/taco/go/domain/response"
-	"github.com/ktk1012/taco/go/service"
 	"github.com/labstack/echo/v4"
+	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/request"
+	"github.com/taco-labs/taco/go/domain/response"
+	"github.com/taco-labs/taco/go/service"
 )
 
 type UserApp interface {
@@ -18,7 +18,7 @@ type UserApp interface {
 	ListCardPayment(ctx context.Context, userId string) ([]entity.UserPayment, error)
 	RegisterCardPayment(ctx context.Context, req request.UserPaymentRegisterRequest) (entity.UserPayment, error)
 	DeleteCardPayment(ctx context.Context, userPaymentId string) error
-	UpdateDefaultPayment(ctx context.Context, req request.DefaultPaymentUpdateRequest) (entity.User, error)
+	UpdateDefaultPayment(ctx context.Context, req request.DefaultPaymentUpdateRequest) error
 }
 
 func (u userServer) Signup(e echo.Context) error {
@@ -43,7 +43,7 @@ func (u userServer) Signup(e echo.Context) error {
 
 	resp := response.UserSignupResponse{
 		Token: token,
-		User:  response.UserResponseFromUser(user),
+		User:  response.UserToResponse(user),
 	}
 
 	if err != nil {
@@ -61,7 +61,7 @@ func (u userServer) GetUser(e echo.Context) error {
 	if err != nil {
 		return e.String(http.StatusBadRequest, err.Error())
 	}
-	return e.JSON(http.StatusOK, user)
+	return e.JSON(http.StatusOK, response.UserToResponse(user))
 }
 
 func (u userServer) ListCardPayment(e echo.Context) error {
@@ -71,7 +71,9 @@ func (u userServer) ListCardPayment(e echo.Context) error {
 	if err != nil {
 		return e.String(http.StatusBadRequest, err.Error())
 	}
-	return e.JSON(http.StatusOK, cardPayments)
+	return e.JSON(http.StatusOK, response.ListCardPaymentResponse{
+		Payments: response.UserPaymentsToResponse(cardPayments),
+	})
 }
 
 func (u userServer) RegisterCardPayment(e echo.Context) error {
@@ -83,16 +85,12 @@ func (u userServer) RegisterCardPayment(e echo.Context) error {
 		return e.String(http.StatusBadRequest, fmt.Errorf("bind error: %v", err).Error())
 	}
 
-	fmt.Printf("Test: %v\n", req)
-
 	cardPayment, err := u.app.user.RegisterCardPayment(ctx, req)
 	if err != nil {
 		return e.String(http.StatusBadRequest, err.Error())
 	}
 
-	fmt.Printf("Test Done: %v\n", cardPayment)
-
-	return e.JSON(http.StatusOK, cardPayment)
+	return e.JSON(http.StatusOK, response.UserPaymentToResponse(cardPayment))
 }
 
 func (u userServer) DeleteCardPayment(e echo.Context) error {
@@ -103,7 +101,9 @@ func (u userServer) DeleteCardPayment(e echo.Context) error {
 	if err != nil {
 		return e.String(http.StatusBadRequest, err.Error())
 	}
-	return e.String(http.StatusOK, paymentId)
+	return e.JSON(http.StatusOK, response.DeleteCardPaymentResponse{
+		PaymentId: paymentId,
+	})
 }
 
 func (u userServer) UpdateDefaultPayment(e echo.Context) error {

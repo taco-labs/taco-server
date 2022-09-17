@@ -2,13 +2,12 @@ package user
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
-	"github.com/ktk1012/taco/go/domain/entity"
-	"github.com/ktk1012/taco/go/domain/request"
-	"github.com/ktk1012/taco/go/domain/value"
-	"github.com/ktk1012/taco/go/utils"
+	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/request"
+	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/utils"
 )
 
 // TODO(taekyeom) Format error
@@ -49,11 +48,11 @@ func (u userApp) RegisterCardPayment(ctx context.Context, req request.UserPaymen
 	}
 
 	if req.DefaultPayment {
-		user.DefaultPaymentId = sql.NullString{
-			String: userPayment.Id,
-			Valid:  true,
+		userDefaultPayment := entity.UserDefaultPayment{
+			UserId:    userId,
+			PaymentId: userPayment.Id,
 		}
-		if err = u.repository.user.UpdateUser(ctx, user); err != nil {
+		if err = u.repository.payment.UpsertDefaultPayment(ctx, userDefaultPayment); err != nil {
 			return entity.UserPayment{}, err
 		}
 	}
@@ -94,44 +93,38 @@ func (u userApp) DeleteCardPayment(ctx context.Context, userPaymentId string) er
 	return nil
 }
 
-func (u userApp) UpdateDefaultPayment(ctx context.Context, req request.DefaultPaymentUpdateRequest) (entity.User, error) {
-	requestTime := utils.GetRequestTimeOrNow(ctx)
-
+func (u userApp) UpdateDefaultPayment(ctx context.Context, req request.DefaultPaymentUpdateRequest) error {
 	ctx, err := u.Start(ctx)
 	if err != nil {
-		return entity.User{}, err
+		return err
 	}
 	defer func() {
 		err = u.Done(ctx, err)
 	}()
 
-	user, err := u.repository.user.FindById(ctx, req.Id)
+	userDefaultPayment, err := u.repository.payment.GetDefaultPaymentByUserId(ctx, req.Id)
 	if err != nil {
-		return entity.User{}, fmt.Errorf("app.user.UpdateDefaultPayment: error while find user by id:\n %v", err)
+		return fmt.Errorf("app.user.UpdateDefaultPayment: error while find default user default payment by user id:\n %v", err)
 	}
 
-	if user.DefaultPaymentId.String == req.DefaultPaymentId {
-		return user, nil
+	if userDefaultPayment.PaymentId == req.DefaultPaymentId {
+		return nil
 	}
 
 	userPayment, err := u.repository.payment.GetUserPayment(ctx, req.DefaultPaymentId)
 	if err != nil {
-		return entity.User{}, err
+		return err
 	}
 
-	if user.Id != userPayment.UserId {
-		return entity.User{}, value.ErrUnAuthorized
+	if req.Id != userPayment.UserId {
+		return value.ErrUnAuthorized
 	}
 
-	user.DefaultPaymentId = sql.NullString{
-		String: req.DefaultPaymentId,
-		Valid:  true,
-	}
-	user.UpdateTime = requestTime
+	userDefaultPayment.PaymentId = userPayment.Id
 
-	if err = u.repository.user.UpdateUser(ctx, user); err != nil {
-		return entity.User{}, fmt.Errorf("app.user.UpdateDefaultPayment: error while update default payment:\n %v", err)
+	if err = u.repository.payment.UpsertDefaultPayment(ctx, userDefaultPayment); err != nil {
+		return fmt.Errorf("app.user.UpdateDefaultPayment: error while update default payment:\n %v", err)
 	}
 
-	return user, nil
+	return nil
 }

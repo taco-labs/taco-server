@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ktk1012/taco/go/domain/entity"
-	"github.com/ktk1012/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/value"
 )
 
 // TODO(taekyeom) Driver repository에서 location 정보까지 같이 handling 해야 할까?

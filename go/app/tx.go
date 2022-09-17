@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ktk1012/taco/go/domain/value"
-	"github.com/ktk1012/taco/go/repository"
+	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/repository"
 	"github.com/uptrace/bun"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ktk1012/taco/go/domain/request"
+	"github.com/taco-labs/taco/go/domain/request"
 )
 
 type accessTokenRequest struct {

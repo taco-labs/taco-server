@@ -3,7 +3,7 @@ package server
 import (
 	"time"
 
-	"github.com/ktk1012/taco/go/utils"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/labstack/echo/v4"
 )
 

@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/ktk1012/taco/go/server"
+	"github.com/taco-labs/taco/go/server"
 	"github.com/labstack/echo/v4"
 )
 

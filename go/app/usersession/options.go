@@ -1,8 +1,8 @@
 package usersession
 
 import (
-	"github.com/ktk1012/taco/go/app"
-	"github.com/ktk1012/taco/go/repository"
+	"github.com/taco-labs/taco/go/app"
+	"github.com/taco-labs/taco/go/repository"
 )
 
 type userSessionOption func(*userSessionApp)

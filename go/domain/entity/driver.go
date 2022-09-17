@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/cridenour/go-postgis"
-	"github.com/ktk1012/taco/go/domain/value"
-	"github.com/ktk1012/taco/go/domain/value/enum"
+	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/uptrace/bun"
 )
 

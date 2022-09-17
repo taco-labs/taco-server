@@ -3,8 +3,8 @@ package user
 import (
 	"context"
 
-	"github.com/ktk1012/taco/go/domain/entity"
-	"github.com/ktk1012/taco/go/utils"
+	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )

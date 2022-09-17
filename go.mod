@@ -1,4 +1,4 @@
-module github.com/ktk1012/taco
+module github.com/taco-labs/taco
 
 go 1.19
 

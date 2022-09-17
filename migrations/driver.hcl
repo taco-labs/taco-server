@@ -88,11 +88,6 @@ table "driver" {
     comment = "Is taxi driver is activated (가입 승인을 받았는지 여부)"
   }
 
-  column "default_settlement_account_id" {
-    type = uuid 
-    null = true
-  }
-
   column "create_time" {
     type = timestamp
     null = false
@@ -119,20 +114,6 @@ table "driver" {
     columns = [
       column.user_unique_key,
     ]
-  }
-
-  foreign_key "user_default_settlement_account_fk" {
-    columns = [
-      column.default_settlement_account_id,
-    ]
-
-    ref_columns = [
-      table.driver_settlement_account.column.id,
-    ]
-
-    on_delete = NO_ACTION 
-
-    on_update = NO_ACTION
   }
 }
 

@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/ktk1012/taco/go/domain/entity"
-	"github.com/ktk1012/taco/go/domain/request"
-	"github.com/ktk1012/taco/go/domain/value"
-	"github.com/ktk1012/taco/go/utils"
+	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/request"
+	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/utils"
 )
 
 const (
