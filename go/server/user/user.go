@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/taco-labs/taco/go/server"
 	"github.com/labstack/echo/v4"
+	"github.com/taco-labs/taco/go/server"
 )
 
 type userServer struct {

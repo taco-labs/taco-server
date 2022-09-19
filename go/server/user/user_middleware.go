@@ -2,12 +2,18 @@ package user
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/taco-labs/taco/go/domain/entity"
-	"github.com/taco-labs/taco/go/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/utils"
 )
+
+var skipSet = map[string]struct{}{
+	"/user/signup": {},
+	"/healthz":     {},
+}
 
 type userSessionApp interface {
 	GetSession(context.Context, string) (entity.UserSession, error)
@@ -25,7 +31,9 @@ func (s sessionMiddleware) Get() echo.MiddlewareFunc {
 }
 
 func (s sessionMiddleware) skipper(c echo.Context) bool {
-	return c.Path() == "/user/signup"
+	fmt.Println("Skipper: ", c.Path())
+	_, ok := skipSet[c.Path()]
+	return ok
 }
 
 func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, error) {
