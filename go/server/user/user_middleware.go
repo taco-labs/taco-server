@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -31,7 +30,6 @@ func (s sessionMiddleware) Get() echo.MiddlewareFunc {
 }
 
 func (s sessionMiddleware) skipper(c echo.Context) bool {
-	fmt.Println("Skipper: ", c.Path())
 	_, ok := skipSet[c.Path()]
 	return ok
 }
