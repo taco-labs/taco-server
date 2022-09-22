@@ -4,8 +4,8 @@ package request
 type UserSignupRequest struct {
 	FirstName   string `json:"firstName"`
 	LastName    string `json:"lastName"`
-	Email       string `json:"email"`
-	IamUid      string `json:"iamUid"`
+	Email       string `json:"email"`  // TODO (remove)
+	IamUid      string `json:"iamUid"` // TODO (remove)
 	AppOs       string `json:"appOs"`
 	AppVersion  string `json:"appVersion"`
 	AppFcmToken string `json:"appFcmToken"`

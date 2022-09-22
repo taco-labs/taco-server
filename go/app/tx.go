@@ -32,7 +32,7 @@ func (t defaultTransactor) Start(ctx context.Context) (context.Context, error) {
 
 	tx, err := t.db.BeginTx(ctx, nil)
 	if err != nil {
-		return ctx, fmt.Errorf("%v: error while open transaction", value.ErrDBInternal)
+		return ctx, fmt.Errorf("%v: error while open transaction:\n%v", value.ErrDBInternal, err)
 	}
 
 	ctx = repository.WithQueryContext(ctx, &tx)
