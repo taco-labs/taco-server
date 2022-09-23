@@ -16,22 +16,17 @@ table "user" {
     null = false
   }
 
-  column "email" {
-    type = text
-    null = false
-  }
-
   column "birthday" {
     type = text
     null = false
   }
 
-  column "phone" {
+  column "gender" {
     type = text
     null = false
   }
 
-  column "gender" {
+  column "phone" {
     type = text
     null = false
   }

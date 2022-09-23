@@ -1,16 +1,22 @@
 package response
 
 import (
+	"time"
+
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils/slices"
 )
 
+type SmsVerificationRequestResponse struct {
+	Id         string    `json:"id"`
+	ExpireTime time.Time `json:"expireTime"`
+}
+
 type UserResponse struct {
 	Id               string      `json:"id"`
 	FirstName        string      `json:"firstName"`
 	LastName         string      `json:"lastName"`
-	Email            string      `json:"email"`
 	BirthDay         string      `json:"birthday"`
 	Phone            string      `json:"phone"`
 	Gender           string      `json:"gender"`
@@ -24,7 +30,6 @@ func UserToResponse(user entity.User) UserResponse {
 		Id:         user.Id,
 		FirstName:  user.FirstName,
 		LastName:   user.LastName,
-		Email:      user.Email,
 		BirthDay:   user.BirthDay,
 		Phone:      user.Phone,
 		Gender:     user.Gender,

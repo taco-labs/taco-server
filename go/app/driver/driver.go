@@ -4,16 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
+	// "time"
 
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
-	"github.com/taco-labs/taco/go/domain/value"
-	"github.com/taco-labs/taco/go/domain/value/enum"
+	// "github.com/taco-labs/taco/go/domain/value/enum"
+	// "github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/repository"
-	"github.com/taco-labs/taco/go/service"
-	"github.com/taco-labs/taco/go/utils"
+	// "github.com/taco-labs/taco/go/utils"
 )
 
 type sessionInterface interface {
@@ -30,8 +29,7 @@ type driverApp struct {
 	}
 
 	service struct {
-		userIdentity service.UserIdentityService
-		session      sessionInterface
+		session sessionInterface
 	}
 
 	actor struct {
@@ -39,105 +37,85 @@ type driverApp struct {
 }
 
 func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) (entity.Driver, string, error) {
-	requestTime := utils.GetRequestTimeOrNow(ctx)
-	userIdentity, err := d.service.userIdentity.GetUserIdentity(ctx, req.IamUid)
-	if err != nil {
-		return entity.Driver{}, "", err
-	}
+	// requestTime := utils.GetRequestTimeOrNow(ctx)
 
-	ctx, err = d.Start(ctx)
-	if err != nil {
-		return entity.Driver{}, "", err
-	}
-	defer func() {
-		err = d.Done(ctx, err)
-	}()
+	// ctx, err := d.Start(ctx)
+	// if err != nil {
+	// 	return entity.Driver{}, "", err
+	// }
+	// defer func() {
+	// 	err = d.Done(ctx, err)
+	// }()
 
-	driver, err := d.repository.driver.FindByUserUniqueKey(ctx, userIdentity.UserUniqueKey)
-	if !errors.Is(value.ErrNotFound, err) && err != nil {
-		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while find user by unique key:\n %v", err)
-	}
+	// driver, err := d.repository.driver.FindByUserUniqueKey(ctx, "") // TODO(taekyeom) Fixit
+	// if !errors.Is(value.ErrNotFound, err) && err != nil {
+	// 	return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while find user by unique key:\n %v", err)
+	// }
 
-	// Id              string          `bun:"id,pk"`
-	// DriverType      enum.DriverType `bun:"driver_type"`
-	// FirstName       string          `bun:"first_name"`
-	// LastName        string          `bun:"last_name"`
-	// BirthDay        string          `bun:"birthday"`
-	// Phone           string          `bun:"phone"`
-	// Gender          string          `bun:"gender"`
-	// AppOs           enum.OsType     `bun:"app_os"`
-	// AppVersion      string          `bun:"app_version"`
-	// AppFcmToken     string          `bun:"app_fcm_token"`
-	// UserUniqueKey   string          `bun:"user_unique_key"`
-	// DriverLicenseId string          `bun:"driver_license_id"`
-	// OnDuty          bool            `bun:"driver_on_duty"`
-	// Active          bool            `bun:"active"`
-	// CreateTime      time.Time       `bun:"create_time"`
-	// UpdateTime      time.Time       `bun:"update_time"`
-	// DeleteTime      time.Time       `bun:"delete_time"`
-	if errors.Is(value.ErrNotFound, err) {
-		newDriver := entity.Driver{
-			Id:              utils.MustNewUUID(),
-			DriverType:      enum.DriverTypeFromString(req.DriverType),
-			FirstName:       req.FirstName,
-			LastName:        req.LastName,
-			BirthDay:        userIdentity.BirthDay,
-			Phone:           userIdentity.Phone,
-			Gender:          userIdentity.Gender,
-			AppOs:           enum.OsTypeFromString(req.AppOs),
-			AppVersion:      req.AppVersion,
-			AppFcmToken:     req.AppFcmToken,
-			UserUniqueKey:   userIdentity.UserUniqueKey,
-			DriverLicenseId: req.DriverLicenseId,
-			OnDuty:          false,
-			Active:          false,
-			CreateTime:      requestTime,
-			UpdateTime:      requestTime,
-			DeleteTime:      time.Time{},
-		}
-		if err = d.repository.driver.Create(ctx, newDriver); err != nil {
-			return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while create new driver:\n%v", err)
-		}
+	// if errors.Is(value.ErrNotFound, err) {
+	// 	newDriver := entity.Driver{
+	// 		Id:              utils.MustNewUUID(),
+	// 		DriverType:      enum.DriverTypeFromString(req.DriverType),
+	// 		FirstName:       req.FirstName,
+	// 		LastName:        req.LastName,
+	// 		BirthDay:        userIdentity.BirthDay,
+	// 		Phone:           userIdentity.Phone,
+	// 		Gender:          userIdentity.Gender,
+	// 		AppOs:           enum.OsTypeFromString(req.AppOs),
+	// 		AppVersion:      req.AppVersion,
+	// 		AppFcmToken:     req.AppFcmToken,
+	// 		UserUniqueKey:   userIdentity.UserUniqueKey,
+	// 		DriverLicenseId: req.DriverLicenseId,
+	// 		OnDuty:          false,
+	// 		Active:          false,
+	// 		CreateTime:      requestTime,
+	// 		UpdateTime:      requestTime,
+	// 		DeleteTime:      time.Time{},
+	// 	}
+	// 	if err = d.repository.driver.Create(ctx, newDriver); err != nil {
+	// 		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while create new driver:\n%v", err)
+	// 	}
 
-		driverSession := entity.DriverSession{
-			Id:         utils.MustNewUUID(),
-			DriverId:   newDriver.Id,
-			Activated:  newDriver.Active,
-			ExpireTime: requestTime.AddDate(0, 1, 0),
-		}
-		if err = d.service.session.Create(ctx, driverSession); err != nil {
-			return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while create new session:\n %v", err)
-		}
+	// 	driverSession := entity.DriverSession{
+	// 		Id:         utils.MustNewUUID(),
+	// 		DriverId:   newDriver.Id,
+	// 		Activated:  newDriver.Active,
+	// 		ExpireTime: requestTime.AddDate(0, 1, 0),
+	// 	}
+	// 	if err = d.service.session.Create(ctx, driverSession); err != nil {
+	// 		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while create new session:\n %v", err)
+	// 	}
 
-		return newDriver, driverSession.Id, nil
-	} else {
-		driver.AppOs = enum.OsTypeFromString(req.AppOs)
-		driver.AppVersion = req.AppVersion
-		driver.AppFcmToken = req.AppFcmToken
-		driver.Phone = userIdentity.Phone
+	// 	return newDriver, driverSession.Id, nil
+	// } else {
+	// 	driver.AppOs = enum.OsTypeFromString(req.AppOs)
+	// 	driver.AppVersion = req.AppVersion
+	// 	driver.AppFcmToken = req.AppFcmToken
+	// 	driver.Phone = userIdentity.Phone
 
-		driver.UpdateTime = requestTime
+	// 	driver.UpdateTime = requestTime
 
-		if err = d.repository.driver.Update(ctx, driver); err != nil {
-			return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while update user:\n%v", err)
-		}
+	// 	if err = d.repository.driver.Update(ctx, driver); err != nil {
+	// 		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while update user:\n%v", err)
+	// 	}
 
-		driverSession := entity.DriverSession{
-			Id:         utils.MustNewUUID(),
-			DriverId:   driver.Id,
-			Activated:  driver.Active,
-			ExpireTime: requestTime.AddDate(0, 1, 0),
-		}
-		if err = d.service.session.RevokeByDriverId(ctx, driver.Id); err != nil {
-			return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while revoke previous session:\n%v", err)
-		}
+	// 	driverSession := entity.DriverSession{
+	// 		Id:         utils.MustNewUUID(),
+	// 		DriverId:   driver.Id,
+	// 		Activated:  driver.Active,
+	// 		ExpireTime: requestTime.AddDate(0, 1, 0),
+	// 	}
+	// 	if err = d.service.session.RevokeByDriverId(ctx, driver.Id); err != nil {
+	// 		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while revoke previous session:\n%v", err)
+	// 	}
 
-		if err = d.service.session.Create(ctx, driverSession); err != nil {
-			return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while create new session:\n%v", err)
-		}
+	// 	if err = d.service.session.Create(ctx, driverSession); err != nil {
+	// 		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while create new session:\n%v", err)
+	// 	}
 
-		return driver, driverSession.Id, nil
-	}
+	// 	return driver, driverSession.Id, nil
+	// }
+	return entity.Driver{}, "", nil
 }
 
 func (d driverApp) GetDriver(ctx context.Context, driverId string) (entity.Driver, error) {
@@ -228,10 +206,6 @@ func (d driverApp) validateApp() error {
 
 	if d.repository.settlementAccount == nil {
 		return errors.New("driver app need settlement account repository")
-	}
-
-	if d.service.userIdentity == nil {
-		return errors.New("driver app need user identity service")
 	}
 
 	if d.service.session == nil {

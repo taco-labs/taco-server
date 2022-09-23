@@ -21,4 +21,8 @@ var (
 	ErrExternal = errors.New("external error")
 
 	ErrUnAuthorized = errors.New("unauthorized")
+
+	ErrAlreadyExists = errors.New("already exists")
+
+	ErrInvalidOperation = errors.New("invalid operation")
 )

@@ -13,7 +13,6 @@ type User struct {
 	Id            string      `bun:"id,pk"`
 	FirstName     string      `bun:"first_name"`
 	LastName      string      `bun:"last_name"`
-	Email         string      `bun:"email"`
 	BirthDay      string      `bun:"birthday"`
 	Phone         string      `bun:"phone"`
 	Gender        string      `bun:"gender"`

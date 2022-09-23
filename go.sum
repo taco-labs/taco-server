@@ -1,3 +1,5 @@
+github.com/coolsms/coolsms-go v0.0.0-20211005081430-ed879c9fbfd3 h1:3bblpn6cwu+f4JQsuhwmDc09VJSpZNvRlREtpl11oFw=
+github.com/coolsms/coolsms-go v0.0.0-20211005081430-ed879c9fbfd3/go.mod h1:JYykg0fnAqroPK9GQHFtM5OHAJdPP64qN/hH1rnxnAo=
 github.com/cridenour/go-postgis v1.0.0 h1:yK82fCY6k0MBCkyeEZDFijalxLNqPECekyNlcjC/B9Q=
 github.com/cridenour/go-postgis v1.0.0/go.mod h1:AtTeWrKgwtl5WjwG1oJwcc3AHIf/EC1ngklA0XZKLls=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

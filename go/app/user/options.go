@@ -27,20 +27,26 @@ func WithUserPaymentRepository(repo repository.UserPaymentRepository) userAppOpt
 	}
 }
 
+func WithSmsVerificationRepository(repo repository.SmsVerificationRepository) userAppOption {
+	return func(ua *userApp) {
+		ua.repository.smsVerification = repo
+	}
+}
+
 func WithSessionService(app SessionInterface) userAppOption {
 	return func(ua *userApp) {
 		ua.service.session = app
 	}
 }
 
-func WithUserIdentityService(svc service.UserIdentityService) userAppOption {
-	return func(ua *userApp) {
-		ua.service.userIdentity = svc
-	}
-}
-
 func WithCardPaymentService(svc service.CardPaymentService) userAppOption {
 	return func(ua *userApp) {
 		ua.service.payment = svc
+	}
+}
+
+func WithSmsSenderService(svc service.SmsSenderService) userAppOption {
+	return func(ua *userApp) {
+		ua.service.smsSender = svc
 	}
 }

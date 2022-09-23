@@ -37,6 +37,8 @@ func main() {
 
 	transactor := app.NewDefaultTranscator(db)
 
+	smsVerificationRepository := repository.NewSmsVerificationRepository()
+
 	userRepository := repository.NewUserRepository()
 	userSessionRepository := repository.NewUserSessionRepository()
 	userPaymentRepository := repository.NewUserPaymentRepository()
@@ -46,8 +48,12 @@ func main() {
 	driverSettlementAccountRepository := repository.NewDriverSettlementAccountRepository()
 	driverSessionRepository := repository.NewDriverSessionRepository()
 
-	// TODO(taekyeom) Replace mock to real one
-	mockIdentityService := service.NewMockIdentityService()
+	smsSenderService := service.NewCoolSmsSenderService(
+		"api.coolsms.co.kr",
+		"01083047880",
+		"NCSCVKFUSA8TPSED",
+		"L25KAYEICPWCPHTIXMKLTEAKWLFFGIHQ",
+	)
 
 	userSessionApp, err := usersession.NewUserSessionApp(
 		usersession.WithTransactor(transactor),
@@ -69,6 +75,7 @@ func main() {
 
 	userSessionMiddleware := userserver.NewSessionMiddleware(userSessionApp)
 
+	// TODO(taekyeom) Replace mock to real one
 	tossPaymentService := service.NewTossPaymentService(
 		"https://api.tosspayments.com",
 		"dGVzdF9za196WExrS0V5cE5BcldtbzUwblgzbG1lYXhZRzVSOg==",
@@ -78,9 +85,10 @@ func main() {
 		user.WithTransactor(transactor),
 		user.WithUserRepository(userRepository),
 		user.WithSessionService(userSessionApp),
-		user.WithUserIdentityService(mockIdentityService),
+		user.WithSmsVerificationRepository(smsVerificationRepository),
 		user.WithUserPaymentRepository(userPaymentRepository),
 		user.WithCardPaymentService(tossPaymentService),
+		user.WithSmsSenderService(smsSenderService),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup user app: %v\n", err)
@@ -92,7 +100,6 @@ func main() {
 		driver.WithDriverRepository(driverRepository),
 		driver.WithDriverLocationRepository(driverLocationRepository),
 		driver.WithSettlementAccountRepository(driverSettlementAccountRepository),
-		driver.WithUserIdentityService(mockIdentityService),
 		driver.WithSessionService(driverSessionApp),
 	)
 	if err != nil {

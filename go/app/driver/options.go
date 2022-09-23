@@ -3,7 +3,6 @@ package driver
 import (
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/repository"
-	"github.com/taco-labs/taco/go/service"
 )
 
 type driverOption func(*driverApp)
@@ -29,12 +28,6 @@ func WithDriverLocationRepository(repo repository.DriverLocationRepository) driv
 func WithSettlementAccountRepository(repo repository.DriverSettlementAccountRepository) driverOption {
 	return func(da *driverApp) {
 		da.repository.settlementAccount = repo
-	}
-}
-
-func WithUserIdentityService(svc service.UserIdentityService) driverOption {
-	return func(da *driverApp) {
-		da.service.userIdentity = svc
 	}
 }
 

@@ -36,8 +36,11 @@ func (u *userServer) initController() error {
 		return c.String(http.StatusOK, "OK")
 	})
 	userGroup := u.echo.Group("/user")
+	userGroup.POST("/signin/sms/request", u.SmsVerificationRequest)
+	userGroup.POST("/signin/sms/verify", u.SmsSingin)
 	userGroup.POST("/signup", u.Signup)
 	userGroup.GET("/:userId", u.GetUser)
+	userGroup.PUT("/:userId", u.UpdateUser)
 	userGroup.GET("/:userId/payment", u.ListCardPayment)
 
 	paymentGroup := u.echo.Group("/payment")

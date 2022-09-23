@@ -10,8 +10,10 @@ import (
 )
 
 var skipSet = map[string]struct{}{
-	"/user/signup": {},
-	"/healthz":     {},
+	"/user/signin/sms/request": {},
+	"/user/signin/sms/verify":  {},
+	"/user/signup":             {},
+	"/healthz":                 {},
 }
 
 type userSessionApp interface {

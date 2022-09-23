@@ -25,28 +25,113 @@ type SessionInterface interface {
 type userApp struct {
 	app.Transactor
 	repository struct {
-		user    repository.UserRepository
-		payment repository.UserPaymentRepository
+		user            repository.UserRepository
+		payment         repository.UserPaymentRepository
+		smsVerification repository.SmsVerificationRepository // TODO(taekyeom) SMS 관련 로직은 별도 app으로 나중에 빼야 할듯?
 	}
 
 	service struct {
-		userIdentity service.UserIdentityService
-		session      SessionInterface
-		payment      service.CardPaymentService
+		smsSender service.SmsSenderService
+		session   SessionInterface
+		payment   service.CardPaymentService
 	}
 
 	actor struct {
 	}
 }
 
-func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (entity.User, string, error) {
+func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVerificationRequest) (entity.SmsVerification, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
-	userIdentity, err := u.service.userIdentity.GetUserIdentity(ctx, req.IamUid)
+
+	ctx, err := u.Start(ctx)
+	if err != nil {
+		return entity.SmsVerification{}, err
+	}
+	defer func() {
+		err = u.Done(ctx, err)
+	}()
+
+	smsVerification := entity.NewSmsVerification(req.StateKey, requestTime, req.Phone)
+
+	if err = u.repository.smsVerification.Create(ctx, smsVerification); err != nil {
+		return entity.SmsVerification{}, fmt.Errorf("app.User.SmsVerificationRequest: error while create sms verification:\n%v", err)
+	}
+
+	if err = u.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerificationCode); err != nil {
+		return entity.SmsVerification{}, fmt.Errorf("app.User.SmsVerificationRequest: error while send sms message:\n%v", err)
+	}
+
+	return smsVerification, nil
+}
+
+func (u userApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) (entity.User, string, error) {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	ctx, err := u.Start(ctx)
 	if err != nil {
 		return entity.User{}, "", err
 	}
+	defer func() {
+		// XXX (taekyeom) 유저가 없는 경우에 대해서 adhoc 하게 핸들링 하고 있음.. 더 나은 방향으로 개선 필요함
+		if errors.Is(value.ErrUserNotFound, err) {
+			err = u.Done(ctx, nil)
+		} else {
+			err = u.Done(ctx, err)
+		}
+	}()
 
-	ctx, err = u.Start(ctx)
+	// First check sms code
+	smsVerification, err := u.repository.smsVerification.FindById(ctx, req.StateKey)
+	if err != nil {
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while find sms verification:\n %v", err)
+	}
+
+	if smsVerification.ExpireTime.Before(requestTime) {
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: expired:\n%v", value.ErrInvalidOperation)
+	}
+
+	if smsVerification.VerificationCode != req.VerificationCode {
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: invalid verification code:\n%v", value.ErrInvalidOperation)
+	}
+
+	user, err := u.repository.user.FindByUserUniqueKey(ctx, smsVerification.Phone)
+	if errors.Is(value.ErrUserNotFound, err) {
+		smsVerification.Verified = true
+		if err = u.repository.smsVerification.Update(ctx, smsVerification); err != nil {
+			return entity.User{}, "", fmt.Errorf("app.User.SmsSingin: error while update sms verification:\n%v", err)
+		}
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: user not found\n%v", value.ErrUserNotFound)
+	}
+	if err != nil {
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while find user by unique key:\n%v", err)
+	}
+
+	if err = u.repository.smsVerification.Delete(ctx, smsVerification); err != nil {
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while delete sms verification:\n%v", err)
+	}
+
+	// revoke session
+	if err = u.service.session.RevokeSessionByUserId(ctx, user.Id); err != nil {
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while revoke previous session:\n %v", err)
+	}
+
+	// create new session
+	userSession := entity.UserSession{
+		Id:         utils.MustNewUUID(),
+		UserId:     user.Id,
+		ExpireTime: requestTime.AddDate(0, 1, 0), // TODO(taekyeom) Configurable expire time
+	}
+	if err = u.service.session.CreateSession(ctx, userSession); err != nil {
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while create new session:\n %v", err)
+	}
+
+	return user, userSession.Id, nil
+}
+
+func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (entity.User, string, error) {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	ctx, err := u.Start(ctx)
 	if err != nil {
 		return entity.User{}, "", err
 	}
@@ -54,75 +139,60 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 		err = u.Done(ctx, err)
 	}()
 
-	user, err := u.repository.user.FindByUserUniqueKey(ctx, userIdentity.UserUniqueKey)
+	user, err := u.repository.user.FindByUserUniqueKey(ctx, req.Phone)
 	if !errors.Is(value.ErrUserNotFound, err) && err != nil {
 		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while find user by unique key:\n %v", err)
 	}
 
-	if errors.Is(value.ErrUserNotFound, err) {
-		// create user
-		newUser := entity.User{
-			Id:            utils.MustNewUUID(),
-			FirstName:     req.FirstName,
-			LastName:      req.LastName,
-			Email:         req.Email,
-			BirthDay:      userIdentity.BirthDay,
-			Phone:         userIdentity.Phone,
-			Gender:        userIdentity.Gender,
-			AppOs:         enum.OsTypeFromString(req.AppOs),
-			AppVersion:    req.AppVersion,
-			AppFcmToken:   req.AppFcmToken,
-			UserUniqueKey: userIdentity.UserUniqueKey,
-			CreateTime:    requestTime,
-			UpdateTime:    requestTime,
-			DeleteTime:    time.Time{},
-		}
-		if err = u.repository.user.CreateUser(ctx, newUser); err != nil {
-			return entity.User{}, "", fmt.Errorf("app.User.Signup: error while create user:\n %v", err)
-		}
-
-		userSession := entity.UserSession{
-			Id:         utils.MustNewUUID(),
-			UserId:     newUser.Id,
-			ExpireTime: requestTime.AddDate(0, 1, 0), // TODO(taekyeom) Configurable expire time
-		}
-		if err = u.service.session.CreateSession(ctx, userSession); err != nil {
-			return entity.User{}, "", fmt.Errorf("app.User.Signup: error while create new session:\n %v", err)
-		}
-
-		return user, userSession.Id, nil
-	} else {
-		// update user
-		// TODO(taekyeom) 모든 변경 사항은 method로 묶고 테스트 가능하도록 해야 함
-		user.Email = req.Email
-		user.AppOs = enum.OsTypeFromString(req.AppOs)
-		user.AppVersion = req.AppVersion
-		user.AppFcmToken = req.AppFcmToken
-		user.Phone = userIdentity.Phone
-
-		user.UpdateTime = requestTime
-
-		if err = u.repository.user.UpdateUser(ctx, user); err != nil {
-			return entity.User{}, "", fmt.Errorf("app.User.Signup: error while update user:\n %v", err)
-		}
-
-		// revoke session
-		if err = u.service.session.RevokeSessionByUserId(ctx, user.Id); err != nil {
-			return entity.User{}, "", fmt.Errorf("app.User.Signup: error while revoke previous session:\n %v", err)
-		}
-
-		// create new session
-		userSession := entity.UserSession{
-			Id:         utils.MustNewUUID(),
-			UserId:     user.Id,
-			ExpireTime: requestTime.AddDate(0, 1, 0), // TODO(taekyeom) Configurable expire time
-		}
-		if err = u.service.session.CreateSession(ctx, userSession); err != nil {
-			return entity.User{}, "", fmt.Errorf("app.User.Signup: error while create new session:\n %v", err)
-		}
-
-		return user, userSession.Id, nil
+	if user.Id != "" {
+		return user, "", fmt.Errorf("app.User.Signup: user already exists: %v", value.ErrAlreadyExists)
 	}
+
+	smsVerification, err := u.repository.smsVerification.FindById(ctx, req.SmsVerificationStateKey)
+	if err != nil {
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: failed to find sms verification:\n%v", err)
+	}
+
+	// check sms verification
+	if !smsVerification.Verified {
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: not verified phone:\n%v", value.ErrUnAuthorized)
+	}
+
+	// create user
+	newUser := entity.User{
+		Id:            utils.MustNewUUID(),
+		FirstName:     req.FirstName,
+		LastName:      req.LastName,
+		BirthDay:      req.Birthday,
+		Phone:         req.Phone,
+		Gender:        req.Gender,
+		AppOs:         enum.OsTypeFromString(req.AppOs),
+		AppVersion:    req.AppVersion,
+		AppFcmToken:   req.AppFcmToken,
+		UserUniqueKey: req.Phone,
+		CreateTime:    requestTime,
+		UpdateTime:    requestTime,
+		DeleteTime:    time.Time{},
+	}
+	if err = u.repository.user.CreateUser(ctx, newUser); err != nil {
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while create user:\n %v", err)
+	}
+
+	userSession := entity.UserSession{
+		Id:         utils.MustNewUUID(),
+		UserId:     newUser.Id,
+		ExpireTime: requestTime.AddDate(0, 1, 0), // TODO(taekyeom) Configurable expire time
+	}
+	if err = u.service.session.CreateSession(ctx, userSession); err != nil {
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while create new session:\n %v", err)
+	}
+
+	// Delete verified sms verification
+	if err = u.repository.smsVerification.Delete(ctx, smsVerification); err != nil {
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while delete sms verification:\n %v", err)
+	}
+
+	return user, userSession.Id, nil
 }
 
 func (u userApp) UpdateUser(ctx context.Context, req request.UserUpdateRequest) (entity.User, error) {
@@ -141,6 +211,8 @@ func (u userApp) UpdateUser(ctx context.Context, req request.UserUpdateRequest) 
 		return entity.User{}, fmt.Errorf("app.user.UpdateUser: error while find user by id:\n %v", err)
 	}
 
+	user.AppOs = enum.OsTypeFromString(req.AppOs)
+	user.AppVersion = req.AppVersion
 	user.AppFcmToken = req.AppFcmToken
 	user.UpdateTime = requestTime
 
@@ -195,16 +267,20 @@ func (u userApp) validateApp() error {
 		return errors.New("user app need user payment repository")
 	}
 
+	if u.repository.smsVerification == nil {
+		return errors.New("user app need sms verification repository")
+	}
+
 	if u.service.session == nil {
 		return errors.New("user app need user session repository")
 	}
 
-	if u.service.userIdentity == nil {
-		return errors.New("user app need user identity service")
-	}
-
 	if u.service.payment == nil {
 		return errors.New("user app need card payment service")
+	}
+
+	if u.service.smsSender == nil {
+		return errors.New("user app need sms sender service")
 	}
 
 	return nil
