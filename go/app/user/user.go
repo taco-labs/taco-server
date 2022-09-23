@@ -192,7 +192,7 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while delete sms verification:\n %w", err)
 	}
 
-	return user, userSession.Id, nil
+	return newUser, userSession.Id, nil
 }
 
 func (u userApp) UpdateUser(ctx context.Context, req request.UserUpdateRequest) (entity.User, error) {

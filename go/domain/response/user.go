@@ -14,15 +14,14 @@ type SmsVerificationRequestResponse struct {
 }
 
 type UserResponse struct {
-	Id               string      `json:"id"`
-	FirstName        string      `json:"firstName"`
-	LastName         string      `json:"lastName"`
-	BirthDay         string      `json:"birthday"`
-	Phone            string      `json:"phone"`
-	Gender           string      `json:"gender"`
-	AppOs            enum.OsType `json:"appOs"`
-	AppVersion       string      `json:"osVersion"`
-	DefaultPaymentId string      `json:"defaultPaymentId"`
+	Id         string      `json:"id"`
+	FirstName  string      `json:"firstName"`
+	LastName   string      `json:"lastName"`
+	BirthDay   string      `json:"birthday"`
+	Phone      string      `json:"phone"`
+	Gender     string      `json:"gender"`
+	AppOs      enum.OsType `json:"appOs"`
+	AppVersion string      `json:"osVersion"`
 }
 
 func UserToResponse(user entity.User) UserResponse {

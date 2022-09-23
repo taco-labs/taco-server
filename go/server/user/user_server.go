@@ -81,14 +81,14 @@ func (u userServer) Signup(e echo.Context) error {
 
 	user, token, err := u.app.user.Signup(ctx, req)
 
-	resp := response.UserSignupResponse{
-		Token: token,
-		User:  response.UserToResponse(user),
-	}
-
 	if err != nil {
 		// TODO(taekyeom) Error handle
 		return e.String(http.StatusBadRequest, err.Error())
+	}
+
+	resp := response.UserSignupResponse{
+		Token: token,
+		User:  response.UserToResponse(user),
 	}
 
 	return e.JSON(http.StatusOK, resp)
