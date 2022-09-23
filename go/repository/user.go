@@ -33,7 +33,7 @@ func (u userRepository) FindById(ctx context.Context, userId string) (entity.Use
 		return entity.User{}, value.ErrUserNotFound
 	}
 	if err != nil {
-		return entity.User{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return entity.User{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return user, nil
@@ -50,7 +50,7 @@ func (u userRepository) FindByUserUniqueKey(ctx context.Context, userUniqueKey s
 		return entity.User{}, value.ErrUserNotFound
 	}
 	if err != nil {
-		return entity.User{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return entity.User{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return user, nil
@@ -62,15 +62,15 @@ func (u userRepository) CreateUser(ctx context.Context, user entity.User) error 
 	res, err := db.NewInsert().Model(&user).Exec(ctx)
 
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
@@ -85,15 +85,15 @@ func (u userRepository) UpdateUser(ctx context.Context, user entity.User) error 
 		return value.ErrUserNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
@@ -108,15 +108,15 @@ func (u userRepository) DeleteUser(ctx context.Context, user entity.User) error 
 		return value.ErrUserNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil

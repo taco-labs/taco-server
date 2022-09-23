@@ -76,7 +76,7 @@ func (t tossPaymentService) RegisterCard(ctx context.Context, user entity.User, 
 		Post(tossPaymentCardReigstrationPath)
 	if err != nil {
 		// TODO(taekyeom) Error handling
-		return entity.UserPayment{}, fmt.Errorf("%v: error from card registration: %v", value.ErrExternal, err)
+		return entity.UserPayment{}, fmt.Errorf("%w: error from card registration: %v", value.ErrExternal, err)
 	}
 
 	tossPaymentResp := resp.Result().(*tossPaymentCardRegisterResponse)
@@ -107,7 +107,7 @@ func (t tossPaymentService) Transaction(ctx context.Context, userPayment entity.
 		Post(fmt.Sprintf(tossPaymentTransactionPath, userPayment.BillingKey))
 	if err != nil {
 		// TODO(taekyeom) Error handling
-		return fmt.Errorf("%v: error from card transaction: %v", value.ErrExternal, err)
+		return fmt.Errorf("%w: error from card transaction: %v", value.ErrExternal, err)
 	}
 
 	// TODO (taekyoem) handle response from transaction

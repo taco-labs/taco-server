@@ -30,7 +30,7 @@ func (d driverSessionRepository) GetById(ctx context.Context, sessionId string) 
 		return entity.DriverSession{}, value.ErrNotFound
 	}
 	if err != nil {
-		return entity.DriverSession{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return entity.DriverSession{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return driverSession, nil
@@ -49,15 +49,15 @@ func (d driverSessionRepository) ActivateByDriverId(ctx context.Context, driverI
 		return value.ErrNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
@@ -69,15 +69,15 @@ func (d driverSessionRepository) Create(ctx context.Context, driverSession entit
 	res, err := db.NewInsert().Model(&driverSession).Exec(ctx)
 
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
@@ -92,15 +92,15 @@ func (d driverSessionRepository) DeleteByDriverId(ctx context.Context, driverId 
 		return value.ErrNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil

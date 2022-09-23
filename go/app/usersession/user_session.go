@@ -28,7 +28,7 @@ func (u userSessionApp) GetSession(ctx context.Context, sessionId string) (entit
 
 	userSession, err := u.repository.session.GetSession(ctx, sessionId)
 	if err != nil {
-		return entity.UserSession{}, fmt.Errorf("app.UserSession.GetSession: error while get session:\n %v", err)
+		return entity.UserSession{}, fmt.Errorf("app.UserSession.GetSession: error while get session:\n %w", err)
 	}
 
 	return userSession, nil
@@ -45,7 +45,7 @@ func (u userSessionApp) RevokeSessionByUserId(ctx context.Context, userId string
 	}()
 
 	if err = u.repository.session.DeleteSessionByUserId(ctx, userId); err != nil {
-		return fmt.Errorf("app.UserSession.DeleteSessionByUserId: error while delete session:\n %v", err)
+		return fmt.Errorf("app.UserSession.DeleteSessionByUserId: error while delete session:\n %w", err)
 	}
 
 	return nil
@@ -62,7 +62,7 @@ func (u userSessionApp) CreateSession(ctx context.Context, session entity.UserSe
 	}()
 
 	if err = u.repository.session.CreateSession(ctx, session); err != nil {
-		return fmt.Errorf("app.UserSession.CreateSession: error while create session:\n %v", err)
+		return fmt.Errorf("app.UserSession.CreateSession: error while create session:\n %w", err)
 	}
 
 	return nil

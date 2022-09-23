@@ -1,28 +1,55 @@
 package value
 
 import (
-	"errors"
 	"fmt"
 )
 
+type ErrCode string
+
+const (
+	ERR_UNAUTHENTICATED ErrCode = "ERR_UNAUTHENTICATED"
+	ERR_UNAUTHORIZED    ErrCode = "ERR_UNAUTHORIZED"
+	ERR_SESSION_EXPIRED ErrCode = "ERR_SESSION_EXPIRED"
+	ERR_DB_INTERNALL    ErrCode = "ERR_DB_INTERNAL"
+	ERR_NOTFOUND        ErrCode = "ERR_NOT_FOUND"
+	ERR_EXTERNAL        ErrCode = "ERR_EXTERNAL"
+	ERR_ALREADY_EXISTS  ErrCode = "ERR_ALREADY_EXISTS"
+	ERR_INVALID         ErrCode = "ERR_INVALID"
+	ERR_INTERNAL        ErrCode = "ERR_INTERNAL"
+)
+
+type TacoError struct {
+	ErrCode ErrCode `json:"errCode"`
+	Message string  `json:"message"`
+}
+
+func (t TacoError) Error() string {
+	return fmt.Sprintf("taco error [%s]: %s", t.ErrCode, t.Message)
+}
+
+func (t TacoError) Is(target error) bool {
+	targetTacoErr, ok := target.(TacoError)
+	return ok && targetTacoErr.ErrCode == t.ErrCode
+}
+
 var (
-	ErrUnAuthenticated = errors.New("unauthenticated")
+	ErrUnAuthenticated = TacoError{ERR_UNAUTHENTICATED, "unauthenticated"}
 
-	ErrSessionExpired = errors.New("session expired")
+	ErrUnAuthorized = TacoError{ERR_UNAUTHORIZED, "unauthorized"}
 
-	ErrDBInternal = errors.New("db internal error")
+	ErrSessionExpired = TacoError{ERR_SESSION_EXPIRED, "session expired"}
 
-	ErrNotFound = errors.New("not found")
+	ErrDBInternal = TacoError{ERR_DB_INTERNALL, "db internal error"}
 
-	ErrUserNotFound = fmt.Errorf("%v: user", ErrNotFound)
+	ErrUserNotFound = TacoError{ERR_NOTFOUND, "user not found"}
 
-	ErrDriverNotFound = fmt.Errorf("%v: driver", ErrNotFound)
+	ErrDriverNotFound = TacoError{ERR_NOTFOUND, "driver not found"}
 
-	ErrExternal = errors.New("external error")
+	ErrNotFound = TacoError{ERR_NOTFOUND, "not found"}
 
-	ErrUnAuthorized = errors.New("unauthorized")
+	ErrExternal = TacoError{ERR_EXTERNAL, "external service error"}
 
-	ErrAlreadyExists = errors.New("already exists")
+	ErrAlreadyExists = TacoError{ERR_ALREADY_EXISTS, "already exists"}
 
-	ErrInvalidOperation = errors.New("invalid operation")
+	ErrInvalidOperation = TacoError{ERR_INVALID, "invalid operation"}
 )

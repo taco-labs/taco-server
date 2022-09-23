@@ -54,11 +54,11 @@ func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVeri
 	smsVerification := entity.NewSmsVerification(req.StateKey, requestTime, req.Phone)
 
 	if err = u.repository.smsVerification.Create(ctx, smsVerification); err != nil {
-		return entity.SmsVerification{}, fmt.Errorf("app.User.SmsVerificationRequest: error while create sms verification:\n%v", err)
+		return entity.SmsVerification{}, fmt.Errorf("app.User.SmsVerificationRequest: error while create sms verification:\n%w", err)
 	}
 
 	if err = u.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerificationCode); err != nil {
-		return entity.SmsVerification{}, fmt.Errorf("app.User.SmsVerificationRequest: error while send sms message:\n%v", err)
+		return entity.SmsVerification{}, fmt.Errorf("app.User.SmsVerificationRequest: error while send sms message:\n%w", err)
 	}
 
 	return smsVerification, nil
@@ -83,36 +83,36 @@ func (u userApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) (e
 	// First check sms code
 	smsVerification, err := u.repository.smsVerification.FindById(ctx, req.StateKey)
 	if err != nil {
-		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while find sms verification:\n %v", err)
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while find sms verification:\n %w", err)
 	}
 
 	if smsVerification.ExpireTime.Before(requestTime) {
-		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: expired:\n%v", value.ErrInvalidOperation)
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: expired:\n%w", value.ErrInvalidOperation)
 	}
 
 	if smsVerification.VerificationCode != req.VerificationCode {
-		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: invalid verification code:\n%v", value.ErrInvalidOperation)
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: invalid verification code:\n%w", value.ErrInvalidOperation)
 	}
 
 	user, err := u.repository.user.FindByUserUniqueKey(ctx, smsVerification.Phone)
 	if errors.Is(value.ErrUserNotFound, err) {
 		smsVerification.Verified = true
 		if err = u.repository.smsVerification.Update(ctx, smsVerification); err != nil {
-			return entity.User{}, "", fmt.Errorf("app.User.SmsSingin: error while update sms verification:\n%v", err)
+			return entity.User{}, "", fmt.Errorf("app.User.SmsSingin: error while update sms verification:\n%w", err)
 		}
-		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: user not found\n%v", value.ErrUserNotFound)
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: user not found\n%w", value.ErrUserNotFound)
 	}
 	if err != nil {
-		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while find user by unique key:\n%v", err)
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while find user by unique key:\n%w", err)
 	}
 
 	if err = u.repository.smsVerification.Delete(ctx, smsVerification); err != nil {
-		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while delete sms verification:\n%v", err)
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while delete sms verification:\n%w", err)
 	}
 
 	// revoke session
 	if err = u.service.session.RevokeSessionByUserId(ctx, user.Id); err != nil {
-		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while revoke previous session:\n %v", err)
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while revoke previous session:\n %w", err)
 	}
 
 	// create new session
@@ -122,7 +122,7 @@ func (u userApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) (e
 		ExpireTime: requestTime.AddDate(0, 1, 0), // TODO(taekyeom) Configurable expire time
 	}
 	if err = u.service.session.CreateSession(ctx, userSession); err != nil {
-		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while create new session:\n %v", err)
+		return entity.User{}, "", fmt.Errorf("app.User.SmsSignin: error while create new session:\n %w", err)
 	}
 
 	return user, userSession.Id, nil
@@ -141,21 +141,21 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 
 	user, err := u.repository.user.FindByUserUniqueKey(ctx, req.Phone)
 	if !errors.Is(value.ErrUserNotFound, err) && err != nil {
-		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while find user by unique key:\n %v", err)
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while find user by unique key:\n %w", err)
 	}
 
 	if user.Id != "" {
-		return user, "", fmt.Errorf("app.User.Signup: user already exists: %v", value.ErrAlreadyExists)
+		return user, "", fmt.Errorf("app.User.Signup: user already exists: %w", value.ErrAlreadyExists)
 	}
 
 	smsVerification, err := u.repository.smsVerification.FindById(ctx, req.SmsVerificationStateKey)
 	if err != nil {
-		return entity.User{}, "", fmt.Errorf("app.User.Signup: failed to find sms verification:\n%v", err)
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: failed to find sms verification:\n%w", err)
 	}
 
 	// check sms verification
 	if !smsVerification.Verified {
-		return entity.User{}, "", fmt.Errorf("app.User.Signup: not verified phone:\n%v", value.ErrUnAuthorized)
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: not verified phone:\n%w", value.ErrUnAuthorized)
 	}
 
 	// create user
@@ -175,7 +175,7 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 		DeleteTime:    time.Time{},
 	}
 	if err = u.repository.user.CreateUser(ctx, newUser); err != nil {
-		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while create user:\n %v", err)
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while create user:\n %w", err)
 	}
 
 	userSession := entity.UserSession{
@@ -184,12 +184,12 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 		ExpireTime: requestTime.AddDate(0, 1, 0), // TODO(taekyeom) Configurable expire time
 	}
 	if err = u.service.session.CreateSession(ctx, userSession); err != nil {
-		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while create new session:\n %v", err)
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while create new session:\n %w", err)
 	}
 
 	// Delete verified sms verification
 	if err = u.repository.smsVerification.Delete(ctx, smsVerification); err != nil {
-		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while delete sms verification:\n %v", err)
+		return entity.User{}, "", fmt.Errorf("app.User.Signup: error while delete sms verification:\n %w", err)
 	}
 
 	return user, userSession.Id, nil
@@ -208,7 +208,7 @@ func (u userApp) UpdateUser(ctx context.Context, req request.UserUpdateRequest) 
 
 	user, err := u.repository.user.FindById(ctx, req.Id)
 	if err != nil {
-		return entity.User{}, fmt.Errorf("app.user.UpdateUser: error while find user by id:\n %v", err)
+		return entity.User{}, fmt.Errorf("app.user.UpdateUser: error while find user by id:\n %w", err)
 	}
 
 	user.AppOs = enum.OsTypeFromString(req.AppOs)
@@ -217,7 +217,7 @@ func (u userApp) UpdateUser(ctx context.Context, req request.UserUpdateRequest) 
 	user.UpdateTime = requestTime
 
 	if err = u.repository.user.UpdateUser(ctx, user); err != nil {
-		return entity.User{}, fmt.Errorf("app.user.UpdateUser: error while update user:\n %v", err)
+		return entity.User{}, fmt.Errorf("app.user.UpdateUser: error while update user:\n %w", err)
 	}
 
 	return user, nil
@@ -234,7 +234,7 @@ func (u userApp) GetUser(ctx context.Context, userId string) (entity.User, error
 
 	user, err := u.repository.user.FindById(ctx, userId)
 	if err != nil {
-		return entity.User{}, fmt.Errorf("app.user.GetUser: error while find user by id:\n %v", err)
+		return entity.User{}, fmt.Errorf("app.user.GetUser: error while find user by id:\n %w", err)
 	}
 
 	return user, nil

@@ -104,7 +104,7 @@ func (u userApp) UpdateDefaultPayment(ctx context.Context, req request.DefaultPa
 
 	userDefaultPayment, err := u.repository.payment.GetDefaultPaymentByUserId(ctx, req.Id)
 	if err != nil {
-		return fmt.Errorf("app.user.UpdateDefaultPayment: error while find default user default payment by user id:\n %v", err)
+		return fmt.Errorf("app.user.UpdateDefaultPayment: error while find default user default payment by user id:\n %w", err)
 	}
 
 	if userDefaultPayment.PaymentId == req.DefaultPaymentId {
@@ -123,7 +123,7 @@ func (u userApp) UpdateDefaultPayment(ctx context.Context, req request.DefaultPa
 	userDefaultPayment.PaymentId = userPayment.Id
 
 	if err = u.repository.payment.UpsertDefaultPayment(ctx, userDefaultPayment); err != nil {
-		return fmt.Errorf("app.user.UpdateDefaultPayment: error while update default payment:\n %v", err)
+		return fmt.Errorf("app.user.UpdateDefaultPayment: error while update default payment:\n %w", err)
 	}
 
 	return nil

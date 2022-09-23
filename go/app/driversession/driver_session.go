@@ -29,7 +29,7 @@ func (d driverSessionApp) GetById(ctx context.Context, sessionId string) (entity
 
 	driverSession, err := d.repository.session.GetById(ctx, sessionId)
 	if err != nil {
-		return entity.DriverSession{}, fmt.Errorf("app.DriverSession.Get: error while get session:\n%v", err)
+		return entity.DriverSession{}, fmt.Errorf("app.DriverSession.Get: error while get session:\n%w", err)
 	}
 
 	return driverSession, nil
@@ -46,7 +46,7 @@ func (d driverSessionApp) RevokeByDriverId(ctx context.Context, driverId string)
 	}()
 
 	if err = d.repository.session.DeleteByDriverId(ctx, driverId); err != nil {
-		return fmt.Errorf("app.DriverSession.RevokeByDriverId: error while revoke driver session:\n%v", err)
+		return fmt.Errorf("app.DriverSession.RevokeByDriverId: error while revoke driver session:\n%w", err)
 	}
 
 	return nil
@@ -63,7 +63,7 @@ func (d driverSessionApp) Create(ctx context.Context, session entity.DriverSessi
 	}()
 
 	if err = d.repository.session.Create(ctx, session); err != nil {
-		return fmt.Errorf("app.DriverSession.Create: error while create driver session:\n%v", err)
+		return fmt.Errorf("app.DriverSession.Create: error while create driver session:\n%w", err)
 	}
 
 	return nil
@@ -80,7 +80,7 @@ func (d driverSessionApp) ActivateByDriverId(ctx context.Context, driverId strin
 	}()
 
 	if err = d.repository.session.ActivateByDriverId(ctx, driverId); err != nil {
-		return fmt.Errorf("app.DriverSession.Create: error while activate driver session:\n%v", err)
+		return fmt.Errorf("app.DriverSession.Create: error while activate driver session:\n%w", err)
 	}
 
 	return nil

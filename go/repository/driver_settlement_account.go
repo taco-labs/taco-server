@@ -31,7 +31,7 @@ func (d driverSettlementAccountRepository) GetByDriverId(ctx context.Context, dr
 		return entity.DriverSettlementAccount{}, value.ErrDriverNotFound
 	}
 	if err != nil {
-		return entity.DriverSettlementAccount{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return entity.DriverSettlementAccount{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return account, nil
@@ -43,15 +43,15 @@ func (d driverSettlementAccountRepository) Create(ctx context.Context, account e
 	res, err := db.NewInsert().Model(&account).Exec(ctx)
 
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
@@ -66,15 +66,15 @@ func (d driverSettlementAccountRepository) Update(ctx context.Context, account e
 		return value.ErrDriverNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil

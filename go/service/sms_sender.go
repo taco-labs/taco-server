@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/coolsms/coolsms-go"
+	"github.com/taco-labs/taco/go/domain/value"
 )
 
 type SmsSenderService interface {
@@ -37,7 +39,10 @@ func (s coolSmsSenderService) SendSms(ctx context.Context, phone string, message
 	params["message"] = msg
 
 	_, err := s.client.Messages.SendSimpleMessage(params)
-	return err
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrExternal, err)
+	}
+	return nil
 }
 
 func NewCoolSmsSenderService(endpoint string, phoneFrom string, apiKey string, apiSecret string) coolSmsSenderService {

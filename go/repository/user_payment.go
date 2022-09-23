@@ -37,7 +37,7 @@ func (u userPaymentRepository) GetUserPayment(ctx context.Context, paymentId str
 		return entity.UserPayment{}, value.ErrUserNotFound
 	}
 	if err != nil {
-		return entity.UserPayment{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return entity.UserPayment{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return userPayment, nil
@@ -51,7 +51,7 @@ func (u userPaymentRepository) ListUserPayment(ctx context.Context, userId strin
 	err := db.NewSelect().Model(&payments).Where("user_id = ?", userId).Scan(ctx)
 
 	if err != nil {
-		return []entity.UserPayment{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return []entity.UserPayment{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return payments, nil
@@ -63,15 +63,15 @@ func (u userPaymentRepository) CreateUserPayment(ctx context.Context, userPaymen
 	res, err := db.NewInsert().Model(&userPayment).Exec(ctx)
 
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
@@ -86,15 +86,15 @@ func (u userPaymentRepository) DeleteUserPayment(ctx context.Context, userPaymen
 		return value.ErrUserNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
@@ -113,7 +113,7 @@ func (u userPaymentRepository) GetDefaultPaymentByUserId(ctx context.Context, us
 		return entity.UserDefaultPayment{}, value.ErrUserNotFound
 	}
 	if err != nil {
-		return entity.UserDefaultPayment{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return entity.UserDefaultPayment{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return userDefaultPayment, nil
@@ -129,7 +129,7 @@ func (u userPaymentRepository) UpsertDefaultPayment(ctx context.Context, userDef
 		Exec(ctx)
 
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return nil

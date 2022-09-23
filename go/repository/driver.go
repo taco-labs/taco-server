@@ -34,7 +34,7 @@ func (u driverRepository) FindById(ctx context.Context, driverId string) (entity
 		return entity.Driver{}, value.ErrDriverNotFound
 	}
 	if err != nil {
-		return entity.Driver{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return entity.Driver{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return driver, nil
@@ -51,7 +51,7 @@ func (u driverRepository) FindByUserUniqueKey(ctx context.Context, userUniqueKey
 		return entity.Driver{}, value.ErrDriverNotFound
 	}
 	if err != nil {
-		return entity.Driver{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return entity.Driver{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return driver, nil
@@ -63,15 +63,15 @@ func (u driverRepository) Create(ctx context.Context, driver entity.Driver) erro
 	res, err := db.NewInsert().Model(&driver).Exec(ctx)
 
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
@@ -83,15 +83,15 @@ func (u driverRepository) Update(ctx context.Context, driver entity.Driver) erro
 	res, err := db.NewUpdate().Model(&driver).WherePK().Exec(ctx)
 
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
@@ -106,15 +106,15 @@ func (u driverRepository) Delete(ctx context.Context, driver entity.Driver) erro
 		return value.ErrDriverNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		return fmt.Errorf("%v: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil

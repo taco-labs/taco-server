@@ -30,7 +30,7 @@ func (d driverLocationRepository) GetByDriverId(ctx context.Context, driverId st
 		return entity.DriverLocation{}, value.ErrDriverNotFound
 	}
 	if err != nil {
-		return entity.DriverLocation{}, fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return entity.DriverLocation{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return driverLocation, nil
@@ -51,7 +51,7 @@ func (d driverLocationRepository) Upsert(ctx context.Context, location entity.Dr
 		Exec(ctx)
 
 	if err != nil {
-		return fmt.Errorf("%v: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return nil
