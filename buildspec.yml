@@ -1,0 +1,48 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: ap-northeast-2
+     # key: "value"
+     # key: "value"
+  #parameter-store:
+     # key: "value"
+     # key: "value"
+  #secrets-manager:
+     # key: secret-id:json-key:version-stage:version-id
+     # key: secret-id:json-key:version-stage:version-id
+  #exported-variables:
+     # - variable
+     # - variable
+  #git-credential-helper: yes
+#batch:
+  #fast-fail: true
+  #build-list:
+  #build-matrix:
+  #build-graph:
+phases:
+  install:
+    #Ubuntu 표준 이미지 2.0 이상을 사용하는 경우 런타임 버전을 지정해야 합니다.
+    #런타임 버전을 지정하는 경우 Ubuntu 표준 이미지 2.0 이외의 이미지를 사용하면 빌드에 실패합니다.
+    runtime-versions:
+      docker: 20
+      # name: version
+      # name: version
+    #commands:
+      # - command
+      # - command
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION) 
+      # - command
+      # - command
+  build:
+    commands:
+      - echo Build started on `date` 
+      - echo Building the Docker image...    
+      - docker build --tag taco:dev . -f ./docker/Dockerfile.server.base
+      - docker build --tag 069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend:latest . -f ./docker/Dockerfile.server.prod
+  post_build:
+    commands:
+      - docker push 069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend:latest
