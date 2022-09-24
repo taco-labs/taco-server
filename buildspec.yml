@@ -47,5 +47,5 @@ phases:
     commands:
       - docker push 069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend:latest
       - printf '[{"name":"taco-backend-template","imageUri":"%s"}]' 069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend:latest > imagedefinitions.json
-  artifacts:
-    files: imagedefinitions.json
+artifacts:
+  files: imagedefinitions.json
