@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/response"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/enum"
+	"github.com/taco-labs/taco/go/utils"
 )
 
 type UserApp interface {
@@ -187,16 +190,78 @@ func (u userServer) UpdateDefaultPayment(e echo.Context) error {
 }
 
 func (u userServer) ListTaxiCallRequest(e echo.Context) error {
-	ctx := e.Request().Context()
-
 	userId := e.Param("userId")
 
-	taxiCallRequests, err := u.app.user.ListTaxiCallRequest(ctx, userId)
-	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+	// TODO(taekyeom) 임시 mock data
+	ctime := time.Now()
+	id := utils.MustNewUUID()
+	taxiCallRequestMock := response.TaxiCallRequestResponse{
+		Id:       id,
+		UserId:   userId,
+		DriverId: utils.MustNewUUID(),
+		Departure: value.Location{
+			Latitude:  35.97664845766847,
+			Longitude: 126.99597295767953,
+			RoadAddress: value.RoadAddress{
+				AddressName:  "전북 익산시 망산길 11-17",
+				RegionDepth1: "전북",
+				RegionDepth2: "익산시",
+				RegionDepth3: "부송동",
+				RoadName:     "망산길",
+				BuildingName: "",
+			},
+		},
+		Arrival: value.Location{
+			Latitude:  37.0789561558879,
+			Longitude: 127.423084873712,
+			RoadAddress: value.RoadAddress{
+				AddressName:  "경기도 안성시 죽산면 죽산초교길 69-4",
+				RegionDepth1: "경기",
+				RegionDepth2: "안성시",
+				RegionDepth3: "죽산면",
+				RoadName:     "죽산초교길",
+				BuildingName: "무지개아파트",
+			},
+		},
+		RequestBasePrice:          12000,
+		RequestMinAdditionalPrice: 0,
+		RequestMaxAdditionalPrice: 12000,
+		BasePrice:                 12300,
+		AdditionalPrice:           3000,
+		Payment: response.TaxiCallRequestCard{
+			PaymentId:  utils.MustNewUUID(),
+			Company:    "현대",
+			CardNumber: "433012******1234",
+		},
+		CallHistory: []response.TaxiCallRequestHistoryResponse{
+			{
+				Id:                utils.MustNewUUID(),
+				TaxiCallRequestId: id,
+				TaxiCallState:     string(enum.TaxiCallState_DONE),
+				CreateTime:        ctime,
+			},
+			{
+				Id:                utils.MustNewUUID(),
+				TaxiCallRequestId: id,
+				TaxiCallState:     string(enum.TaxiCallState_DRIVER_TO_ARRIVAL),
+				CreateTime:        ctime.Add(-time.Minute * 20),
+			},
+			{
+				Id:                utils.MustNewUUID(),
+				TaxiCallRequestId: id,
+				TaxiCallState:     string(enum.TaxiCallState_DRIVER_TO_DEPARTURE),
+				CreateTime:        ctime.Add(-time.Minute * 25),
+			},
+			{
+				Id:                utils.MustNewUUID(),
+				TaxiCallRequestId: id,
+				TaxiCallState:     string(enum.TaxiCallState_Requested),
+				CreateTime:        ctime.Add(-time.Minute * 30),
+			},
+		},
 	}
 
 	return e.JSON(http.StatusOK, response.TaxiCallRequestPageResponse{
-		Data: taxiCallRequests,
+		Data: []response.TaxiCallRequestResponse{taxiCallRequestMock},
 	})
 }
