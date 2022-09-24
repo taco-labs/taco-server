@@ -28,6 +28,7 @@ type userApp struct {
 		user            repository.UserRepository
 		payment         repository.UserPaymentRepository
 		smsVerification repository.SmsVerificationRepository // TODO(taekyeom) SMS 관련 로직은 별도 app으로 나중에 빼야 할듯?
+		taxiCallRequest repository.TaxiCallRepository
 	}
 
 	service struct {
@@ -261,6 +262,23 @@ func (u userApp) DeleteUser(ctx context.Context, userId string) error {
 	return nil
 }
 
+func (u userApp) ListTaxiCallRequest(ctx context.Context, userId string) ([]entity.TaxiCallRequest, error) {
+	ctx, err := u.Start(ctx)
+	if err != nil {
+		return []entity.TaxiCallRequest{}, err
+	}
+	defer func() {
+		err = u.Done(ctx, err)
+	}()
+
+	taxiCallRequests, err := u.repository.taxiCallRequest.ListByUserId(ctx, userId)
+	if err != nil {
+		return []entity.TaxiCallRequest{}, fmt.Errorf("app.user.ListTaxiCallRequest: error while get taxi call requests:\n%w", err)
+	}
+
+	return taxiCallRequests, nil
+}
+
 func NewUserApp(opts ...userAppOption) (userApp, error) {
 	ua := userApp{}
 
@@ -290,6 +308,10 @@ func (u userApp) validateApp() error {
 
 	if u.repository.smsVerification == nil {
 		return errors.New("user app need sms verification repository")
+	}
+
+	if u.repository.taxiCallRequest == nil {
+		return errors.New("user app need taxi call request repository")
 	}
 
 	if u.service.session == nil {

@@ -24,6 +24,7 @@ type UserApp interface {
 	RegisterCardPayment(ctx context.Context, req request.UserPaymentRegisterRequest) (entity.UserPayment, error)
 	DeleteCardPayment(ctx context.Context, userPaymentId string) error
 	UpdateDefaultPayment(ctx context.Context, req request.DefaultPaymentUpdateRequest) error
+	ListTaxiCallRequest(context.Context, string) ([]entity.TaxiCallRequest, error)
 }
 
 func (u userServer) SmsVerificationRequest(e echo.Context) error {
@@ -183,4 +184,19 @@ func (u userServer) DeleteCardPayment(e echo.Context) error {
 
 func (u userServer) UpdateDefaultPayment(e echo.Context) error {
 	return nil
+}
+
+func (u userServer) ListTaxiCallRequest(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	userId := e.Param("userId")
+
+	taxiCallRequests, err := u.app.user.ListTaxiCallRequest(ctx, userId)
+	if err != nil {
+		return e.String(http.StatusBadRequest, err.Error())
+	}
+
+	return e.JSON(http.StatusOK, response.TaxiCallRequestPageResponse{
+		Data: taxiCallRequests,
+	})
 }

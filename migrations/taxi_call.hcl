@@ -31,12 +31,6 @@ table "taxi_call_request" {
     null = true
   }
 
-  // TODO (taekyeom) TO BE normalized?
-  column "taxi_call_state" {
-    type = enum.taxi_call_state
-    null = false
-  }
-
   // departure location
   column "departure_latitude" {
     type = float
@@ -57,6 +51,12 @@ table "taxi_call_request" {
   column "arrival_longitude" {
     type = float
     null = false
+  }
+
+  column "payment_id" {
+    type = uuid
+    null = false
+    comment = "User payment id"
   }
 
   // price (requested)
@@ -139,6 +139,20 @@ table "taxi_call_request" {
 
     ref_columns = [
       table.driver.column.id,
+    ]
+
+    on_delete = NO_ACTION
+
+    on_update = NO_ACTION
+  }
+
+  foreign_key "payment_taxi_call_request_fk" {
+    columns = [
+      column.payment_id,
+    ]
+
+    ref_columns = [
+      table.user_payment.column.id,
     ]
 
     on_delete = NO_ACTION

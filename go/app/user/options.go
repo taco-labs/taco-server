@@ -33,6 +33,12 @@ func WithSmsVerificationRepository(repo repository.SmsVerificationRepository) us
 	}
 }
 
+func WithTaxiCallRequestRepository(repo repository.TaxiCallRepository) userAppOption {
+	return func(ua *userApp) {
+		ua.repository.taxiCallRequest = repo
+	}
+}
+
 func WithSessionService(app SessionInterface) userAppOption {
 	return func(ua *userApp) {
 		ua.service.session = app

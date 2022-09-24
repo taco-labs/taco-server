@@ -43,6 +43,8 @@ func main() {
 	userSessionRepository := repository.NewUserSessionRepository()
 	userPaymentRepository := repository.NewUserPaymentRepository()
 
+	taxiCallRequestRepository := repository.NewTaxiCallRepository()
+
 	driverRepository := repository.NewDriverRepository()
 	driverLocationRepository := repository.NewDriverLocationRepository()
 	driverSettlementAccountRepository := repository.NewDriverSettlementAccountRepository()
@@ -89,6 +91,7 @@ func main() {
 		user.WithUserPaymentRepository(userPaymentRepository),
 		user.WithCardPaymentService(tossPaymentService),
 		user.WithSmsSenderService(smsSenderService),
+		user.WithTaxiCallRequestRepository(taxiCallRequestRepository),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup user app: %v\n", err)
