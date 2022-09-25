@@ -12,3 +12,9 @@ type PaymentResult struct {
 	Amount     int
 	OrderName  string
 }
+
+type PaymentSummary struct {
+	PaymentId  string `json:"paymentId"`
+	Company    string `json:"company"`
+	CardNumber string `json:"cardNumber"`
+}

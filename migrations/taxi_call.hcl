@@ -31,32 +31,30 @@ table "taxi_call_request" {
     null = true
   }
 
-  // departure location
-  column "departure_latitude" {
-    type = float
+  column "departure" {
+    type = jsonb
     null = false
   }
 
-  column "departure_longitude" {
-    type = float
+  column "arrival" {
+    type = jsonb
     null = false
   }
 
-  // arrival location
-  column "arrival_latitude" {
-    type = float
+  column "taxi_call_state" {
+    type = enum.taxi_call_state
     null = false
   }
 
-  column "arrival_longitude" {
-    type = float
+  column "taxi_call_state_history" {
+    type = jsonb
     null = false
   }
 
-  column "payment_id" {
-    type = uuid
+  column "payment_summary" {
+    type = jsonb
     null = false
-    comment = "User payment id"
+    comment = "User payment id / company / redacted card number"
   }
 
   // price (requested)
@@ -139,20 +137,6 @@ table "taxi_call_request" {
 
     ref_columns = [
       table.driver.column.id,
-    ]
-
-    on_delete = NO_ACTION
-
-    on_update = NO_ACTION
-  }
-
-  foreign_key "payment_taxi_call_request_fk" {
-    columns = [
-      column.payment_id,
-    ]
-
-    ref_columns = [
-      table.user_payment.column.id,
     ]
 
     on_delete = NO_ACTION
@@ -291,54 +275,54 @@ table "taxi_call_distributed_ticket" {
   }
 }
 
-table "taxi_call_request_history" {
-  schema = schema.taco
+/* table "taxi_call_request_history" { */
+/*   schema = schema.taco */
 
-  column "id" {
-    type = uuid
-    null = false
-  }
+/*   column "id" { */
+/*     type = uuid */
+/*     null = false */
+/*   } */
 
-  column "taxi_call_request_id" {
-    type = uuid
-    null = false
-  }
+/*   column "taxi_call_request_id" { */
+/*     type = uuid */
+/*     null = false */
+/*   } */
 
-  column "taxi_call_state" {
-    type = enum.taxi_call_state
-    null = false
-  }
+/*   column "taxi_call_state" { */
+/*     type = enum.taxi_call_state */
+/*     null = false */
+/*   } */
 
-  column "create_time" {
-    type = timestamp
-    null = false
-  }
+/*   column "create_time" { */
+/*     type = timestamp */
+/*     null = false */
+/*   } */
 
-  primary_key {
-    columns = [
-      column.id,
-    ]
-  }
+/*   primary_key { */
+/*     columns = [ */
+/*       column.id, */
+/*     ] */
+/*   } */
 
-  index "taxi_call_request_history_taxl_call_request_id_idx" {
-    unique = false
-    type = HASH
-    columns = [
-      column.taxi_call_request_id,
-    ]
-  }
+/*   index "taxi_call_request_history_taxl_call_request_id_idx" { */
+/*     unique = false */
+/*     type = HASH */
+/*     columns = [ */
+/*       column.taxi_call_request_id, */
+/*     ] */
+/*   } */
 
-  foreign_key "taxi_call_request_id_fk" {
-    columns = [
-      column.taxi_call_request_id,
-    ]
-    
-    ref_columns = [
-      table.taxi_call_request.column.id,
-    ]
+/*   foreign_key "taxi_call_request_id_fk" { */
+/*     columns = [ */
+/*       column.taxi_call_request_id, */
+/*     ] */
+/*      */
+/*     ref_columns = [ */
+/*       table.taxi_call_request.column.id, */
+/*     ] */
 
-    on_delete = CASCADE
+/*     on_delete = CASCADE */
 
-    on_update = NO_ACTION
-  }
-}
+/*     on_update = NO_ACTION */
+/*   } */
+/* } */

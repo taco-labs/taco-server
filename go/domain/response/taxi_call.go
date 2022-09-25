@@ -3,10 +3,12 @@ package response
 import (
 	"time"
 
+	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/utils/slices"
 )
 
-type TaxiCallRequestCard struct {
+type PaymentSummaryResponse struct {
 	PaymentId  string `json:"paymentId"`
 	Company    string `json:"company"`
 	CardNumber string `json:"cardNumber"`
@@ -18,25 +20,59 @@ type TaxiCallRequestResponse struct {
 	DriverId                  string                           `json:"driverId"`
 	Departure                 value.Location                   `json:"departure"`
 	Arrival                   value.Location                   `json:"arrival"`
-	Payment                   TaxiCallRequestCard              `json:"payment"`
+	Payment                   PaymentSummaryResponse           `json:"payment"`
 	RequestBasePrice          int                              `json:"requestBasePrice"`
 	RequestMinAdditionalPrice int                              `json:"requestMinAdditionalPrice"`
 	RequestMaxAdditionalPrice int                              `json:"requestMaxAdditionalPrice"`
 	BasePrice                 int                              `json:"basePrice"`
 	AdditionalPrice           int                              `json:"additionalPrice"`
+	CurrentState              string                           `json:"currentState"`
 	CallHistory               []TaxiCallRequestHistoryResponse `json:"history"`
 	CreateTime                time.Time                        `json:"createTime"`
 	UpdateTime                time.Time                        `json:"updateTime"`
 }
 
 type TaxiCallRequestHistoryResponse struct {
-	Id                string    `json:"id"`
-	TaxiCallRequestId string    `json:"taxiCallRequestId"`
-	TaxiCallState     string    `json:"taxiCallState"`
-	CreateTime        time.Time `json:"createTime"`
+	TaxiCallState string    `json:"taxiCallState"`
+	CreateTime    time.Time `json:"createTime"`
 }
 
 type TaxiCallRequestPageResponse struct {
 	PageToken string                    `json:"pageToken"`
 	Data      []TaxiCallRequestResponse `json:"data"`
+}
+
+func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummaryResponse {
+	return PaymentSummaryResponse{
+		PaymentId:  paymentSummary.PaymentId,
+		Company:    paymentSummary.Company,
+		CardNumber: paymentSummary.CardNumber,
+	}
+}
+
+func TaxiCallHistoryToResponse(history value.TaxiCallRequestHistory) TaxiCallRequestHistoryResponse {
+	return TaxiCallRequestHistoryResponse{
+		TaxiCallState: string(history.TaxiCallState),
+		CreateTime:    history.CreateTime,
+	}
+}
+
+func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallRequestResponse {
+	return TaxiCallRequestResponse{
+		Id:                        taxiCallRequest.Id,
+		UserId:                    taxiCallRequest.UserId,
+		DriverId:                  taxiCallRequest.DriverId,
+		Departure:                 taxiCallRequest.Departure,
+		Arrival:                   taxiCallRequest.Arrival,
+		Payment:                   PaymentSummaryToResponse(taxiCallRequest.PaymentSummary),
+		RequestBasePrice:          taxiCallRequest.RequestBasePrice,
+		RequestMinAdditionalPrice: taxiCallRequest.RequestMinAdditionalPrice,
+		RequestMaxAdditionalPrice: taxiCallRequest.RequestMaxAdditionalPrice,
+		BasePrice:                 taxiCallRequest.BasePrice,
+		AdditionalPrice:           taxiCallRequest.AdditionalPrice,
+		CurrentState:              string(taxiCallRequest.CurrentState),
+		CallHistory:               slices.Map(taxiCallRequest.CallHistory, TaxiCallHistoryToResponse),
+		CreateTime:                taxiCallRequest.CreateTime,
+		UpdateTime:                taxiCallRequest.UpdateTime,
+	}
 }

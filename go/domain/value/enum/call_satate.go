@@ -19,3 +19,13 @@ var (
 
 	TaxiCallState_SETTLEMENT_DONE TaxiCallState = "DRIVER_SETTLEMENT_DONE"
 )
+
+func (t TaxiCallState) Active() bool {
+	return t == TaxiCallState_Requested ||
+		t == TaxiCallState_DRIVER_TO_DEPARTURE ||
+		t == TaxiCallState_DRIVER_TO_ARRIVAL
+}
+
+func (t TaxiCallState) Complete() bool {
+	return !t.Active()
+}

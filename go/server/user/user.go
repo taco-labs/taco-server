@@ -43,11 +43,15 @@ func (u *userServer) initController() error {
 	userGroup.PUT("/:userId", u.UpdateUser)
 	userGroup.DELETE("/:userId", u.DeleteUser)
 	userGroup.GET("/:userId/payment", u.ListCardPayment)
+	userGroup.GET("/:userId/taxicall_latest", u.GetLatestTaxiCallRequest)
 	userGroup.GET("/:userId/taxicall", u.ListTaxiCallRequest)
 
 	paymentGroup := u.echo.Group("/payment")
 	paymentGroup.POST("", u.RegisterCardPayment)
 	paymentGroup.DELETE("/:paymentId", u.DeleteCardPayment)
+
+	taxiCallGroup := u.echo.Group("/taxicall")
+	taxiCallGroup.POST("", u.CreateTaxiCallRequest)
 	return nil
 }
 

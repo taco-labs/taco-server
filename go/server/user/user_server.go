@@ -28,6 +28,8 @@ type UserApp interface {
 	DeleteCardPayment(ctx context.Context, userPaymentId string) error
 	UpdateDefaultPayment(ctx context.Context, req request.DefaultPaymentUpdateRequest) error
 	ListTaxiCallRequest(context.Context, string) ([]entity.TaxiCallRequest, error)
+	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
+	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 }
 
 func (u userServer) SmsVerificationRequest(e echo.Context) error {
@@ -189,6 +191,40 @@ func (u userServer) UpdateDefaultPayment(e echo.Context) error {
 	return nil
 }
 
+func (u userServer) CreateTaxiCallRequest(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.CreateTaxiCallRequest{}
+	if err := e.Bind(&req); err != nil {
+		return e.String(http.StatusBadRequest, fmt.Errorf("bind error: %v", err).Error())
+	}
+
+	taxiCallRequest, err := u.app.user.CreateTaxiCallRequest(ctx, req)
+	if err != nil {
+		return e.String(http.StatusBadRequest, err.Error())
+	}
+
+	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (u userServer) GetLatestTaxiCallRequest(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	userId := e.Param("userId")
+
+	taxiCallRequest, err := u.app.user.GetLatestTaxiCallRequest(ctx, userId)
+	if errors.Is(err, value.ErrNotFound) {
+		return e.JSON(http.StatusNotFound, value.ErrNotFound)
+	}
+	if err != nil {
+		return e.String(http.StatusBadRequest, err.Error())
+	}
+
+	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
+	return e.JSON(http.StatusOK, resp)
+}
+
 func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 	userId := e.Param("userId")
 
@@ -228,35 +264,27 @@ func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 		RequestMaxAdditionalPrice: 12000,
 		BasePrice:                 12300,
 		AdditionalPrice:           3000,
-		Payment: response.TaxiCallRequestCard{
+		Payment: response.PaymentSummaryResponse{
 			PaymentId:  utils.MustNewUUID(),
 			Company:    "현대",
 			CardNumber: "433012******1234",
 		},
 		CallHistory: []response.TaxiCallRequestHistoryResponse{
 			{
-				Id:                utils.MustNewUUID(),
-				TaxiCallRequestId: id,
-				TaxiCallState:     string(enum.TaxiCallState_DONE),
-				CreateTime:        ctime,
+				TaxiCallState: string(enum.TaxiCallState_DONE),
+				CreateTime:    ctime,
 			},
 			{
-				Id:                utils.MustNewUUID(),
-				TaxiCallRequestId: id,
-				TaxiCallState:     string(enum.TaxiCallState_DRIVER_TO_ARRIVAL),
-				CreateTime:        ctime.Add(-time.Minute * 20),
+				TaxiCallState: string(enum.TaxiCallState_DRIVER_TO_ARRIVAL),
+				CreateTime:    ctime.Add(-time.Minute * 20),
 			},
 			{
-				Id:                utils.MustNewUUID(),
-				TaxiCallRequestId: id,
-				TaxiCallState:     string(enum.TaxiCallState_DRIVER_TO_DEPARTURE),
-				CreateTime:        ctime.Add(-time.Minute * 25),
+				TaxiCallState: string(enum.TaxiCallState_DRIVER_TO_DEPARTURE),
+				CreateTime:    ctime.Add(-time.Minute * 25),
 			},
 			{
-				Id:                utils.MustNewUUID(),
-				TaxiCallRequestId: id,
-				TaxiCallState:     string(enum.TaxiCallState_Requested),
-				CreateTime:        ctime.Add(-time.Minute * 30),
+				TaxiCallState: string(enum.TaxiCallState_Requested),
+				CreateTime:    ctime.Add(-time.Minute * 30),
 			},
 		},
 	}

@@ -46,7 +46,7 @@ func (d driverLocationRepository) Upsert(ctx context.Context, location entity.Dr
 
 	_, err := db.NewInsert().
 		Model(&location).
-		On("CONFLICT (driver_id) UPDATE").
+		On("CONFLICT (driver_id) DO UPDATE").
 		Set("location = EXCLUDED.location").
 		Exec(ctx)
 

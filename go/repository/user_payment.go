@@ -124,7 +124,7 @@ func (u userPaymentRepository) UpsertDefaultPayment(ctx context.Context, userDef
 
 	_, err := db.NewInsert().
 		Model(&userDefaultPayment).
-		On("CONFLICT (user_id) UPDATE").
+		On("CONFLICT (user_id) DO UPDATE").
 		Set("payment_id = EXCLUDED.payment_id").
 		Exec(ctx)
 
