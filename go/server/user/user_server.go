@@ -14,6 +14,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
+	"github.com/taco-labs/taco/go/utils/slices"
 )
 
 type UserApp interface {
@@ -226,15 +227,25 @@ func (u userServer) GetLatestTaxiCallRequest(e echo.Context) error {
 }
 
 func (u userServer) ListTaxiCallRequest(e echo.Context) error {
+	ctx := e.Request().Context()
+
 	userId := e.Param("userId")
+
+	taxiCallRequests, err := u.app.user.ListTaxiCallRequest(ctx, userId)
+	if err != nil {
+		return e.String(http.StatusBadRequest, err.Error())
+	}
+
+	resp := slices.Map(taxiCallRequests, response.TaxiCallRequestToResponse)
 
 	// TODO(taekyeom) 임시 mock data
 	ctime := time.Now()
 	id := utils.MustNewUUID()
+	driverId := utils.MustNewUUID()
 	taxiCallRequestMock := response.TaxiCallRequestResponse{
 		Id:       id,
 		UserId:   userId,
-		DriverId: utils.MustNewUUID(),
+		DriverId: &driverId,
 		Departure: value.Location{
 			Latitude:  35.97664845766847,
 			Longitude: 126.99597295767953,
@@ -290,6 +301,6 @@ func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusOK, response.TaxiCallRequestPageResponse{
-		Data: []response.TaxiCallRequestResponse{taxiCallRequestMock},
+		Data: append(resp, taxiCallRequestMock),
 	})
 }

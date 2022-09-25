@@ -17,7 +17,7 @@ type PaymentSummaryResponse struct {
 type TaxiCallRequestResponse struct {
 	Id                        string                           `json:"id"`
 	UserId                    string                           `json:"userId"`
-	DriverId                  string                           `json:"driverId"`
+	DriverId                  *string                          `json:"driverId"`
 	Departure                 value.Location                   `json:"departure"`
 	Arrival                   value.Location                   `json:"arrival"`
 	Payment                   PaymentSummaryResponse           `json:"payment"`
@@ -59,9 +59,14 @@ func TaxiCallHistoryToResponse(history value.TaxiCallRequestHistory) TaxiCallReq
 
 func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallRequestResponse {
 	return TaxiCallRequestResponse{
-		Id:                        taxiCallRequest.Id,
-		UserId:                    taxiCallRequest.UserId,
-		DriverId:                  taxiCallRequest.DriverId,
+		Id:     taxiCallRequest.Id,
+		UserId: taxiCallRequest.UserId,
+		DriverId: func() *string {
+			if taxiCallRequest.DriverId.Valid {
+				return &taxiCallRequest.DriverId.String
+			}
+			return nil
+		}(),
 		Departure:                 taxiCallRequest.Departure,
 		Arrival:                   taxiCallRequest.Arrival,
 		Payment:                   PaymentSummaryToResponse(taxiCallRequest.PaymentSummary),

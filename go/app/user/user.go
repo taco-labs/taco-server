@@ -346,8 +346,8 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 			CardNumber: userPayment.RedactedCardNumber,
 		},
 		RequestBasePrice:          req.RequestBasePrice,
-		RequestMinAdditionalPrice: 0, // TODO(taekyeom) To be paramterized
-		RequestMaxAdditionalPrice: req.RequestBasePrice,
+		RequestMinAdditionalPrice: 0,                    // TODO(taekyeom) To be paramterized
+		RequestMaxAdditionalPrice: req.RequestBasePrice, // TODO(taekyeom) To be paramterized
 		CurrentState:              initialState,
 		CallHistory: []value.TaxiCallRequestHistory{
 			{

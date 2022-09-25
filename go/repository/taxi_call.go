@@ -64,7 +64,7 @@ func (t taxiCallRepository) ListByUserId(ctx context.Context, userId string) ([]
 	resp := []entity.TaxiCallRequest{}
 
 	// TODO (taekyeom) pagenation, ordering
-	err := db.NewSelect().Model(&resp).Relation("CallHistory").Scan(ctx)
+	err := db.NewSelect().Model(&resp).Where("user_id = ?", userId).Scan(ctx)
 
 	if err != nil {
 		return resp, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)

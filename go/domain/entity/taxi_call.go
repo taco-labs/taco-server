@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/value"
@@ -13,7 +14,7 @@ type TaxiCallRequest struct {
 
 	Id                        string                         `bun:"id,pk"`
 	UserId                    string                         `bun:"user_id"`
-	DriverId                  string                         `bun:"driver_id"`
+	DriverId                  sql.NullString                 `bun:"driver_id"`
 	Departure                 value.Location                 `bun:"departure,type:jsonb"`
 	Arrival                   value.Location                 `bun:"arrival,type:jsonb"`
 	PaymentSummary            value.PaymentSummary           `bun:"payment_summary,type:jsonb"`
@@ -22,8 +23,8 @@ type TaxiCallRequest struct {
 	RequestMaxAdditionalPrice int                            `bun:"request_max_additional_price"`
 	BasePrice                 int                            `bun:"base_price"`
 	AdditionalPrice           int                            `bun:"additional_price"`
-	CurrentState              enum.TaxiCallState             `bun:"taxi_call_state,type:jsonb"`
-	CallHistory               []value.TaxiCallRequestHistory `bun:"taxi_call_state_history"`
+	CurrentState              enum.TaxiCallState             `bun:"taxi_call_state"`
+	CallHistory               []value.TaxiCallRequestHistory `bun:"taxi_call_state_history,type:jsonb"`
 	CreateTime                time.Time                      `bun:"create_time"`
 	UpdateTime                time.Time                      `bun:"update_time"`
 }

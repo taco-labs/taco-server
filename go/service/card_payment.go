@@ -65,9 +65,8 @@ func (t tossPaymentService) RegisterCard(ctx context.Context, user entity.User, 
 	tossPaymentRequest := tossPaymentCardRegisterRequest{
 		CustomerKey:            utils.MustNewUUID(), // TODO (taekyeom) inject id from outside
 		CardNumber:             req.CardNumber,
-		CardExpirationYear:     req.CardExpirationYear,
-		CardExpirationMonth:    req.CardExpirationMonth,
-		CardPassword:           req.CardPassword,
+		CardExpirationYear:     req.ExpirationYear,
+		CardExpirationMonth:    req.ExpirationMonth,
 		CustomerIdentityNumber: req.CustomerIdentityNumber,
 	}
 	resp, err := t.client.R().
@@ -87,8 +86,8 @@ func (t tossPaymentService) RegisterCard(ctx context.Context, user entity.User, 
 		Name:                req.Name,
 		CardCompany:         tossPaymentResp.Card.Comany,
 		RedactedCardNumber:  tossPaymentResp.Card.Number,
-		CardExpirationYear:  req.CardExpirationYear,
-		CardExpirationMonth: req.CardExpirationMonth,
+		CardExpirationYear:  req.ExpirationYear,
+		CardExpirationMonth: req.ExpirationMonth,
 		BillingKey:          tossPaymentResp.BillingKey,
 		CreateTime:          time.Now().UTC(),
 	}, nil
