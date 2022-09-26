@@ -89,6 +89,7 @@ func (t tossPaymentService) RegisterCard(ctx context.Context, user entity.User, 
 		CardExpirationYear:  req.ExpirationYear,
 		CardExpirationMonth: req.ExpirationMonth,
 		BillingKey:          tossPaymentResp.BillingKey,
+		DefaultPayment:      req.DefaultPayment,
 		CreateTime:          time.Now().UTC(),
 	}, nil
 }

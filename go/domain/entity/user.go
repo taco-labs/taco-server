@@ -36,6 +36,7 @@ type UserPayment struct {
 	CardExpirationYear  string    `bun:"card_expiration_year"`
 	CardExpirationMonth string    `bun:"card_expiration_month"`
 	BillingKey          string    `bun:"billing_key"`
+	DefaultPayment      bool      `bun:"default_payment"`
 	CreateTime          time.Time `bun:"create_time"`
 	DeleteTime          time.Time `bun:"delete_time"`
 }

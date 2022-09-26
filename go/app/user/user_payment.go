@@ -60,9 +60,9 @@ func (u userApp) RegisterCardPayment(ctx context.Context, req request.UserPaymen
 		return entity.UserPayment{}, err
 	}
 
-	if req.DefaultPayment {
+	if userPayment.DefaultPayment {
 		userDefaultPayment := entity.UserDefaultPayment{
-			UserId:    userId,
+			UserId:    userPayment.UserId,
 			PaymentId: userPayment.Id,
 		}
 		if err = u.repository.payment.UpsertDefaultPayment(ctx, userDefaultPayment); err != nil {

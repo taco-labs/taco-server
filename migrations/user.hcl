@@ -182,6 +182,13 @@ table "user_default_payment" {
     ]
   }
 
+  index "user_default_payment_id_uidx" {
+    unique = true
+    columns = [
+      column.payment_id,
+    ]
+  }
+
   foreign_key "user_default_payment_user_id_fk" {
     columns = [
       column.user_id,

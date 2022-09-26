@@ -42,13 +42,15 @@ type UserSignupResponse struct {
 }
 
 type UserPaymentResponse struct {
-	Id                  string `json:"id"`
-	UserId              string `json:"userId"`
-	Name                string `json:"name"`
-	CardCompany         string `json:"cardCompany"`
-	RedactedCardNumber  string `json:"redactedCardNumber"`
-	CardExpirationYear  string `json:"cardExpirationYear"`
-	CardExpirationMonth string `json:"cardExpirationMonth"`
+	Id                  string    `json:"id"`
+	UserId              string    `json:"userId"`
+	Name                string    `json:"name"`
+	CardCompany         string    `json:"cardCompany"`
+	RedactedCardNumber  string    `json:"redactedCardNumber"`
+	CardExpirationYear  string    `json:"cardExpirationYear"`
+	CardExpirationMonth string    `json:"cardExpirationMonth"`
+	DefaultPayment      bool      `json:"defaultPayment"`
+	CreateTime          time.Time `json:"createTime"`
 }
 
 func UserPaymentToResponse(userPayment entity.UserPayment) UserPaymentResponse {
@@ -60,6 +62,8 @@ func UserPaymentToResponse(userPayment entity.UserPayment) UserPaymentResponse {
 		RedactedCardNumber:  userPayment.RedactedCardNumber,
 		CardExpirationYear:  userPayment.CardExpirationYear,
 		CardExpirationMonth: userPayment.CardExpirationMonth,
+		DefaultPayment:      userPayment.DefaultPayment,
+		CreateTime:          userPayment.CreateTime,
 	}
 }
 

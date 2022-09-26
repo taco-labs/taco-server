@@ -27,11 +27,17 @@ type userPaymentRepository struct{}
 func (u userPaymentRepository) GetUserPayment(ctx context.Context, paymentId string) (entity.UserPayment, error) {
 	db := GetQueryContext(ctx)
 
+	defaultPaymentSubq := db.NewSelect().Model(&entity.UserDefaultPayment{}).Where("payment_id = ?", paymentId)
+
 	userPayment := entity.UserPayment{
 		Id: paymentId,
 	}
 
-	err := db.NewSelect().Model(&userPayment).WherePK().Scan(ctx)
+	err := db.NewSelect().
+		Model(&userPayment).
+		ColumnExpr("user_payment.*").
+		ColumnExpr("exists(select 1 from (?) s where s.payment_id = user_payment.id) as default_payment", defaultPaymentSubq).
+		WherePK().Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
 		return entity.UserPayment{}, value.ErrUserNotFound
@@ -48,7 +54,13 @@ func (u userPaymentRepository) ListUserPayment(ctx context.Context, userId strin
 
 	var payments []entity.UserPayment
 
-	err := db.NewSelect().Model(&payments).Where("user_id = ?", userId).Scan(ctx)
+	defaultPaymentSubq := db.NewSelect().Model(&entity.UserDefaultPayment{UserId: userId}).WherePK()
+
+	err := db.NewSelect().
+		Model(&payments).
+		ColumnExpr("user_payment.*").
+		ColumnExpr("exists(select 1 from (?) s where s.payment_id = user_payment.id) as default_payment", defaultPaymentSubq).
+		Where("user_id = ?", userId).Scan(ctx)
 
 	if err != nil {
 		return []entity.UserPayment{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
@@ -60,7 +72,7 @@ func (u userPaymentRepository) ListUserPayment(ctx context.Context, userId strin
 func (u userPaymentRepository) CreateUserPayment(ctx context.Context, userPayment entity.UserPayment) error {
 	db := GetQueryContext(ctx)
 
-	res, err := db.NewInsert().Model(&userPayment).Exec(ctx)
+	res, err := db.NewInsert().Model(&userPayment).ExcludeColumn("default_payment").Exec(ctx)
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
