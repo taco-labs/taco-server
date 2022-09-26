@@ -24,7 +24,7 @@ type UserApp interface {
 	GetUser(context.Context, string) (entity.User, error)
 	DeleteUser(context.Context, string) error
 	UpdateUser(context.Context, request.UserUpdateRequest) (entity.User, error)
-	ListCardPayment(ctx context.Context, userId string) ([]entity.UserPayment, error)
+	ListCardPayment(ctx context.Context, userId string) ([]entity.UserPayment, entity.UserDefaultPayment, error)
 	RegisterCardPayment(ctx context.Context, req request.UserPaymentRegisterRequest) (entity.UserPayment, error)
 	DeleteCardPayment(ctx context.Context, userPaymentId string) error
 	UpdateDefaultPayment(ctx context.Context, req request.DefaultPaymentUpdateRequest) error
@@ -149,12 +149,13 @@ func (u userServer) DeleteUser(e echo.Context) error {
 func (u userServer) ListCardPayment(e echo.Context) error {
 	ctx := e.Request().Context()
 	userId := e.Param("userId")
-	cardPayments, err := u.app.user.ListCardPayment(ctx, userId)
+	userPayments, userDefaultPayment, err := u.app.user.ListCardPayment(ctx, userId)
 	if err != nil {
 		return e.String(http.StatusBadRequest, err.Error())
 	}
 	return e.JSON(http.StatusOK, response.ListCardPaymentResponse{
-		Payments: response.UserPaymentsToResponse(cardPayments),
+		DefaultPaymentId: userDefaultPayment.PaymentId,
+		Payments:         slices.Map(userPayments, response.UserPaymentToResponse),
 	})
 }
 
@@ -189,7 +190,19 @@ func (u userServer) DeleteCardPayment(e echo.Context) error {
 }
 
 func (u userServer) UpdateDefaultPayment(e echo.Context) error {
-	return nil
+	ctx := e.Request().Context()
+
+	req := request.DefaultPaymentUpdateRequest{}
+
+	if err := e.Bind(&req); err != nil {
+		return e.String(http.StatusBadRequest, fmt.Errorf("bind error: %w", err).Error())
+	}
+
+	if err := u.app.user.UpdateDefaultPayment(ctx, req); err != nil {
+		return e.String(http.StatusBadRequest, err.Error())
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
 }
 
 func (u userServer) CreateTaxiCallRequest(e echo.Context) error {

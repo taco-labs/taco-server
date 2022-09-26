@@ -46,7 +46,7 @@ func (u userPaymentRepository) GetUserPayment(ctx context.Context, paymentId str
 func (u userPaymentRepository) ListUserPayment(ctx context.Context, userId string) ([]entity.UserPayment, error) {
 	db := GetQueryContext(ctx)
 
-	payments := []entity.UserPayment{}
+	var payments []entity.UserPayment
 
 	err := db.NewSelect().Model(&payments).Where("user_id = ?", userId).Scan(ctx)
 

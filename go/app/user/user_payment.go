@@ -12,13 +12,26 @@ import (
 
 // TODO(taekyeom) Format error
 
-func (u userApp) ListCardPayment(ctx context.Context, userId string) ([]entity.UserPayment, error) {
+func (u userApp) ListCardPayment(ctx context.Context, userId string) ([]entity.UserPayment, entity.UserDefaultPayment, error) {
+	ctx, err := u.Start(ctx)
+	if err != nil {
+		return []entity.UserPayment{}, entity.UserDefaultPayment{}, err
+	}
+	defer func() {
+		err = u.Done(ctx, err)
+	}()
+
 	userPayments, err := u.repository.payment.ListUserPayment(ctx, userId)
 	if err != nil {
-		return []entity.UserPayment{}, err
+		return []entity.UserPayment{}, entity.UserDefaultPayment{}, err
 	}
 
-	return userPayments, nil
+	userDefaultPayment, err := u.repository.payment.GetDefaultPaymentByUserId(ctx, userId)
+	if err != nil {
+		return []entity.UserPayment{}, entity.UserDefaultPayment{}, err
+	}
+
+	return userPayments, userDefaultPayment, nil
 }
 
 func (u userApp) RegisterCardPayment(ctx context.Context, req request.UserPaymentRegisterRequest) (entity.UserPayment, error) {
@@ -107,11 +120,11 @@ func (u userApp) UpdateDefaultPayment(ctx context.Context, req request.DefaultPa
 		return fmt.Errorf("app.user.UpdateDefaultPayment: error while find default user default payment by user id:\n %w", err)
 	}
 
-	if userDefaultPayment.PaymentId == req.DefaultPaymentId {
+	if userDefaultPayment.PaymentId == req.PaymentId {
 		return nil
 	}
 
-	userPayment, err := u.repository.payment.GetUserPayment(ctx, req.DefaultPaymentId)
+	userPayment, err := u.repository.payment.GetUserPayment(ctx, req.PaymentId)
 	if err != nil {
 		return err
 	}

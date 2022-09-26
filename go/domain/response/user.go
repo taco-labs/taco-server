@@ -5,7 +5,6 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value/enum"
-	"github.com/taco-labs/taco/go/utils/slices"
 )
 
 type SmsVerificationRequestResponse struct {
@@ -62,10 +61,6 @@ func UserPaymentToResponse(userPayment entity.UserPayment) UserPaymentResponse {
 		CardExpirationYear:  userPayment.CardExpirationYear,
 		CardExpirationMonth: userPayment.CardExpirationMonth,
 	}
-}
-
-func UserPaymentsToResponse(userPayments []entity.UserPayment) []UserPaymentResponse {
-	return slices.Map(userPayments, UserPaymentToResponse)
 }
 
 type ListCardPaymentResponse struct {
