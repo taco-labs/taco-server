@@ -82,12 +82,6 @@ table "driver" {
     null = false
   }
 
-  column "active" {
-    type = boolean
-    null = false
-    comment = "Is taxi driver is activated (가입 승인을 받았는지 여부)"
-  }
-
   column "create_time" {
     type = timestamp
     null = false
@@ -178,44 +172,3 @@ table "driver_settlement_account" {
   }
 }
 
-table "driver_location" {
-  schema = schema.taco
-
-  column "driver_id" {
-    type = uuid
-    null = false
-  }
-
-  column "location" {
-    null = true
-    type = sql("geometry(point,4326)")
-  }
-
-  primary_key {
-    columns = [
-      column.driver_id,
-    ]
-  }
-
-  index "driver_location_idx" {
-    unique = false
-    type = GIST
-    columns = [
-      column.location,
-    ]
-  }
-
-  foreign_key "driver_location_fk" {
-    columns = [
-      column.driver_id,
-    ]
-
-    ref_columns = [
-      table.driver.column.id,
-    ]
-
-    on_delete = CASCADE
-
-    on_update = NO_ACTION
-  }
-}

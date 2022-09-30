@@ -46,11 +46,6 @@ table "taxi_call_request" {
     null = false
   }
 
-  column "taxi_call_state_history" {
-    type = jsonb
-    null = false
-  }
-
   column "payment_summary" {
     type = jsonb
     null = false
@@ -207,44 +202,35 @@ table "taxi_call_ticket" {
   }
 }
 
-table "taxi_call_distributed_ticket" {
+table "taxi_call_last_received_ticket" {
   schema = schema.taco
-
-  column "taxi_call_ticket_id" {
-    type = uuid
-    null = false
-  }
 
   column "driver_id" {
     type = uuid
     null = false
   }
 
-  column "create_time" {
+  column "taxi_call_ticket_id" {
+    type = uuid
+    null = false
+  }
+
+  column "receive_time" {
     type = timestamp
     null = false
   }
 
   primary_key {
     columns = [
-      column.taxi_call_ticket_id,
       column.driver_id,
     ]
   }
 
-  index "taxi_call_distributed_ticket_driver_id_idx" {
-    unique = false
-    type = HASH
-    columns = [
-      column.driver_id,
-    ]
-  }
-
-  index "create_time_brin_idx" {
+  index "receive_time_brin_idx" {
     unique = false
     type = BRIN
     columns = [
-      column.create_time,
+      column.receive_time,
     ]
   }
 
@@ -257,7 +243,7 @@ table "taxi_call_distributed_ticket" {
       table.taxi_call_ticket.column.id,
     ]
 
-    on_delete = CASCADE
+    on_delete = NO_ACTION
     on_update = NO_ACTION
   }
 
@@ -275,54 +261,50 @@ table "taxi_call_distributed_ticket" {
   }
 }
 
-/* table "taxi_call_request_history" { */
-/*   schema = schema.taco */
+table "driver_location" {
+  schema = schema.taco
 
-/*   column "id" { */
-/*     type = uuid */
-/*     null = false */
-/*   } */
+  column "active" {
+    type = boolean
+    null = false
+    comment = "Is taxi driver is activated (가입 승인을 받았는지 여부)"
+  }
 
-/*   column "taxi_call_request_id" { */
-/*     type = uuid */
-/*     null = false */
-/*   } */
+  column "driver_id" {
+    type = uuid
+    null = false
+  }
 
-/*   column "taxi_call_state" { */
-/*     type = enum.taxi_call_state */
-/*     null = false */
-/*   } */
+  column "location" {
+    null = true
+    type = sql("geometry(point,4326)")
+  }
 
-/*   column "create_time" { */
-/*     type = timestamp */
-/*     null = false */
-/*   } */
+  primary_key {
+    columns = [
+      column.driver_id,
+    ]
+  }
 
-/*   primary_key { */
-/*     columns = [ */
-/*       column.id, */
-/*     ] */
-/*   } */
+  index "driver_location_idx" {
+    unique = false
+    type = GIST
+    columns = [
+      column.location,
+    ]
+  }
 
-/*   index "taxi_call_request_history_taxl_call_request_id_idx" { */
-/*     unique = false */
-/*     type = HASH */
-/*     columns = [ */
-/*       column.taxi_call_request_id, */
-/*     ] */
-/*   } */
+  foreign_key "driver_location_fk" {
+    columns = [
+      column.driver_id,
+    ]
 
-/*   foreign_key "taxi_call_request_id_fk" { */
-/*     columns = [ */
-/*       column.taxi_call_request_id, */
-/*     ] */
-/*      */
-/*     ref_columns = [ */
-/*       table.taxi_call_request.column.id, */
-/*     ] */
+    ref_columns = [
+      table.driver.column.id,
+    ]
 
-/*     on_delete = CASCADE */
+    on_delete = CASCADE
 
-/*     on_update = NO_ACTION */
-/*   } */
-/* } */
+    on_update = NO_ACTION
+  }
+}

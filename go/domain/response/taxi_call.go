@@ -5,7 +5,6 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
-	"github.com/taco-labs/taco/go/utils/slices"
 )
 
 type PaymentSummaryResponse struct {
@@ -15,21 +14,20 @@ type PaymentSummaryResponse struct {
 }
 
 type TaxiCallRequestResponse struct {
-	Id                        string                           `json:"id"`
-	UserId                    string                           `json:"userId"`
-	DriverId                  *string                          `json:"driverId"`
-	Departure                 value.Location                   `json:"departure"`
-	Arrival                   value.Location                   `json:"arrival"`
-	Payment                   PaymentSummaryResponse           `json:"payment"`
-	RequestBasePrice          int                              `json:"requestBasePrice"`
-	RequestMinAdditionalPrice int                              `json:"requestMinAdditionalPrice"`
-	RequestMaxAdditionalPrice int                              `json:"requestMaxAdditionalPrice"`
-	BasePrice                 int                              `json:"basePrice"`
-	AdditionalPrice           int                              `json:"additionalPrice"`
-	CurrentState              string                           `json:"currentState"`
-	CallHistory               []TaxiCallRequestHistoryResponse `json:"history"`
-	CreateTime                time.Time                        `json:"createTime"`
-	UpdateTime                time.Time                        `json:"updateTime"`
+	Id                        string                 `json:"id"`
+	UserId                    string                 `json:"userId"`
+	DriverId                  *string                `json:"driverId"`
+	Departure                 value.Location         `json:"departure"`
+	Arrival                   value.Location         `json:"arrival"`
+	Payment                   PaymentSummaryResponse `json:"payment"`
+	RequestBasePrice          int                    `json:"requestBasePrice"`
+	RequestMinAdditionalPrice int                    `json:"requestMinAdditionalPrice"`
+	RequestMaxAdditionalPrice int                    `json:"requestMaxAdditionalPrice"`
+	BasePrice                 int                    `json:"basePrice"`
+	AdditionalPrice           int                    `json:"additionalPrice"`
+	CurrentState              string                 `json:"currentState"`
+	CreateTime                time.Time              `json:"createTime"`
+	UpdateTime                time.Time              `json:"updateTime"`
 }
 
 type TaxiCallRequestHistoryResponse struct {
@@ -47,13 +45,6 @@ func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummar
 		PaymentId:  paymentSummary.PaymentId,
 		Company:    paymentSummary.Company,
 		CardNumber: paymentSummary.CardNumber,
-	}
-}
-
-func TaxiCallHistoryToResponse(history value.TaxiCallRequestHistory) TaxiCallRequestHistoryResponse {
-	return TaxiCallRequestHistoryResponse{
-		TaxiCallState: string(history.TaxiCallState),
-		CreateTime:    history.CreateTime,
 	}
 }
 
@@ -76,7 +67,6 @@ func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallR
 		BasePrice:                 taxiCallRequest.BasePrice,
 		AdditionalPrice:           taxiCallRequest.AdditionalPrice,
 		CurrentState:              string(taxiCallRequest.CurrentState),
-		CallHistory:               slices.Map(taxiCallRequest.CallHistory, TaxiCallHistoryToResponse),
 		CreateTime:                taxiCallRequest.CreateTime,
 		UpdateTime:                taxiCallRequest.UpdateTime,
 	}

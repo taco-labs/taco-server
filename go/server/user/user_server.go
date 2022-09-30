@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/response"
 	"github.com/taco-labs/taco/go/domain/value"
-	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"
 )
@@ -31,6 +29,7 @@ type UserApp interface {
 	ListTaxiCallRequest(context.Context, string) ([]entity.TaxiCallRequest, error)
 	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
+	CancelTaxiCallRequest(context.Context, string) error
 }
 
 func (u userServer) SmsVerificationRequest(e echo.Context) error {
@@ -252,7 +251,6 @@ func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 	resp := slices.Map(taxiCallRequests, response.TaxiCallRequestToResponse)
 
 	// TODO(taekyeom) 임시 mock data
-	ctime := time.Now()
 	id := utils.MustNewUUID()
 	driverId := utils.MustNewUUID()
 	taxiCallRequestMock := response.TaxiCallRequestResponse{
@@ -293,27 +291,21 @@ func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 			Company:    "현대",
 			CardNumber: "433012******1234",
 		},
-		CallHistory: []response.TaxiCallRequestHistoryResponse{
-			{
-				TaxiCallState: string(enum.TaxiCallState_DONE),
-				CreateTime:    ctime,
-			},
-			{
-				TaxiCallState: string(enum.TaxiCallState_DRIVER_TO_ARRIVAL),
-				CreateTime:    ctime.Add(-time.Minute * 20),
-			},
-			{
-				TaxiCallState: string(enum.TaxiCallState_DRIVER_TO_DEPARTURE),
-				CreateTime:    ctime.Add(-time.Minute * 25),
-			},
-			{
-				TaxiCallState: string(enum.TaxiCallState_Requested),
-				CreateTime:    ctime.Add(-time.Minute * 30),
-			},
-		},
 	}
 
 	return e.JSON(http.StatusOK, response.TaxiCallRequestPageResponse{
 		Data: append(resp, taxiCallRequestMock),
 	})
+}
+
+func (u userServer) CancelTaxiCallRequest(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	taxiCallRequestId := e.Param("taxiCallRequestId")
+
+	if err := u.app.user.CancelTaxiCallRequest(ctx, taxiCallRequestId); err != nil {
+		return e.String(http.StatusBadRequest, err.Error())
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
 }

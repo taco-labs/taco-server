@@ -53,6 +53,7 @@ func (u *userServer) initController() error {
 
 	taxiCallGroup := u.echo.Group("/taxicall")
 	taxiCallGroup.POST("", u.CreateTaxiCallRequest)
+	taxiCallGroup.DELETE("/:taxiCallRequestId", u.CancelTaxiCallRequest)
 	return nil
 }
 
