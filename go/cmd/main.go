@@ -57,6 +57,8 @@ func main() {
 		"L25KAYEICPWCPHTIXMKLTEAKWLFFGIHQ",
 	)
 
+	mapRouteService := service.NewMockRouteService()
+
 	userSessionApp, err := usersession.NewUserSessionApp(
 		usersession.WithTransactor(transactor),
 		usersession.WithUserSessionRepository(userSessionRepository),
@@ -92,6 +94,7 @@ func main() {
 		user.WithCardPaymentService(tossPaymentService),
 		user.WithSmsSenderService(smsSenderService),
 		user.WithTaxiCallRequestRepository(taxiCallRequestRepository),
+		user.WithMapRouteService(mapRouteService),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup user app: %v\n", err)
@@ -115,6 +118,7 @@ func main() {
 		userserver.WithPort(18881),
 		userserver.WithUserApp(userApp),
 		userserver.WithMiddleware(userSessionMiddleware.Get()),
+		userserver.WithMiddleware(userserver.UserIdChecker),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup user server: %v\n", err)

@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -66,5 +67,22 @@ func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, er
 func NewSessionMiddleware(sessionApp userSessionApp) sessionMiddleware {
 	return sessionMiddleware{
 		sessionApp: sessionApp,
+	}
+}
+
+func UserIdChecker(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
+		requestUserId := c.Param("userId")
+
+		if requestUserId != "" {
+			userId := utils.GetUserId(ctx)
+			if requestUserId != userId {
+				return fmt.Errorf("unauthorized access to user resource:%w", value.ErrUnAuthorized)
+			}
+		}
+
+		return next(c)
 	}
 }

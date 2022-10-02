@@ -84,9 +84,16 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 		return entity.TaxiCallRequest{}, err
 	}
 
+	// Get route
+	route, err := u.service.route.GetRoute(ctx, req.Departure, req.Arrival)
+	if err != nil {
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while get route:\n%w", err)
+	}
+
 	// create taxi call request
 	initialState := enum.TaxiCallState_Requested
 	taxiCallRequest := entity.TaxiCallRequest{
+		Dryrun:    req.Dryrun,
 		Id:        utils.MustNewUUID(),
 		UserId:    userId,
 		Departure: req.Departure,
@@ -96,12 +103,16 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 			Company:    userPayment.CardCompany,
 			CardNumber: userPayment.RedactedCardNumber,
 		},
-		RequestBasePrice:          req.RequestBasePrice,
-		RequestMinAdditionalPrice: 0,                    // TODO(taekyeom) To be paramterized
-		RequestMaxAdditionalPrice: req.RequestBasePrice, // TODO(taekyeom) To be paramterized
+		RequestBasePrice:          route.Price,
+		RequestMinAdditionalPrice: 0,           // TODO(taekyeom) To be paramterized
+		RequestMaxAdditionalPrice: route.Price, // TODO(taekyeom) To be paramterized
 		CurrentState:              initialState,
 		CreateTime:                requestTime,
 		UpdateTime:                requestTime,
+	}
+
+	if taxiCallRequest.Dryrun {
+		return taxiCallRequest, nil
 	}
 
 	if err = u.repository.taxiCallRequest.Create(ctx, taxiCallRequest); err != nil {

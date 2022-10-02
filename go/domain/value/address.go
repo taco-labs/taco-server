@@ -1,5 +1,7 @@
 package value
 
+import "time"
+
 type RoadAddress struct {
 	AddressName  string `json:"addressName"`
 	RegionDepth1 string `json:"regionDepth1"`
@@ -13,4 +15,9 @@ type Location struct {
 	RoadAddress RoadAddress `json:"roadAddress"`
 	Latitude    float32     `json:"latitude"`
 	Longitude   float32     `json:"longitude"`
+}
+
+type Route struct {
+	ETA   time.Duration `json:"eta"`
+	Price int           `json:"price"`
 }

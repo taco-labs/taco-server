@@ -17,14 +17,21 @@ func ToResponse(err error) error {
 
 	defer utils.Logger.Sync()
 	sugar := utils.Logger.Sugar()
-	sugar.Errorf("Error occurred: %v", err)
 
 	tacoError := &value.TacoError{}
 	if !errors.As(err, tacoError) {
+		sugar.Errorw("Non taco error occurred",
+			"error", err.Error(),
+		)
 		return err
 	}
 
 	herr := echo.NewHTTPError(http.StatusInternalServerError)
+	sugar.Errorw("Taco error occurred",
+		"error", err.Error(),
+		"code", tacoError.ErrCode,
+		"message", tacoError.Message,
+	)
 
 	switch tacoError.ErrCode {
 	case value.ERR_UNAUTHENTICATED, value.ERR_UNAUTHORIZED, value.ERR_SESSION_EXPIRED:

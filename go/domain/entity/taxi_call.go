@@ -12,6 +12,9 @@ import (
 type TaxiCallRequest struct {
 	bun.BaseModel `bun:"table:taxi_call_request"`
 
+	// In Memroy
+	Dryrun bool `bun:"-"`
+
 	Id                        string               `bun:"id,pk"`
 	UserId                    string               `bun:"user_id"`
 	DriverId                  sql.NullString       `bun:"driver_id"`

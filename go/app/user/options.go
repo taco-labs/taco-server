@@ -56,3 +56,9 @@ func WithSmsSenderService(svc service.SmsSenderService) userAppOption {
 		ua.service.smsSender = svc
 	}
 }
+
+func WithMapRouteService(svc service.MapRouteService) userAppOption {
+	return func(ua *userApp) {
+		ua.service.route = svc
+	}
+}

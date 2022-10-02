@@ -35,6 +35,7 @@ type userApp struct {
 		smsSender service.SmsSenderService
 		session   SessionInterface
 		payment   service.CardPaymentService
+		route     service.MapRouteService
 	}
 
 	actor struct {
@@ -307,6 +308,10 @@ func (u userApp) validateApp() error {
 
 	if u.service.smsSender == nil {
 		return errors.New("user app need sms sender service")
+	}
+
+	if u.service.route == nil {
+		return errors.New("user app need map route service")
 	}
 
 	return nil

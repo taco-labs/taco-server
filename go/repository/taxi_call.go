@@ -49,7 +49,7 @@ func (t taxiCallRepository) GetLatestByUserId(ctx context.Context, userId string
 	err := db.NewSelect().Model(&resp).Where("user_id = ?", userId).OrderExpr("create_time DESC").Limit(1).Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
-		return entity.TaxiCallRequest{}, value.ErrUserNotFound
+		return entity.TaxiCallRequest{}, value.ErrNotFound
 	}
 	if err != nil {
 		return resp, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
