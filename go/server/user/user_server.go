@@ -2,8 +2,6 @@ package user
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -11,6 +9,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/response"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/server"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"
 )
@@ -38,12 +37,12 @@ func (u userServer) SmsVerificationRequest(e echo.Context) error {
 	req := request.SmsVerificationRequest{}
 
 	if err := e.Bind(&req); err != nil {
-		return e.String(http.StatusBadRequest, "bind error")
+		return err
 	}
 
 	smsVerification, err := u.app.user.SmsVerificationRequest(ctx, req)
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
 	resp := response.SmsVerificationRequestResponse{
@@ -60,7 +59,7 @@ func (u userServer) SmsSingin(e echo.Context) error {
 	req := request.SmsSigninRequest{}
 
 	if err := e.Bind(&req); err != nil {
-		return e.String(http.StatusBadRequest, "bind error")
+		return err
 	}
 
 	user, token, err := u.app.user.SmsSignin(ctx, req)
@@ -70,11 +69,8 @@ func (u userServer) SmsSingin(e echo.Context) error {
 		User:  response.UserToResponse(user),
 	}
 
-	if errors.Is(err, value.ErrUserNotFound) {
-		return e.JSON(http.StatusNotFound, value.ErrUserNotFound)
-	}
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
 	return e.JSON(http.StatusOK, resp)
@@ -87,14 +83,13 @@ func (u userServer) Signup(e echo.Context) error {
 
 	if err := e.Bind(&req); err != nil {
 		// TODO(taekyeom) Error handle
-		return e.String(http.StatusBadRequest, "bind error 1")
+		return err
 	}
 
 	user, token, err := u.app.user.Signup(ctx, req)
 
 	if err != nil {
-		// TODO(taekyeom) Error handle
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
 	resp := response.UserSignupResponse{
@@ -110,7 +105,7 @@ func (u userServer) GetUser(e echo.Context) error {
 	userId := e.Param("userId")
 	user, err := u.app.user.GetUser(ctx, userId)
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 	return e.JSON(http.StatusOK, response.UserToResponse(user))
 }
@@ -121,13 +116,12 @@ func (u userServer) UpdateUser(e echo.Context) error {
 	req := request.UserUpdateRequest{}
 
 	if err := e.Bind(&req); err != nil {
-		// TODO(taekyeom) Error handle
-		return e.String(http.StatusBadRequest, "bind error 1")
+		return err
 	}
 
 	user, err := u.app.user.UpdateUser(ctx, req)
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
 	return e.JSON(http.StatusOK, response.UserToResponse(user))
@@ -139,10 +133,10 @@ func (u userServer) DeleteUser(e echo.Context) error {
 	userId := e.Param("userId")
 	err := u.app.user.DeleteUser(ctx, userId)
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
-	return nil
+	return e.JSON(http.StatusOK, struct{}{})
 }
 
 func (u userServer) ListCardPayment(e echo.Context) error {
@@ -150,8 +144,9 @@ func (u userServer) ListCardPayment(e echo.Context) error {
 	userId := e.Param("userId")
 	userPayments, userDefaultPayment, err := u.app.user.ListCardPayment(ctx, userId)
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
+
 	return e.JSON(http.StatusOK, response.ListCardPaymentResponse{
 		DefaultPaymentId: userDefaultPayment.PaymentId,
 		Payments:         slices.Map(userPayments, response.UserPaymentToResponse),
@@ -163,13 +158,12 @@ func (u userServer) RegisterCardPayment(e echo.Context) error {
 
 	req := request.UserPaymentRegisterRequest{}
 	if err := e.Bind(&req); err != nil {
-		// TODO(taekyeom) Error handle
-		return e.String(http.StatusBadRequest, fmt.Errorf("bind error: %v", err).Error())
+		return err
 	}
 
 	cardPayment, err := u.app.user.RegisterCardPayment(ctx, req)
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
 	return e.JSON(http.StatusOK, response.UserPaymentToResponse(cardPayment))
@@ -181,7 +175,7 @@ func (u userServer) DeleteCardPayment(e echo.Context) error {
 	paymentId := e.Param("paymentId")
 	err := u.app.user.DeleteCardPayment(ctx, paymentId)
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 	return e.JSON(http.StatusOK, response.DeleteCardPaymentResponse{
 		PaymentId: paymentId,
@@ -194,11 +188,11 @@ func (u userServer) UpdateDefaultPayment(e echo.Context) error {
 	req := request.DefaultPaymentUpdateRequest{}
 
 	if err := e.Bind(&req); err != nil {
-		return e.String(http.StatusBadRequest, fmt.Errorf("bind error: %w", err).Error())
+		return err
 	}
 
 	if err := u.app.user.UpdateDefaultPayment(ctx, req); err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -209,12 +203,12 @@ func (u userServer) CreateTaxiCallRequest(e echo.Context) error {
 
 	req := request.CreateTaxiCallRequest{}
 	if err := e.Bind(&req); err != nil {
-		return e.String(http.StatusBadRequest, fmt.Errorf("bind error: %v", err).Error())
+		return err
 	}
 
 	taxiCallRequest, err := u.app.user.CreateTaxiCallRequest(ctx, req)
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
 	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
@@ -227,11 +221,8 @@ func (u userServer) GetLatestTaxiCallRequest(e echo.Context) error {
 	userId := e.Param("userId")
 
 	taxiCallRequest, err := u.app.user.GetLatestTaxiCallRequest(ctx, userId)
-	if errors.Is(err, value.ErrNotFound) {
-		return e.JSON(http.StatusNotFound, value.ErrNotFound)
-	}
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
 	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
@@ -245,7 +236,7 @@ func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 
 	taxiCallRequests, err := u.app.user.ListTaxiCallRequest(ctx, userId)
 	if err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
 	resp := slices.Map(taxiCallRequests, response.TaxiCallRequestToResponse)
@@ -304,7 +295,7 @@ func (u userServer) CancelTaxiCallRequest(e echo.Context) error {
 	taxiCallRequestId := e.Param("taxiCallRequestId")
 
 	if err := u.app.user.CancelTaxiCallRequest(ctx, taxiCallRequestId); err != nil {
-		return e.String(http.StatusBadRequest, err.Error())
+		return server.ToResponse(err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})

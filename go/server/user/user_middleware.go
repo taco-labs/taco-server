@@ -2,10 +2,12 @@ package user
 
 import (
 	"context"
+	"errors"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/utils"
 )
 
@@ -39,6 +41,9 @@ func (s sessionMiddleware) skipper(c echo.Context) bool {
 func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, error) {
 	ctx := c.Request().Context()
 	session, err := s.sessionApp.GetSession(ctx, key)
+	if errors.Is(err, value.ErrNotFound) {
+		return false, value.ErrUnAuthenticated
+	}
 	if err != nil {
 		// TODO(taekyeom) handle error
 		return false, err
@@ -47,7 +52,7 @@ func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, er
 	currentTime := utils.GetRequestTimeOrNow(ctx)
 
 	if session.ExpireTime.Before(currentTime) {
-		return false, nil
+		return false, value.ErrSessionExpired
 	}
 
 	// Set userId key

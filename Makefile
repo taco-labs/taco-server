@@ -21,6 +21,7 @@ docker_build: docker_server_build_base docker_migration_build_base
 
 run_local: docker_build_local
 	docker-compose -f ./docker/docker-compose.yaml up -d
+	./migrations/migration.sh
 
 stop_local: 
 	docker-compose -f ./docker/docker-compose.yaml down

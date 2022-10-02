@@ -18,17 +18,6 @@ services:
       retries: 5
     networks:
       - taconet
-  init_taco:
-    container_name: "taco_migration"
-    image: "taco_migration:dev"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DATABASE: taco
-      POSTGRES_HOST: taco_postgres
-      POSTGRES_PORT: 5432
-    networks:
-      - taconet
   server:
     container_name: "taco_server"
     image: "taco_local:dev"
