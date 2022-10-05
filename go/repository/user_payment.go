@@ -8,25 +8,24 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/uptrace/bun"
 )
 
 type UserPaymentRepository interface {
 	// Payment entity
-	GetUserPayment(context.Context, string) (entity.UserPayment, error)
-	ListUserPayment(context.Context, string) ([]entity.UserPayment, error) // TODO (taekyeom) pagination?
-	CreateUserPayment(context.Context, entity.UserPayment) error
-	DeleteUserPayment(context.Context, string) error
+	GetUserPayment(context.Context, bun.IDB, string) (entity.UserPayment, error)
+	ListUserPayment(context.Context, bun.IDB, string) ([]entity.UserPayment, error) // TODO (taekyeom) pagination?
+	CreateUserPayment(context.Context, bun.IDB, entity.UserPayment) error
+	DeleteUserPayment(context.Context, bun.IDB, string) error
 
 	// Default payment entity
-	GetDefaultPaymentByUserId(context.Context, string) (entity.UserDefaultPayment, error)
-	UpsertDefaultPayment(context.Context, entity.UserDefaultPayment) error
+	GetDefaultPaymentByUserId(context.Context, bun.IDB, string) (entity.UserDefaultPayment, error)
+	UpsertDefaultPayment(context.Context, bun.IDB, entity.UserDefaultPayment) error
 }
 
 type userPaymentRepository struct{}
 
-func (u userPaymentRepository) GetUserPayment(ctx context.Context, paymentId string) (entity.UserPayment, error) {
-	db := GetQueryContext(ctx)
-
+func (u userPaymentRepository) GetUserPayment(ctx context.Context, db bun.IDB, paymentId string) (entity.UserPayment, error) {
 	defaultPaymentSubq := db.NewSelect().Model(&entity.UserDefaultPayment{}).Where("payment_id = ?", paymentId)
 
 	userPayment := entity.UserPayment{
@@ -40,7 +39,7 @@ func (u userPaymentRepository) GetUserPayment(ctx context.Context, paymentId str
 		WherePK().Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
-		return entity.UserPayment{}, value.ErrUserNotFound
+		return entity.UserPayment{}, value.ErrNotFound
 	}
 	if err != nil {
 		return entity.UserPayment{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
@@ -49,9 +48,7 @@ func (u userPaymentRepository) GetUserPayment(ctx context.Context, paymentId str
 	return userPayment, nil
 }
 
-func (u userPaymentRepository) ListUserPayment(ctx context.Context, userId string) ([]entity.UserPayment, error) {
-	db := GetQueryContext(ctx)
-
+func (u userPaymentRepository) ListUserPayment(ctx context.Context, db bun.IDB, userId string) ([]entity.UserPayment, error) {
 	var payments []entity.UserPayment
 
 	defaultPaymentSubq := db.NewSelect().Model(&entity.UserDefaultPayment{UserId: userId}).WherePK()
@@ -69,9 +66,7 @@ func (u userPaymentRepository) ListUserPayment(ctx context.Context, userId strin
 	return payments, nil
 }
 
-func (u userPaymentRepository) CreateUserPayment(ctx context.Context, userPayment entity.UserPayment) error {
-	db := GetQueryContext(ctx)
-
+func (u userPaymentRepository) CreateUserPayment(ctx context.Context, db bun.IDB, userPayment entity.UserPayment) error {
 	res, err := db.NewInsert().Model(&userPayment).ExcludeColumn("default_payment").Exec(ctx)
 
 	if err != nil {
@@ -89,9 +84,7 @@ func (u userPaymentRepository) CreateUserPayment(ctx context.Context, userPaymen
 	return nil
 }
 
-func (u userPaymentRepository) DeleteUserPayment(ctx context.Context, userPaymentId string) error {
-	db := GetQueryContext(ctx)
-
+func (u userPaymentRepository) DeleteUserPayment(ctx context.Context, db bun.IDB, userPaymentId string) error {
 	res, err := db.NewDelete().Model(&entity.UserPayment{}).WherePK(userPaymentId).Exec(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
@@ -112,9 +105,7 @@ func (u userPaymentRepository) DeleteUserPayment(ctx context.Context, userPaymen
 	return nil
 }
 
-func (u userPaymentRepository) GetDefaultPaymentByUserId(ctx context.Context, userId string) (entity.UserDefaultPayment, error) {
-	db := GetQueryContext(ctx)
-
+func (u userPaymentRepository) GetDefaultPaymentByUserId(ctx context.Context, db bun.IDB, userId string) (entity.UserDefaultPayment, error) {
 	userDefaultPayment := entity.UserDefaultPayment{
 		UserId: userId,
 	}
@@ -131,9 +122,7 @@ func (u userPaymentRepository) GetDefaultPaymentByUserId(ctx context.Context, us
 	return userDefaultPayment, nil
 }
 
-func (u userPaymentRepository) UpsertDefaultPayment(ctx context.Context, userDefaultPayment entity.UserDefaultPayment) error {
-	db := GetQueryContext(ctx)
-
+func (u userPaymentRepository) UpsertDefaultPayment(ctx context.Context, db bun.IDB, userDefaultPayment entity.UserDefaultPayment) error {
 	_, err := db.NewInsert().
 		Model(&userDefaultPayment).
 		On("CONFLICT (user_id) DO UPDATE").

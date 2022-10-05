@@ -8,20 +8,19 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/uptrace/bun"
 )
 
 type SmsVerificationRepository interface {
-	FindById(context.Context, string) (entity.SmsVerification, error)
-	Create(context.Context, entity.SmsVerification) error
-	Update(context.Context, entity.SmsVerification) error
-	Delete(context.Context, entity.SmsVerification) error
+	FindById(context.Context, bun.IDB, string) (entity.SmsVerification, error)
+	Create(context.Context, bun.IDB, entity.SmsVerification) error
+	Update(context.Context, bun.IDB, entity.SmsVerification) error
+	Delete(context.Context, bun.IDB, entity.SmsVerification) error
 }
 
 type smsVerificationRepository struct{}
 
-func (s smsVerificationRepository) FindById(ctx context.Context, id string) (entity.SmsVerification, error) {
-	db := GetQueryContext(ctx)
-
+func (s smsVerificationRepository) FindById(ctx context.Context, db bun.IDB, id string) (entity.SmsVerification, error) {
 	smsVerification := entity.SmsVerification{
 		Id: id,
 	}
@@ -38,9 +37,7 @@ func (s smsVerificationRepository) FindById(ctx context.Context, id string) (ent
 	return smsVerification, nil
 }
 
-func (s smsVerificationRepository) Create(ctx context.Context, smsVerification entity.SmsVerification) error {
-	db := GetQueryContext(ctx)
-
+func (s smsVerificationRepository) Create(ctx context.Context, db bun.IDB, smsVerification entity.SmsVerification) error {
 	res, err := db.NewInsert().Model(&smsVerification).Exec(ctx)
 
 	if err != nil {
@@ -58,9 +55,7 @@ func (s smsVerificationRepository) Create(ctx context.Context, smsVerification e
 	return nil
 }
 
-func (s smsVerificationRepository) Update(ctx context.Context, smsVerification entity.SmsVerification) error {
-	db := GetQueryContext(ctx)
-
+func (s smsVerificationRepository) Update(ctx context.Context, db bun.IDB, smsVerification entity.SmsVerification) error {
 	res, err := db.NewUpdate().Model(&smsVerification).WherePK().Exec(ctx)
 
 	if err != nil {
@@ -78,9 +73,7 @@ func (s smsVerificationRepository) Update(ctx context.Context, smsVerification e
 	return nil
 }
 
-func (s smsVerificationRepository) Delete(ctx context.Context, smsVerification entity.SmsVerification) error {
-	db := GetQueryContext(ctx)
-
+func (s smsVerificationRepository) Delete(ctx context.Context, db bun.IDB, smsVerification entity.SmsVerification) error {
 	res, err := db.NewDelete().Model(&smsVerification).WherePK().Exec(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {

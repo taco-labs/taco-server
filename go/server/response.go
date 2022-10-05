@@ -55,6 +55,9 @@ func ToResponse(err error) error {
 	case value.ERR_NEED_CONFIRMATION:
 		err := echo.NewHTTPError(http.StatusNotAcceptable, tacoError)
 		herr.SetInternal(err)
+	case value.ERR_UNSUPPORTED:
+		err := echo.NewHTTPError(http.StatusNotAcceptable, tacoError)
+		herr.SetInternal(err)
 	default:
 		err := echo.NewHTTPError(http.StatusInternalServerError, err)
 		herr.SetInternal(err)

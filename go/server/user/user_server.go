@@ -10,7 +10,6 @@ import (
 	"github.com/taco-labs/taco/go/domain/response"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/server"
-	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"
 )
 
@@ -29,6 +28,7 @@ type UserApp interface {
 	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	CancelTaxiCallRequest(context.Context, string) error
+	SearchLocation(context.Context, request.SearchLocationRequest) ([]value.LocationSummary, error)
 }
 
 func (u userServer) SmsVerificationRequest(e echo.Context) error {
@@ -241,51 +241,8 @@ func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 
 	resp := slices.Map(taxiCallRequests, response.TaxiCallRequestToResponse)
 
-	// TODO(taekyeom) 임시 mock data
-	id := utils.MustNewUUID()
-	driverId := utils.MustNewUUID()
-	taxiCallRequestMock := response.TaxiCallRequestResponse{
-		Id:       id,
-		UserId:   userId,
-		DriverId: &driverId,
-		Departure: value.Location{
-			Latitude:  35.97664845766847,
-			Longitude: 126.99597295767953,
-			RoadAddress: value.RoadAddress{
-				AddressName:  "전북 익산시 망산길 11-17",
-				RegionDepth1: "전북",
-				RegionDepth2: "익산시",
-				RegionDepth3: "부송동",
-				RoadName:     "망산길",
-				BuildingName: "",
-			},
-		},
-		Arrival: value.Location{
-			Latitude:  37.0789561558879,
-			Longitude: 127.423084873712,
-			RoadAddress: value.RoadAddress{
-				AddressName:  "경기도 안성시 죽산면 죽산초교길 69-4",
-				RegionDepth1: "경기",
-				RegionDepth2: "안성시",
-				RegionDepth3: "죽산면",
-				RoadName:     "죽산초교길",
-				BuildingName: "무지개아파트",
-			},
-		},
-		RequestBasePrice:          12000,
-		RequestMinAdditionalPrice: 0,
-		RequestMaxAdditionalPrice: 12000,
-		BasePrice:                 12300,
-		AdditionalPrice:           3000,
-		Payment: response.PaymentSummaryResponse{
-			PaymentId:  utils.MustNewUUID(),
-			Company:    "현대",
-			CardNumber: "433012******1234",
-		},
-	}
-
 	return e.JSON(http.StatusOK, response.TaxiCallRequestPageResponse{
-		Data: append(resp, taxiCallRequestMock),
+		Data: resp,
 	})
 }
 
@@ -299,4 +256,20 @@ func (u userServer) CancelTaxiCallRequest(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
+}
+
+func (u userServer) SearchLocation(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.SearchLocationRequest{}
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	resp, err := u.app.user.SearchLocation(ctx, req)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	return e.JSON(http.StatusOK, resp)
 }

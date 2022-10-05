@@ -62,3 +62,9 @@ func WithMapRouteService(svc service.MapRouteService) userAppOption {
 		ua.service.route = svc
 	}
 }
+
+func WithLocationService(svc service.LocationService) userAppOption {
+	return func(ua *userApp) {
+		ua.service.location = svc
+	}
+}

@@ -8,23 +8,22 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/uptrace/bun"
 )
 
 type TaxiCallRepository interface {
-	GetById(context.Context, string) (entity.TaxiCallRequest, error)
-	GetLatestByUserId(context.Context, string) (entity.TaxiCallRequest, error)
+	GetById(context.Context, bun.IDB, string) (entity.TaxiCallRequest, error)
+	GetLatestByUserId(context.Context, bun.IDB, string) (entity.TaxiCallRequest, error)
 	// GetLatestByDriverId(context.Context, string) (entity.TaxiCallRequest, error)
-	ListByUserId(context.Context, string) ([]entity.TaxiCallRequest, error)
+	ListByUserId(context.Context, bun.IDB, string) ([]entity.TaxiCallRequest, error)
 	// ListByDriverId(context.Context, string) ([]entity.TaxiCallRequest, error)
-	Create(context.Context, entity.TaxiCallRequest) error
-	Update(context.Context, entity.TaxiCallRequest) error
+	Create(context.Context, bun.IDB, entity.TaxiCallRequest) error
+	Update(context.Context, bun.IDB, entity.TaxiCallRequest) error
 }
 
 type taxiCallRepository struct{}
 
-func (t taxiCallRepository) GetById(ctx context.Context, taxiCallRequestId string) (entity.TaxiCallRequest, error) {
-	db := GetQueryContext(ctx)
-
+func (t taxiCallRepository) GetById(ctx context.Context, db bun.IDB, taxiCallRequestId string) (entity.TaxiCallRequest, error) {
 	resp := entity.TaxiCallRequest{
 		Id: taxiCallRequestId,
 	}
@@ -32,7 +31,7 @@ func (t taxiCallRepository) GetById(ctx context.Context, taxiCallRequestId strin
 	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
-		return entity.TaxiCallRequest{}, value.ErrUserNotFound
+		return entity.TaxiCallRequest{}, value.ErrNotFound
 	}
 	if err != nil {
 		return resp, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
@@ -41,9 +40,7 @@ func (t taxiCallRepository) GetById(ctx context.Context, taxiCallRequestId strin
 	return resp, nil
 }
 
-func (t taxiCallRepository) GetLatestByUserId(ctx context.Context, userId string) (entity.TaxiCallRequest, error) {
-	db := GetQueryContext(ctx)
-
+func (t taxiCallRepository) GetLatestByUserId(ctx context.Context, db bun.IDB, userId string) (entity.TaxiCallRequest, error) {
 	resp := entity.TaxiCallRequest{}
 
 	err := db.NewSelect().Model(&resp).Where("user_id = ?", userId).OrderExpr("create_time DESC").Limit(1).Scan(ctx)
@@ -58,9 +55,7 @@ func (t taxiCallRepository) GetLatestByUserId(ctx context.Context, userId string
 	return resp, nil
 }
 
-func (t taxiCallRepository) ListByUserId(ctx context.Context, userId string) ([]entity.TaxiCallRequest, error) {
-	db := GetQueryContext(ctx)
-
+func (t taxiCallRepository) ListByUserId(ctx context.Context, db bun.IDB, userId string) ([]entity.TaxiCallRequest, error) {
 	resp := []entity.TaxiCallRequest{}
 
 	// TODO (taekyeom) pagenation, ordering
@@ -73,9 +68,7 @@ func (t taxiCallRepository) ListByUserId(ctx context.Context, userId string) ([]
 	return resp, nil
 }
 
-func (t taxiCallRepository) Create(ctx context.Context, taxiCallRequest entity.TaxiCallRequest) error {
-	db := GetQueryContext(ctx)
-
+func (t taxiCallRepository) Create(ctx context.Context, db bun.IDB, taxiCallRequest entity.TaxiCallRequest) error {
 	_, err := db.NewInsert().Model(&taxiCallRequest).Exec(ctx)
 
 	// TODO (taekyeom) handle already exists
@@ -86,9 +79,7 @@ func (t taxiCallRepository) Create(ctx context.Context, taxiCallRequest entity.T
 	return nil
 }
 
-func (t taxiCallRepository) Update(ctx context.Context, taxiCallRequest entity.TaxiCallRequest) error {
-	db := GetQueryContext(ctx)
-
+func (t taxiCallRepository) Update(ctx context.Context, db bun.IDB, taxiCallRequest entity.TaxiCallRequest) error {
 	res, err := db.NewUpdate().Model(&taxiCallRequest).WherePK().Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)

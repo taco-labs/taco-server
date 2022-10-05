@@ -8,21 +8,20 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/uptrace/bun"
 )
 
 type UserRepository interface {
-	FindById(context.Context, string) (entity.User, error)
-	FindByUserUniqueKey(context.Context, string) (entity.User, error)
-	CreateUser(context.Context, entity.User) error
-	UpdateUser(context.Context, entity.User) error
-	DeleteUser(context.Context, entity.User) error
+	FindById(context.Context, bun.IDB, string) (entity.User, error)
+	FindByUserUniqueKey(context.Context, bun.IDB, string) (entity.User, error)
+	CreateUser(context.Context, bun.IDB, entity.User) error
+	UpdateUser(context.Context, bun.IDB, entity.User) error
+	DeleteUser(context.Context, bun.IDB, entity.User) error
 }
 
 type userRepository struct{}
 
-func (u userRepository) FindById(ctx context.Context, userId string) (entity.User, error) {
-	db := GetQueryContext(ctx)
-
+func (u userRepository) FindById(ctx context.Context, db bun.IDB, userId string) (entity.User, error) {
 	user := entity.User{
 		Id: userId,
 	}
@@ -39,9 +38,7 @@ func (u userRepository) FindById(ctx context.Context, userId string) (entity.Use
 	return user, nil
 }
 
-func (u userRepository) FindByUserUniqueKey(ctx context.Context, userUniqueKey string) (entity.User, error) {
-	db := GetQueryContext(ctx)
-
+func (u userRepository) FindByUserUniqueKey(ctx context.Context, db bun.IDB, userUniqueKey string) (entity.User, error) {
 	user := entity.User{}
 
 	err := db.NewSelect().Model(&user).Where("user_unique_key = ?", userUniqueKey).Scan(ctx)
@@ -56,9 +53,7 @@ func (u userRepository) FindByUserUniqueKey(ctx context.Context, userUniqueKey s
 	return user, nil
 }
 
-func (u userRepository) CreateUser(ctx context.Context, user entity.User) error {
-	db := GetQueryContext(ctx)
-
+func (u userRepository) CreateUser(ctx context.Context, db bun.IDB, user entity.User) error {
 	res, err := db.NewInsert().Model(&user).Exec(ctx)
 
 	if err != nil {
@@ -76,9 +71,7 @@ func (u userRepository) CreateUser(ctx context.Context, user entity.User) error 
 	return nil
 }
 
-func (u userRepository) UpdateUser(ctx context.Context, user entity.User) error {
-	db := GetQueryContext(ctx)
-
+func (u userRepository) UpdateUser(ctx context.Context, db bun.IDB, user entity.User) error {
 	res, err := db.NewUpdate().Model(&user).WherePK().Exec(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
@@ -99,9 +92,7 @@ func (u userRepository) UpdateUser(ctx context.Context, user entity.User) error 
 	return nil
 }
 
-func (u userRepository) DeleteUser(ctx context.Context, user entity.User) error {
-	db := GetQueryContext(ctx)
-
+func (u userRepository) DeleteUser(ctx context.Context, db bun.IDB, user entity.User) error {
 	res, err := db.NewDelete().Model(&user).WherePK().Exec(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {

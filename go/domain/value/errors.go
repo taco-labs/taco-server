@@ -17,6 +17,7 @@ const (
 	ERR_INVALID           ErrCode = "ERR_INVALID"
 	ERR_INTERNAL          ErrCode = "ERR_INTERNAL"
 	ERR_NEED_CONFIRMATION ErrCode = "ERR_NEED_CONFIRMATION"
+	ERR_UNSUPPORTED       ErrCode = "ERR_UNSUPPORTED"
 )
 
 type TacoError struct {
@@ -54,7 +55,11 @@ var (
 
 	ErrInvalidOperation = TacoError{ERR_INVALID, "invalid operation"}
 
+	ErrInvalidRoute = TacoError{ERR_INVALID, "invalid route request"}
+
 	ErrInvalidTaxiCallStateTransition = TacoError{ERR_INVALID, "invalid taxi call state change"}
 
 	ErrConfirmationNeededStateTransition = TacoError{ERR_NEED_CONFIRMATION, "need confirmation"}
+
+	ErrUnsupportedRegion = TacoError{ERR_UNSUPPORTED, "unsupported region"}
 )

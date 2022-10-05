@@ -20,6 +20,9 @@ var (
 	TaxiCallState_SETTLEMENT_DONE TaxiCallState = "DRIVER_SETTLEMENT_DONE"
 
 	TaxiCallState_INVALID TaxiCallState = "INVALID"
+
+	// DO not persist
+	TaxiCallState_DRYRUN TaxiCallState = "DRYRUN"
 )
 
 func (t TaxiCallState) Active() bool {
@@ -45,11 +48,6 @@ func (t TaxiCallState) TryChangeState(nextState TaxiCallState) bool {
 		return nextState == TaxiCallState_DONE
 	case TaxiCallState_DONE:
 		return nextState == TaxiCallState_SETTLEMENT_DONE
-	case TaxiCallState_DRIVER_CANCELLED,
-		TaxiCallState_USER_CANCELLED,
-		TaxiCallState_FAILED,
-		TaxiCallState_SETTLEMENT_DONE:
-		return false
 	}
-	return true
+	return false
 }

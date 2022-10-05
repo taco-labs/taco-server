@@ -57,7 +57,16 @@ func main() {
 		"L25KAYEICPWCPHTIXMKLTEAKWLFFGIHQ",
 	)
 
-	mapRouteService := service.NewMockRouteService()
+	mapRouteService := service.NewNaverMapsRouteService(
+		"https://naveropenapi.apigw.ntruss.com",
+		"s9i06iew36",
+		"hvVaEKpxiu6XT9RqvEdH7JTF3uGJpDShdjZ6nIJi",
+	)
+
+	locationService := service.NewKakaoLocationService(
+		"https://dapi.kakao.com",
+		"c46bd6c102717c6453ae7f0e6630a408",
+	)
 
 	userSessionApp, err := usersession.NewUserSessionApp(
 		usersession.WithTransactor(transactor),
@@ -95,6 +104,7 @@ func main() {
 		user.WithSmsSenderService(smsSenderService),
 		user.WithTaxiCallRequestRepository(taxiCallRequestRepository),
 		user.WithMapRouteService(mapRouteService),
+		user.WithLocationService(locationService),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup user app: %v\n", err)

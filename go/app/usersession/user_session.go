@@ -6,6 +6,7 @@ import (
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/repository"
+	"github.com/uptrace/bun"
 	"golang.org/x/net/context"
 )
 
@@ -17,55 +18,41 @@ type userSessionApp struct {
 }
 
 func (u userSessionApp) GetSession(ctx context.Context, sessionId string) (entity.UserSession, error) {
-	ctx, err := u.Start(ctx)
+	var userSession entity.UserSession
+	var err error
+
+	err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		userSession, err = u.repository.session.GetSession(ctx, i, sessionId)
+		if err != nil {
+			return fmt.Errorf("app.UserSession.GetSession: error while get session:\n %w", err)
+		}
+		return nil
+	})
+
 	if err != nil {
 		return entity.UserSession{}, err
-	}
-
-	defer func() {
-		err = u.Done(ctx, err)
-	}()
-
-	userSession, err := u.repository.session.GetSession(ctx, sessionId)
-	if err != nil {
-		return entity.UserSession{}, fmt.Errorf("app.UserSession.GetSession: error while get session:\n %w", err)
 	}
 
 	return userSession, nil
 }
 
 func (u userSessionApp) RevokeSessionByUserId(ctx context.Context, userId string) error {
-	ctx, err := u.Start(ctx)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		err = u.Done(ctx, err)
-	}()
-
-	if err = u.repository.session.DeleteSessionByUserId(ctx, userId); err != nil {
-		return fmt.Errorf("app.UserSession.DeleteSessionByUserId: error while delete session:\n %w", err)
-	}
-
-	return nil
+	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := u.repository.session.DeleteSessionByUserId(ctx, i, userId); err != nil {
+			return fmt.Errorf("app.UserSession.DeleteSessionByUserId: error while delete session:\n %w", err)
+		}
+		return nil
+	})
 }
 
 func (u userSessionApp) CreateSession(ctx context.Context, session entity.UserSession) error {
-	ctx, err := u.Start(ctx)
-	if err != nil {
-		return err
-	}
+	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := u.repository.session.CreateSession(ctx, i, session); err != nil {
+			return fmt.Errorf("app.UserSession.CreateSession: error while create session:\n %w", err)
+		}
 
-	defer func() {
-		err = u.Done(ctx, err)
-	}()
-
-	if err = u.repository.session.CreateSession(ctx, session); err != nil {
-		return fmt.Errorf("app.UserSession.CreateSession: error while create session:\n %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func (u userSessionApp) validateApp() error {
