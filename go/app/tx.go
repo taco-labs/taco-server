@@ -17,8 +17,6 @@ var (
 )
 
 type Transactor interface {
-	Start(context.Context) (context.Context, error)
-	Done(context.Context, error) error
 	Run(context.Context, func(context.Context, bun.IDB) error) error
 	RunWithNonRollbackError(context.Context, error, func(context.Context, bun.IDB) error) error
 }

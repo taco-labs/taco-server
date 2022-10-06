@@ -264,12 +264,6 @@ table "taxi_call_last_received_ticket" {
 table "driver_location" {
   schema = schema.taco
 
-  column "active" {
-    type = boolean
-    null = false
-    comment = "Is taxi driver is activated (가입 승인을 받았는지 여부)"
-  }
-
   column "driver_id" {
     type = uuid
     null = false
@@ -278,6 +272,12 @@ table "driver_location" {
   column "location" {
     null = true
     type = sql("geometry(point,4326)")
+  }
+
+  column "on_duty" {
+    type = boolean
+    null = false
+    comment = "Is taxi driver is activated (가입 승인을 받았는지 여부)"
   }
 
   primary_key {

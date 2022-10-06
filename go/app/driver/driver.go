@@ -4,15 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	// "time"
 
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
-	// "github.com/taco-labs/taco/go/domain/value/enum"
-	// "github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/enum"
+	"github.com/taco-labs/taco/go/service"
+	"github.com/taco-labs/taco/go/utils"
+	"github.com/uptrace/bun"
+
 	"github.com/taco-labs/taco/go/repository"
-	// "github.com/taco-labs/taco/go/utils"
 )
 
 type sessionInterface interface {
@@ -26,159 +31,238 @@ type driverApp struct {
 		driver            repository.DriverRepository
 		driverLocation    repository.DriverLocationRepository
 		settlementAccount repository.DriverSettlementAccountRepository
+		smsVerification   repository.SmsVerificationRepository
 	}
 
 	service struct {
-		session sessionInterface
+		smsSender service.SmsSenderService
+		session   sessionInterface
 	}
 
 	actor struct {
 	}
 }
 
+func (d driverApp) SmsVerificationRequest(ctx context.Context, req request.SmsVerificationRequest) (entity.SmsVerification, error) {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	smsVerification := entity.NewSmsVerification(req.StateKey, requestTime, req.Phone)
+
+	err := d.Run(ctx, func(ctx context.Context, db bun.IDB) error {
+		if err := d.repository.smsVerification.Create(ctx, db, smsVerification); err != nil {
+			return fmt.Errorf("app.Driver.SmsVerificationRequest: error while create sms verification:\n%w", err)
+		}
+
+		if err := d.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerificationCode); err != nil {
+			return fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return entity.SmsVerification{}, err
+	}
+
+	return smsVerification, nil
+}
+
+func (d driverApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) (entity.Driver, string, error) {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	var smsVerification entity.SmsVerification
+	var err error
+	var driver entity.Driver
+	var driverSession entity.DriverSession
+
+	err = d.RunWithNonRollbackError(ctx, value.ErrDriverNotFound, func(ctx context.Context, i bun.IDB) error {
+		smsVerification, err = d.repository.smsVerification.FindById(ctx, i, req.StateKey)
+		if err != nil {
+			return fmt.Errorf("app.Driver.SmsSignin: error while find sms verification:\n %w", err)
+		}
+
+		if smsVerification.VerificationCode != req.VerificationCode {
+			return fmt.Errorf("app.Driver.SmsSignin: invalid verification code:\n%w", value.ErrInvalidOperation)
+		}
+		driver, err = d.repository.driver.FindByUserUniqueKey(ctx, i, smsVerification.Phone)
+		if errors.Is(value.ErrDriverNotFound, err) {
+			smsVerification.Verified = true
+			if err := d.repository.smsVerification.Update(ctx, i, smsVerification); err != nil {
+				return fmt.Errorf("app.Driver.SmsSingin: error while update sms verification:\n%w", err)
+			}
+			return err
+		}
+		if err != nil {
+			return fmt.Errorf("app.Driver.SmsSignin: error while find user by unique key\n%w", err)
+		}
+
+		// create new session
+		driverSession = entity.DriverSession{
+			Id:         utils.MustNewUUID(),
+			DriverId:   driver.Id,
+			ExpireTime: requestTime.AddDate(0, 1, 0), // TODO(taekyeom) Configurable expire time
+			Activated:  driver.Active,
+		}
+
+		if err = d.repository.smsVerification.Delete(ctx, i, smsVerification); err != nil {
+			return fmt.Errorf("app.Driver.SmsSignin: error while delete sms verification:\n%w", err)
+		}
+
+		// revoke session
+		if err = d.service.session.RevokeByDriverId(ctx, driver.Id); err != nil {
+			return fmt.Errorf("app.Driver.SmsSignin: error while revoke previous session:\n %w", err)
+		}
+
+		if err = d.service.session.Create(ctx, driverSession); err != nil {
+			return fmt.Errorf("app.Driver.SmsSignin: error while create new session:\n %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return entity.Driver{}, "", err
+	}
+
+	return driver, driverSession.Id, nil
+}
+
 func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) (entity.Driver, string, error) {
-	// requestTime := utils.GetRequestTimeOrNow(ctx)
+	requestTime := utils.GetRequestTimeOrNow(ctx)
 
-	// ctx, err := d.Start(ctx)
-	// if err != nil {
-	// 	return entity.Driver{}, "", err
-	// }
-	// defer func() {
-	// 	err = d.Done(ctx, err)
-	// }()
+	var newDriver entity.Driver
+	var driverSession entity.DriverSession
 
-	// driver, err := d.repository.driver.FindByUserUniqueKey(ctx, "") // TODO(taekyeom) Fixit
-	// if !errors.Is(value.ErrNotFound, err) && err != nil {
-	// 	return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while find user by unique key:\n %w", err)
-	// }
+	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driver, err := d.repository.driver.FindByUserUniqueKey(ctx, i, req.Phone)
+		if !errors.Is(err, value.ErrDriverNotFound) {
+			return fmt.Errorf("app.Driver.Signup: error while find driver by unique key:%w", err)
+		}
 
-	// if errors.Is(value.ErrNotFound, err) {
-	// 	newDriver := entity.Driver{
-	// 		Id:              utils.MustNewUUID(),
-	// 		DriverType:      enum.DriverTypeFromString(req.DriverType),
-	// 		FirstName:       req.FirstName,
-	// 		LastName:        req.LastName,
-	// 		BirthDay:        userIdentity.BirthDay,
-	// 		Phone:           userIdentity.Phone,
-	// 		Gender:          userIdentity.Gender,
-	// 		AppOs:           enum.OsTypeFromString(req.AppOs),
-	// 		AppVersion:      req.AppVersion,
-	// 		AppFcmToken:     req.AppFcmToken,
-	// 		UserUniqueKey:   userIdentity.UserUniqueKey,
-	// 		DriverLicenseId: req.DriverLicenseId,
-	// 		OnDuty:          false,
-	// 		Active:          false,
-	// 		CreateTime:      requestTime,
-	// 		UpdateTime:      requestTime,
-	// 		DeleteTime:      time.Time{},
-	// 	}
-	// 	if err = d.repository.driver.Create(ctx, newDriver); err != nil {
-	// 		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while create new driver:\n%w", err)
-	// 	}
+		if driver.Id != "" {
+			return fmt.Errorf("app.Driver.Signup: user already exists: %w", value.ErrAlreadyExists)
+		}
 
-	// 	driverSession := entity.DriverSession{
-	// 		Id:         utils.MustNewUUID(),
-	// 		DriverId:   newDriver.Id,
-	// 		Activated:  newDriver.Active,
-	// 		ExpireTime: requestTime.AddDate(0, 1, 0),
-	// 	}
-	// 	if err = d.service.session.Create(ctx, driverSession); err != nil {
-	// 		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while create new session:\n %w", err)
-	// 	}
+		smsVerification, err := d.repository.smsVerification.FindById(ctx, i, req.SmsVerificationStateKey)
+		if err != nil {
+			return fmt.Errorf("app.Driver.Signup: failed to find sms verification:\n%w", err)
+		}
 
-	// 	return newDriver, driverSession.Id, nil
-	// } else {
-	// 	driver.AppOs = enum.OsTypeFromString(req.AppOs)
-	// 	driver.AppVersion = req.AppVersion
-	// 	driver.AppFcmToken = req.AppFcmToken
-	// 	driver.Phone = userIdentity.Phone
+		if !smsVerification.Verified {
+			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrUnAuthorized)
+		}
+		// Id              string          `bun:"id,pk"`
+		// DriverType      enum.DriverType `bun:"driver_type"`
+		// FirstName       string          `bun:"first_name"`
+		// LastName        string          `bun:"last_name"`
+		// BirthDay        string          `bun:"birthday"`
+		// Phone           string          `bun:"phone"`
+		// Gender          string          `bun:"gender"`
+		// AppOs           enum.OsType     `bun:"app_os"`
+		// AppVersion      string          `bun:"app_version"`
+		// AppFcmToken     string          `bun:"app_fcm_token"`
+		// UserUniqueKey   string          `bun:"user_unique_key"`
+		// DriverLicenseId string          `bun:"driver_license_id"`
+		// Active          bool            `bun:"active"`
+		// CreateTime      time.Time       `bun:"create_time"`
+		// UpdateTime      time.Time       `bun:"update_time"`
+		// DeleteTime      time.Time       `bun:"delete_time"`
 
-	// 	driver.UpdateTime = requestTime
+		newDriver = entity.Driver{
+			Id:              utils.MustNewUUID(),
+			DriverType:      enum.DriverTypeFromString(req.DriverType),
+			FirstName:       req.FirstName,
+			LastName:        req.LastName,
+			BirthDay:        req.Birthday,
+			Gender:          req.Gender,
+			Phone:           req.Phone,
+			AppOs:           enum.OsTypeFromString(req.AppOs),
+			AppVersion:      req.AppVersion,
+			AppFcmToken:     req.AppFcmToken,
+			UserUniqueKey:   req.Phone,
+			DriverLicenseId: req.DriverLicenseId,
+			Active:          false,
+			CreateTime:      requestTime,
+			UpdateTime:      requestTime,
+			DeleteTime:      time.Time{},
+		}
 
-	// 	if err = d.repository.driver.Update(ctx, driver); err != nil {
-	// 		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while update user:\n%w", err)
-	// 	}
+		if err := d.repository.driver.Create(ctx, i, newDriver); err != nil {
+			return fmt.Errorf("app.Driver.Signup: error while create driver:%w", err)
+		}
 
-	// 	driverSession := entity.DriverSession{
-	// 		Id:         utils.MustNewUUID(),
-	// 		DriverId:   driver.Id,
-	// 		Activated:  driver.Active,
-	// 		ExpireTime: requestTime.AddDate(0, 1, 0),
-	// 	}
-	// 	if err = d.service.session.RevokeByDriverId(ctx, driver.Id); err != nil {
-	// 		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while revoke previous session:\n%w", err)
-	// 	}
+		driverSession = entity.DriverSession{
+			Id:         utils.MustNewUUID(),
+			DriverId:   newDriver.Id,
+			ExpireTime: requestTime.AddDate(0, 1, 0),
+			Activated:  newDriver.Active,
+		}
+		if err := d.service.session.Create(ctx, driverSession); err != nil {
+			return fmt.Errorf("app.Driver.Signup: error while create new session:%w", err)
+		}
 
-	// 	if err = d.service.session.Create(ctx, driverSession); err != nil {
-	// 		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while create new session:\n%w", err)
-	// 	}
+		if err := d.repository.smsVerification.Delete(ctx, i, smsVerification); err != nil {
+			return fmt.Errorf("app.Driver.Signup: error while delete sms verification:%w", err)
+		}
 
-	// 	return driver, driverSession.Id, nil
-	// }
-	return entity.Driver{}, "", nil
+		return nil
+	})
+
+	if err != nil {
+		return entity.Driver{}, "", err
+	}
+
+	return newDriver, driverSession.Id, nil
 }
 
 func (d driverApp) GetDriver(ctx context.Context, driverId string) (entity.Driver, error) {
-	ctx, err := d.Start(ctx)
-	if err != nil {
-		return entity.Driver{}, err
-	}
-	defer func() {
-		err = d.Done(ctx, err)
-	}()
+	var driver entity.Driver
 
-	driver, err := d.repository.driver.FindById(ctx, driverId)
-	if err != nil {
-		return entity.Driver{}, fmt.Errorf("app.Driver.GetDriver: error while find driver by id:\n%w", err)
-	}
+	d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		dr, err := d.repository.driver.FindById(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.Driver.GetDriver: error while find driver by id:\n%w", err)
+		}
+		driver = dr
+		return nil
+	})
 
 	return driver, nil
 }
 
 func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpdateRequest) error {
-	ctx, err := d.Start(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = d.Done(ctx, err)
-	}()
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverLocation, err := d.repository.driverLocation.GetByDriverId(ctx, i, req.DriverId)
+		if !errors.Is(err, value.ErrNotFound) {
+			// driver, err := d.repository.driver.FindById(ctx, req.DriverId)
+			// if err != nil {
+			return fmt.Errorf("app.Driver.UpdateOnDuty: error while find driver location:%w", err)
+		}
 
-	driver, err := d.repository.driver.FindById(ctx, req.DriverId)
-	if err != nil {
-		return fmt.Errorf("app.Driver.UpdateOnDuty: error while find driver by id:\n%w", err)
-	}
+		driverLocation.OnDuty = req.OnDuty
 
-	driver.OnDuty = req.OnDuty
+		if err = d.repository.driverLocation.Upsert(ctx, i, driverLocation); err != nil {
+			return fmt.Errorf("app.Driver.UpdateOnDuty: error while update user:\n%w", err)
+		}
 
-	if err = d.repository.driver.Update(ctx, driver); err != nil {
-		return fmt.Errorf("app.Driver.UpdateOnDuty: error while update user:\n%w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func (d driverApp) UpdateDriverLocation(ctx context.Context, req request.DriverLocationUpdateRequest) error {
-	ctx, err := d.Start(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = d.Done(ctx, err)
-	}()
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		_, err := d.repository.driver.FindById(ctx, i, req.DriverId)
+		if err != nil {
+			return fmt.Errorf("app.Driver.UpdateDriverLocation: error while find driver by id:\n%w", err)
+		}
 
-	_, err = d.repository.driver.FindById(ctx, req.DriverId)
-	if err != nil {
-		return fmt.Errorf("app.Driver.UpdateDriverLocation: error while find driver by id:\n%w", err)
-	}
+		driverLocation := entity.NewDriverLocation(req.DriverId, req.Latitude, req.Longitude)
 
-	driverLocation := entity.NewDriverLocation(req.DriverId, req.Latitude, req.Longitude)
+		if err = d.repository.driverLocation.Upsert(ctx, i, driverLocation); err != nil {
+			return fmt.Errorf("app.Driver.UpdateDriverLocation: error while update driver location:\n%w", err)
+		}
 
-	if err = d.repository.driverLocation.Upsert(ctx, driverLocation); err != nil {
-		return fmt.Errorf("app.Driver.UpdateDriverLocation: error while update driver location:\n%w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func NewDriverApp(opts ...driverOption) (driverApp, error) {

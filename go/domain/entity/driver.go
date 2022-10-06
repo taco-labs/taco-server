@@ -24,7 +24,6 @@ type Driver struct {
 	AppFcmToken     string          `bun:"app_fcm_token"`
 	UserUniqueKey   string          `bun:"user_unique_key"`
 	DriverLicenseId string          `bun:"driver_license_id"`
-	OnDuty          bool            `bun:"driver_on_duty"`
 	Active          bool            `bun:"active"`
 	CreateTime      time.Time       `bun:"create_time"`
 	UpdateTime      time.Time       `bun:"update_time"`
@@ -48,6 +47,7 @@ type DriverLocation struct {
 
 	DriverId string         `bun:"driver_id,pk"`
 	Location postgis.PointS `bun:"location"`
+	OnDuty   bool           `bun:"on_duty"`
 }
 
 func NewDriverLocation(driverId string, latitude float64, longitude float64) DriverLocation {

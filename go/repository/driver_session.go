@@ -8,20 +8,19 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/uptrace/bun"
 )
 
 type DriverSessionRepository interface {
-	GetById(context.Context, string) (entity.DriverSession, error)
-	ActivateByDriverId(context.Context, string) error
-	Create(context.Context, entity.DriverSession) error
-	DeleteByDriverId(context.Context, string) error
+	GetById(context.Context, bun.IDB, string) (entity.DriverSession, error)
+	ActivateByDriverId(context.Context, bun.IDB, string) error
+	Create(context.Context, bun.IDB, entity.DriverSession) error
+	DeleteByDriverId(context.Context, bun.IDB, string) error
 }
 
 type driverSessionRepository struct{}
 
-func (d driverSessionRepository) GetById(ctx context.Context, sessionId string) (entity.DriverSession, error) {
-	db := GetQueryContext(ctx)
-
+func (d driverSessionRepository) GetById(ctx context.Context, db bun.IDB, sessionId string) (entity.DriverSession, error) {
 	driverSession := entity.DriverSession{Id: sessionId}
 
 	err := db.NewSelect().Model(&driverSession).WherePK().Scan(ctx)
@@ -36,9 +35,7 @@ func (d driverSessionRepository) GetById(ctx context.Context, sessionId string) 
 	return driverSession, nil
 }
 
-func (d driverSessionRepository) ActivateByDriverId(ctx context.Context, driverId string) error {
-	db := GetQueryContext(ctx)
-
+func (d driverSessionRepository) ActivateByDriverId(ctx context.Context, db bun.IDB, driverId string) error {
 	res, err := db.NewUpdate().
 		Model(&entity.DriverSession{}).
 		Set("activated = true").
@@ -63,9 +60,7 @@ func (d driverSessionRepository) ActivateByDriverId(ctx context.Context, driverI
 	return nil
 }
 
-func (d driverSessionRepository) Create(ctx context.Context, driverSession entity.DriverSession) error {
-	db := GetQueryContext(ctx)
-
+func (d driverSessionRepository) Create(ctx context.Context, db bun.IDB, driverSession entity.DriverSession) error {
 	res, err := db.NewInsert().Model(&driverSession).Exec(ctx)
 
 	if err != nil {
@@ -83,9 +78,7 @@ func (d driverSessionRepository) Create(ctx context.Context, driverSession entit
 	return nil
 }
 
-func (d driverSessionRepository) DeleteByDriverId(ctx context.Context, driverId string) error {
-	db := GetQueryContext(ctx)
-
+func (d driverSessionRepository) DeleteByDriverId(ctx context.Context, db bun.IDB, driverId string) error {
 	res, err := db.NewDelete().Model(&entity.DriverSession{}).Where("driver_id = ?", driverId).Exec(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {

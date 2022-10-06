@@ -113,6 +113,7 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 
 			taxiCallRequest = entity.TaxiCallRequest{
 				Dryrun: req.Dryrun,
+				ETA:    route.ETA,
 				UserId: userId,
 				Departure: value.Location{
 					Point:   req.Departure,
@@ -152,6 +153,7 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 		// create taxi call request
 		taxiCallRequest = entity.TaxiCallRequest{
 			Dryrun: req.Dryrun,
+			ETA:    route.ETA,
 			Id:     utils.MustNewUUID(),
 			UserId: userId,
 			Departure: value.Location{

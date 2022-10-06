@@ -15,6 +15,7 @@ type PaymentSummaryResponse struct {
 
 type TaxiCallRequestResponse struct {
 	Dryrun                    bool                   `json:"dryrun"`
+	ETA                       time.Duration          `json:"eta"`
 	Id                        string                 `json:"id"`
 	UserId                    string                 `json:"userId"`
 	DriverId                  *string                `json:"driverId"`
@@ -52,6 +53,7 @@ func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummar
 func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallRequestResponse {
 	return TaxiCallRequestResponse{
 		Dryrun: taxiCallRequest.Dryrun,
+		ETA:    taxiCallRequest.ETA,
 		Id:     taxiCallRequest.Id,
 		UserId: taxiCallRequest.UserId,
 		DriverId: func() *string {

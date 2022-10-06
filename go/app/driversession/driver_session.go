@@ -8,6 +8,7 @@ import (
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/repository"
+	"github.com/uptrace/bun"
 )
 
 type driverSessionApp struct {
@@ -18,72 +19,49 @@ type driverSessionApp struct {
 }
 
 func (d driverSessionApp) GetById(ctx context.Context, sessionId string) (entity.DriverSession, error) {
-	ctx, err := d.Start(ctx)
+	var driverSession entity.DriverSession
+	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		sess, err := d.repository.session.GetById(ctx, i, sessionId)
+		if err != nil {
+			return fmt.Errorf("app.DriverSession.Get: error while get session:\n%w", err)
+		}
+		driverSession = sess
+		return nil
+	})
+
 	if err != nil {
 		return entity.DriverSession{}, err
-	}
-
-	defer func() {
-		err = d.Done(ctx, err)
-	}()
-
-	driverSession, err := d.repository.session.GetById(ctx, sessionId)
-	if err != nil {
-		return entity.DriverSession{}, fmt.Errorf("app.DriverSession.Get: error while get session:\n%w", err)
 	}
 
 	return driverSession, nil
 }
 
 func (d driverSessionApp) RevokeByDriverId(ctx context.Context, driverId string) error {
-	ctx, err := d.Start(ctx)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		err = d.Done(ctx, err)
-	}()
-
-	if err = d.repository.session.DeleteByDriverId(ctx, driverId); err != nil {
-		return fmt.Errorf("app.DriverSession.RevokeByDriverId: error while revoke driver session:\n%w", err)
-	}
-
-	return nil
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := d.repository.session.DeleteByDriverId(ctx, i, driverId); err != nil {
+			return fmt.Errorf("app.DriverSession.RevokeByDriverId: error while revoke driver session:\n%w", err)
+		}
+		return nil
+	})
 }
 
 func (d driverSessionApp) Create(ctx context.Context, session entity.DriverSession) error {
-	ctx, err := d.Start(ctx)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		err = d.Done(ctx, err)
-	}()
-
-	if err = d.repository.session.Create(ctx, session); err != nil {
-		return fmt.Errorf("app.DriverSession.Create: error while create driver session:\n%w", err)
-	}
-
-	return nil
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := d.repository.session.Create(ctx, i, session); err != nil {
+			return fmt.Errorf("app.DriverSession.Create: error while create driver session:\n%w", err)
+		}
+		return nil
+	})
 }
 
 func (d driverSessionApp) ActivateByDriverId(ctx context.Context, driverId string) error {
-	ctx, err := d.Start(ctx)
-	if err != nil {
-		return err
-	}
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := d.repository.session.ActivateByDriverId(ctx, i, driverId); err != nil {
+			return fmt.Errorf("app.DriverSession.Create: error while activate driver session:\n%w", err)
+		}
 
-	defer func() {
-		err = d.Done(ctx, err)
-	}()
-
-	if err = d.repository.session.ActivateByDriverId(ctx, driverId); err != nil {
-		return fmt.Errorf("app.DriverSession.Create: error while activate driver session:\n%w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func NewDriverSessionApp(opts ...driverSessionOption) (driverSessionApp, error) {

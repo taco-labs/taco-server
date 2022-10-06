@@ -2,14 +2,24 @@ package request
 
 // TODO(taekyeom) validation
 type DriverSignupRequest struct {
-	DriverType      string `json:"driverType"`
-	FirstName       string `json:"firstName"`
-	LastName        string `json:"lastName"`
-	IamUid          string `json:"iamUid"`
-	AppOs           string `json:"appOs"`
-	AppVersion      string `json:"appVersion"`
-	AppFcmToken     string `json:"appFcmToken"`
-	DriverLicenseId string `json:"driverLicenseId"`
+	DriverType              string `json:"driverType"`
+	FirstName               string `json:"firstName"`
+	LastName                string `json:"lastName"`
+	Gender                  string `json:"gender"`
+	Birthday                string `json:"birthday"`
+	Phone                   string `json:"phone"`
+	AppOs                   string `json:"appOs"`
+	AppVersion              string `json:"appVersion"`
+	AppFcmToken             string `json:"appFcmToken"`
+	DriverLicenseId         string `json:"driverLicenseId"`
+	SmsVerificationStateKey string `json:"smsVerificationStateKey"`
+}
+
+type DriverUpdateRequest struct {
+	Id          string `param:"driverId"`
+	AppOs       string `json:"appOs"`
+	AppVersion  string `json:"appVersion"`
+	AppFcmToken string `json:"appFcmToken"`
 }
 
 type DriverOnDutyUpdateRequest struct {
@@ -21,10 +31,4 @@ type DriverLocationUpdateRequest struct {
 	DriverId  string  `param:"driverId"`
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
-}
-
-type MockDriverIdentity struct {
-	MockGender   string `json:"gender"`
-	MockBirthday string `json:"birthday"`
-	MockPhone    string `json:"phone"`
 }

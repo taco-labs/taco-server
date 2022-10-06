@@ -8,22 +8,21 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/uptrace/bun"
 )
 
 // TODO(taekyeom) Driver repository에서 location 정보까지 같이 handling 해야 할까?
 type DriverRepository interface {
-	FindById(context.Context, string) (entity.Driver, error)
-	FindByUserUniqueKey(context.Context, string) (entity.Driver, error)
-	Create(context.Context, entity.Driver) error
-	Update(context.Context, entity.Driver) error
-	Delete(context.Context, entity.Driver) error
+	FindById(context.Context, bun.IDB, string) (entity.Driver, error)
+	FindByUserUniqueKey(context.Context, bun.IDB, string) (entity.Driver, error)
+	Create(context.Context, bun.IDB, entity.Driver) error
+	Update(context.Context, bun.IDB, entity.Driver) error
+	Delete(context.Context, bun.IDB, entity.Driver) error
 }
 
 type driverRepository struct{}
 
-func (u driverRepository) FindById(ctx context.Context, driverId string) (entity.Driver, error) {
-	db := GetQueryContext(ctx)
-
+func (u driverRepository) FindById(ctx context.Context, db bun.IDB, driverId string) (entity.Driver, error) {
 	driver := entity.Driver{
 		Id: driverId,
 	}
@@ -40,9 +39,7 @@ func (u driverRepository) FindById(ctx context.Context, driverId string) (entity
 	return driver, nil
 }
 
-func (u driverRepository) FindByUserUniqueKey(ctx context.Context, userUniqueKey string) (entity.Driver, error) {
-	db := GetQueryContext(ctx)
-
+func (u driverRepository) FindByUserUniqueKey(ctx context.Context, db bun.IDB, userUniqueKey string) (entity.Driver, error) {
 	driver := entity.Driver{}
 
 	err := db.NewSelect().Model(&driver).Where("user_unique_key = ?", userUniqueKey).Scan(ctx)
@@ -57,9 +54,7 @@ func (u driverRepository) FindByUserUniqueKey(ctx context.Context, userUniqueKey
 	return driver, nil
 }
 
-func (u driverRepository) Create(ctx context.Context, driver entity.Driver) error {
-	db := GetQueryContext(ctx)
-
+func (u driverRepository) Create(ctx context.Context, db bun.IDB, driver entity.Driver) error {
 	res, err := db.NewInsert().Model(&driver).Exec(ctx)
 
 	if err != nil {
@@ -77,9 +72,7 @@ func (u driverRepository) Create(ctx context.Context, driver entity.Driver) erro
 	return nil
 }
 
-func (u driverRepository) Update(ctx context.Context, driver entity.Driver) error {
-	db := GetQueryContext(ctx)
-
+func (u driverRepository) Update(ctx context.Context, db bun.IDB, driver entity.Driver) error {
 	res, err := db.NewUpdate().Model(&driver).WherePK().Exec(ctx)
 
 	if err != nil {
@@ -97,9 +90,7 @@ func (u driverRepository) Update(ctx context.Context, driver entity.Driver) erro
 	return nil
 }
 
-func (u driverRepository) Delete(ctx context.Context, driver entity.Driver) error {
-	db := GetQueryContext(ctx)
-
+func (u driverRepository) Delete(ctx context.Context, db bun.IDB, driver entity.Driver) error {
 	res, err := db.NewDelete().Model(&driver).WherePK().Exec(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {

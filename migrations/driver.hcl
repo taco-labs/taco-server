@@ -19,12 +19,6 @@ table "driver" {
     null = false
   }
 
-  column "driver_on_duty" {
-    type = boolean
-    null = false
-    comment = "택시 기사 출근 여부"
-  }
-
   column "first_name" {
     type = text
     null = false
@@ -64,6 +58,13 @@ table "driver" {
     type = text
     null = false
   }
+
+  column "active" {
+    type = boolean
+    null = false
+    comment = "Is taxi driver is activated (가입 승인을 받았는지 여부)"
+  }
+
 
   column "driver_license_id" {
     type = text
