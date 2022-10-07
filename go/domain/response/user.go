@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
-	"github.com/taco-labs/taco/go/domain/value/enum"
 )
 
 type SmsVerificationRequestResponse struct {
@@ -13,14 +12,14 @@ type SmsVerificationRequestResponse struct {
 }
 
 type UserResponse struct {
-	Id         string      `json:"id"`
-	FirstName  string      `json:"firstName"`
-	LastName   string      `json:"lastName"`
-	BirthDay   string      `json:"birthday"`
-	Phone      string      `json:"phone"`
-	Gender     string      `json:"gender"`
-	AppOs      enum.OsType `json:"appOs"`
-	AppVersion string      `json:"osVersion"`
+	Id         string `json:"id"`
+	FirstName  string `json:"firstName"`
+	LastName   string `json:"lastName"`
+	BirthDay   string `json:"birthday"`
+	Phone      string `json:"phone"`
+	Gender     string `json:"gender"`
+	AppOs      string `json:"appOs"`
+	AppVersion string `json:"osVersion"`
 }
 
 func UserToResponse(user entity.User) UserResponse {
@@ -31,7 +30,7 @@ func UserToResponse(user entity.User) UserResponse {
 		BirthDay:   user.BirthDay,
 		Phone:      user.Phone,
 		Gender:     user.Gender,
-		AppOs:      user.AppOs,
+		AppOs:      string(user.AppOs),
 		AppVersion: user.AppVersion,
 	}
 }

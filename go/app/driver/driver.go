@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	// "time"
@@ -35,8 +36,9 @@ type driverApp struct {
 	}
 
 	service struct {
-		smsSender service.SmsSenderService
-		session   sessionInterface
+		smsSender  service.SmsSenderService
+		session    sessionInterface
+		fileUpload service.FileUploadService
 	}
 
 	actor struct {
@@ -132,7 +134,13 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 	var newDriver entity.Driver
 	var driverSession entity.DriverSession
 
-	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	// TODO (taekyeom) Handle delete when signup failed
+	imageUrl, err := d.service.fileUpload.Upload(ctx, os.File{})
+	if err != nil {
+		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while upload driver url: %w", err)
+	}
+
+	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driver, err := d.repository.driver.FindByUserUniqueKey(ctx, i, req.Phone)
 		if !errors.Is(err, value.ErrDriverNotFound) {
 			return fmt.Errorf("app.Driver.Signup: error while find driver by unique key:%w", err)
@@ -150,40 +158,25 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 		if !smsVerification.Verified {
 			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrUnAuthorized)
 		}
-		// Id              string          `bun:"id,pk"`
-		// DriverType      enum.DriverType `bun:"driver_type"`
-		// FirstName       string          `bun:"first_name"`
-		// LastName        string          `bun:"last_name"`
-		// BirthDay        string          `bun:"birthday"`
-		// Phone           string          `bun:"phone"`
-		// Gender          string          `bun:"gender"`
-		// AppOs           enum.OsType     `bun:"app_os"`
-		// AppVersion      string          `bun:"app_version"`
-		// AppFcmToken     string          `bun:"app_fcm_token"`
-		// UserUniqueKey   string          `bun:"user_unique_key"`
-		// DriverLicenseId string          `bun:"driver_license_id"`
-		// Active          bool            `bun:"active"`
-		// CreateTime      time.Time       `bun:"create_time"`
-		// UpdateTime      time.Time       `bun:"update_time"`
-		// DeleteTime      time.Time       `bun:"delete_time"`
 
 		newDriver = entity.Driver{
-			Id:              utils.MustNewUUID(),
-			DriverType:      enum.DriverTypeFromString(req.DriverType),
-			FirstName:       req.FirstName,
-			LastName:        req.LastName,
-			BirthDay:        req.Birthday,
-			Gender:          req.Gender,
-			Phone:           req.Phone,
-			AppOs:           enum.OsTypeFromString(req.AppOs),
-			AppVersion:      req.AppVersion,
-			AppFcmToken:     req.AppFcmToken,
-			UserUniqueKey:   req.Phone,
-			DriverLicenseId: req.DriverLicenseId,
-			Active:          false,
-			CreateTime:      requestTime,
-			UpdateTime:      requestTime,
-			DeleteTime:      time.Time{},
+			Id:                    utils.MustNewUUID(),
+			DriverType:            enum.DriverTypeFromString(req.DriverType),
+			FirstName:             req.FirstName,
+			LastName:              req.LastName,
+			BirthDay:              req.Birthday,
+			Gender:                req.Gender,
+			Phone:                 req.Phone,
+			AppOs:                 enum.OsTypeFromString(req.AppOs),
+			AppVersion:            req.AppVersion,
+			AppFcmToken:           req.AppFcmToken,
+			UserUniqueKey:         req.Phone,
+			DriverLicenseId:       req.DriverLicenseId,
+			DriverLicenseImageUrl: imageUrl,
+			Active:                false,
+			CreateTime:            requestTime,
+			UpdateTime:            requestTime,
+			DeleteTime:            time.Time{},
 		}
 
 		if err := d.repository.driver.Create(ctx, i, newDriver); err != nil {
@@ -288,12 +281,24 @@ func (d driverApp) validateApp() error {
 		return errors.New("driver app need driver location repostiroy")
 	}
 
+	if d.repository.smsVerification == nil {
+		return errors.New("driver app need sms verification repository")
+	}
+
 	if d.repository.settlementAccount == nil {
 		return errors.New("driver app need settlement account repository")
 	}
 
 	if d.service.session == nil {
 		return errors.New("driver app need driver session service")
+	}
+
+	if d.service.smsSender == nil {
+		return errors.New("driver app need sms sender service")
+	}
+
+	if d.service.fileUpload == nil {
+		return errors.New("driver app need file upload service")
 	}
 
 	return nil

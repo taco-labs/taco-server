@@ -53,7 +53,7 @@ func (u userServer) SmsVerificationRequest(e echo.Context) error {
 	return e.JSON(http.StatusOK, resp)
 }
 
-func (u userServer) SmsSingin(e echo.Context) error {
+func (u userServer) SmsSignin(e echo.Context) error {
 	ctx := e.Request().Context()
 
 	req := request.SmsSigninRequest{}

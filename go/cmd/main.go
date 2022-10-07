@@ -68,6 +68,8 @@ func main() {
 		"c46bd6c102717c6453ae7f0e6630a408",
 	)
 
+	fileUploadService := service.NewMockFileUploadService()
+
 	userSessionApp, err := usersession.NewUserSessionApp(
 		usersession.WithTransactor(transactor),
 		usersession.WithUserSessionRepository(userSessionRepository),
@@ -117,6 +119,9 @@ func main() {
 		driver.WithDriverLocationRepository(driverLocationRepository),
 		driver.WithSettlementAccountRepository(driverSettlementAccountRepository),
 		driver.WithSessionService(driverSessionApp),
+		driver.WithSmsSenderService(smsSenderService),
+		driver.WithSmsVerificationRepository(smsVerificationRepository),
+		driver.WithFileUploadService(fileUploadService),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver app: %v\n", err)

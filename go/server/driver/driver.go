@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/taco-labs/taco/go/server"
 	"github.com/labstack/echo/v4"
+	"github.com/taco-labs/taco/go/server"
 )
 
 type driverServer struct {
@@ -35,6 +35,11 @@ func (d *driverServer) initController() error {
 	d.echo.GET("/healthz", func(c echo.Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
+
+	driverGroup := d.echo.Group("/driver")
+	driverGroup.POST("/signin/sms/request", d.SmsVerificationRequest)
+	driverGroup.POST("/signin/sms/verify", d.SmsSignin)
+	driverGroup.POST("/signup", d.Signup)
 
 	return nil
 }
