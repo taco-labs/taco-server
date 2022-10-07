@@ -120,11 +120,6 @@ table "driver_settlement_account" {
     null = false
   }
 
-  column "name" {
-    type = text
-    null = false
-  }
-
   column "bank" {
     type = text
     null = false
@@ -143,11 +138,6 @@ table "driver_settlement_account" {
   }
 
   column "update_time" {
-    type = timestamp
-    null = false
-  }
-
-  column "delete_time" {
     type = timestamp
     null = false
   }

@@ -1,6 +1,8 @@
 package response
 
 import (
+	"time"
+
 	"github.com/taco-labs/taco/go/domain/entity"
 )
 
@@ -14,6 +16,7 @@ type DriverResponse struct {
 	Gender     string `json:"gender"`
 	AppOs      string `json:"appOs"`
 	AppVersion string `json:"osVersion"`
+	Active     bool   `json:"active"`
 }
 
 type DriverSignupResponse struct {
@@ -32,5 +35,24 @@ func DriverToResponse(driver entity.Driver) DriverResponse {
 		Gender:     driver.Gender,
 		AppOs:      string(driver.AppOs),
 		AppVersion: driver.AppVersion,
+		Active:     driver.Active,
+	}
+}
+
+type DriverSettlemtnAccountResponse struct {
+	DriverId      string    `json:"driverId"`
+	Bank          string    `json:"bank"`
+	AccountNumber string    `json:"accountNumber"`
+	CreateTime    time.Time `json:"createTime"`
+	UpdateTime    time.Time `json:"updateTime"`
+}
+
+func DriverSettlemtnAccountToResponse(account entity.DriverSettlementAccount) DriverSettlemtnAccountResponse {
+	return DriverSettlemtnAccountResponse{
+		DriverId:      account.DriverId,
+		Bank:          account.Bank,
+		AccountNumber: account.AccountNumber,
+		CreateTime:    account.CreateTime,
+		UpdateTime:    account.UpdateTime,
 	}
 }

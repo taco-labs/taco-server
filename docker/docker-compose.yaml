@@ -21,10 +21,15 @@ services:
   server:
     container_name: "taco_server"
     image: "taco_local:dev"
-    command: [ "-dsn", "postgres://postgres:postgres@taco_postgres:5432/taco?sslmode=disable&search_path=taco"]
+    command: 
+      - "-dsn"
+      - "postgres://postgres:postgres@taco_postgres:5432/taco?sslmode=disable&search_path=taco"
+      - "-backofficeSecret"
+      - "backoffice_secret"
     ports:
       - 18881:18881
       - 18882:18882
+      - 18883:18883
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

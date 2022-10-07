@@ -18,7 +18,6 @@ type UserApp interface {
 	SmsSignin(context.Context, request.SmsSigninRequest) (entity.User, string, error)
 	Signup(context.Context, request.UserSignupRequest) (entity.User, string, error)
 	GetUser(context.Context, string) (entity.User, error)
-	DeleteUser(context.Context, string) error
 	UpdateUser(context.Context, request.UserUpdateRequest) (entity.User, error)
 	ListCardPayment(ctx context.Context, userId string) ([]entity.UserPayment, entity.UserDefaultPayment, error)
 	RegisterCardPayment(ctx context.Context, req request.UserPaymentRegisterRequest) (entity.UserPayment, error)
@@ -125,18 +124,6 @@ func (u userServer) UpdateUser(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusOK, response.UserToResponse(user))
-}
-
-func (u userServer) DeleteUser(e echo.Context) error {
-	ctx := e.Request().Context()
-
-	userId := e.Param("userId")
-	err := u.app.user.DeleteUser(ctx, userId)
-	if err != nil {
-		return server.ToResponse(err)
-	}
-
-	return e.JSON(http.StatusOK, struct{}{})
 }
 
 func (u userServer) ListCardPayment(e echo.Context) error {

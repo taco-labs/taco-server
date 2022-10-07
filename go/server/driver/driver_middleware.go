@@ -1,4 +1,4 @@
-package user
+package driver
 
 import (
 	"context"
@@ -14,18 +14,18 @@ import (
 )
 
 var skipSet = map[string]struct{}{
-	"/user/signin/sms/request": {},
-	"/user/signin/sms/verify":  {},
-	"/user/signup":             {},
-	"/healthz":                 {},
+	"/driver/signin/sms/request": {},
+	"/driver/signin/sms/verify":  {},
+	"/driver/signup":             {},
+	"/healthz":                   {},
 }
 
-type userSessionApp interface {
-	GetSession(context.Context, string) (entity.UserSession, error)
+type driverSessionApp interface {
+	GetById(context.Context, string) (entity.DriverSession, error)
 }
 
 type sessionMiddleware struct {
-	sessionApp userSessionApp
+	sessionApp driverSessionApp
 }
 
 func (s sessionMiddleware) Get() echo.MiddlewareFunc {
@@ -42,13 +42,16 @@ func (s sessionMiddleware) skipper(c echo.Context) bool {
 
 func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, error) {
 	ctx := c.Request().Context()
-	session, err := s.sessionApp.GetSession(ctx, key)
+	session, err := s.sessionApp.GetById(ctx, key)
 	if errors.Is(err, value.ErrNotFound) {
 		return false, value.ErrUnAuthenticated
 	}
 	if err != nil {
-		// TODO(taekyeom) handle error
 		return false, err
+	}
+
+	if !session.Activated {
+		return false, value.ErrNotYetActivated
 	}
 
 	currentTime := utils.GetRequestTimeOrNow(ctx)
@@ -57,30 +60,29 @@ func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, er
 		return false, value.ErrSessionExpired
 	}
 
-	// Set userId key
-	ctx = utils.SetUserId(ctx, session.UserId)
+	ctx = utils.SetDriverId(ctx, session.DriverId)
 	r := c.Request().WithContext(ctx)
 	c.SetRequest(r)
 
 	return true, nil
 }
 
-func NewSessionMiddleware(sessionApp userSessionApp) sessionMiddleware {
+func NewSessionMiddleware(sessionApp driverSessionApp) sessionMiddleware {
 	return sessionMiddleware{
 		sessionApp: sessionApp,
 	}
 }
 
-func UserIdChecker(next echo.HandlerFunc) echo.HandlerFunc {
+func DriverIdChecker(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := c.Request().Context()
 
-		requestUserId := c.Param("userId")
+		requestDriverId := c.Param("driverId")
 
-		if requestUserId != "" {
-			userId := utils.GetUserId(ctx)
-			if requestUserId != userId {
-				return server.ToResponse(fmt.Errorf("unauthorized access to user resource:%w", value.ErrUnAuthorized))
+		if requestDriverId != "" {
+			driverId := utils.GetDriverId(ctx)
+			if requestDriverId != driverId {
+				return server.ToResponse(fmt.Errorf("unauthorized access to driver resource:%w", value.ErrUnAuthorized))
 			}
 		}
 

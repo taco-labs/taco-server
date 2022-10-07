@@ -13,6 +13,7 @@ import (
 	"github.com/taco-labs/taco/go/app/user"
 	"github.com/taco-labs/taco/go/app/usersession"
 	"github.com/taco-labs/taco/go/repository"
+	backofficeserver "github.com/taco-labs/taco/go/server/backoffice"
 	driverserver "github.com/taco-labs/taco/go/server/driver"
 	userserver "github.com/taco-labs/taco/go/server/user"
 	"github.com/taco-labs/taco/go/service"
@@ -27,6 +28,8 @@ func main() {
 	// TODO (taekyeom) Config
 	dsn := "postgres://postgres:postgres@localhost:25432/taco?sslmode=disable&search_path=taco"
 	dbDsnPtr := flag.String("dsn", dsn, "dsn of database")
+	backofficeSecret := "secret!!"
+	backofficeSecretPtr := flag.String("backofficeSecret", backofficeSecret, "secret of backoffice server")
 	flag.Parse()
 	ctx := context.Background()
 
@@ -113,6 +116,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	driverSessionMiddleware := driverserver.NewSessionMiddleware(driverSessionApp)
+
 	driverApp, err := driver.NewDriverApp(
 		driver.WithTransactor(transactor),
 		driver.WithDriverRepository(driverRepository),
@@ -144,9 +149,24 @@ func main() {
 		driverserver.WithEndpoint("0.0.0.0"),
 		driverserver.WithPort(18882),
 		driverserver.WithDriverApp(driverApp),
+		driverserver.WithMiddleware(driverSessionMiddleware.Get()),
+		driverserver.WithMiddleware(driverserver.DriverIdChecker),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver server: %v\n", err)
+		os.Exit(1)
+	}
+
+	backofficeSessionMiddleware := backofficeserver.NewSessionMiddleware(*backofficeSecretPtr)
+	backofficeServer, err := backofficeserver.NewBackofficeServer(
+		backofficeserver.WithEndpoint("0.0.0.0"),
+		backofficeserver.WithPort(18883),
+		backofficeserver.WithDriverApp(driverApp),
+		backofficeserver.WithUserApp(userApp),
+		backofficeserver.WithMiddleware(backofficeSessionMiddleware.Get()),
+	)
+	if err != nil {
+		fmt.Printf("Failed to setup backoffice server: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -162,6 +182,13 @@ func main() {
 	group.Go(func() error {
 		if err = driverServer.Run(ctx); err != nil {
 			return fmt.Errorf("failed to start driver server:\n%v", err)
+		}
+		return nil
+	})
+
+	group.Go(func() error {
+		if err = backofficeServer.Run(ctx); err != nil {
+			return fmt.Errorf("failed to start backoffice server:\n%v", err)
 		}
 		return nil
 	})

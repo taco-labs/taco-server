@@ -1,0 +1,118 @@
+package backoffice
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+
+	"github.com/labstack/echo/v4"
+	"github.com/taco-labs/taco/go/domain/entity"
+)
+
+type driverApp interface {
+	GetDriver(context.Context, string) (entity.Driver, error)
+	DeleteDriver(context.Context, string) error
+	ActivateDriver(context.Context, string) error
+}
+
+type userApp interface {
+	GetUser(context.Context, string) (entity.User, error)
+	DeleteUser(context.Context, string) error
+}
+
+type backofficeServer struct {
+	echo     *echo.Echo
+	endpoint string
+	port     int
+	app      struct {
+		driver driverApp
+		user   userApp
+	}
+	middlewares []echo.MiddlewareFunc
+}
+
+func (b *backofficeServer) initMiddleware() error {
+	for _, middleware := range b.middlewares {
+		b.echo.Use(middleware)
+	}
+
+	return nil
+}
+
+func (b *backofficeServer) initController() error {
+	b.echo.GET("/healthz", func(c echo.Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
+
+	driverGroup := b.echo.Group("/driver")
+	driverGroup.GET("/:driverId", b.GetDriver)
+	driverGroup.DELETE("/:driverId", b.DeleteDriver)
+	driverGroup.PUT("/:driverId/activate", b.ActivateDriver)
+
+	userGroup := b.echo.Group("/user")
+	userGroup.GET("/:userId", b.GetUser)
+	userGroup.DELETE("/:userId", b.DeleteUser)
+
+	return nil
+}
+
+func (b backofficeServer) validate() error {
+	if b.app.driver == nil {
+		return errors.New("backoffice server need driver app")
+	}
+
+	if b.app.user == nil {
+		return errors.New("backoffice server need user app")
+	}
+
+	return nil
+}
+
+func (b *backofficeServer) Run(ctx context.Context) error {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for {
+			select {
+			case <-c:
+				fmt.Println("shutting down [User API] server... because of interrupt")
+				b.echo.Shutdown(ctx)
+				return
+			case <-ctx.Done():
+				fmt.Println("shutting down [User API] server... because of context cancel")
+				b.echo.Shutdown(ctx)
+				return
+			}
+		}
+	}()
+	if err := b.echo.Start(fmt.Sprintf("%s:%d", b.endpoint, b.port)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func NewBackofficeServer(opts ...backofficeOption) (backofficeServer, error) {
+	e := echo.New()
+
+	server := backofficeServer{
+		echo:        e,
+		middlewares: make([]echo.MiddlewareFunc, 0),
+	}
+
+	for _, opt := range opts {
+		opt(&server)
+	}
+
+	if err := server.initMiddleware(); err != nil {
+		return server, err
+	}
+
+	if err := server.initController(); err != nil {
+		return server, err
+	}
+
+	return server, server.validate()
+}

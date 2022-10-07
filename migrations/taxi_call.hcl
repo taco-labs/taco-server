@@ -110,34 +110,6 @@ table "taxi_call_request" {
       column.driver_id,
     ]
   }
-
-  foreign_key "user_taxi_call_request_fk" {
-    columns = [
-      column.user_id,
-    ]
-
-    ref_columns = [
-      table.user.column.id,
-    ]
-
-    on_delete = NO_ACTION
-
-    on_update = NO_ACTION
-  }
-
-  foreign_key "driver_taxi_call_request_fk" {
-    columns = [
-      column.driver_id,
-    ]
-
-    ref_columns = [
-      table.driver.column.id,
-    ]
-
-    on_delete = NO_ACTION
-
-    on_update = NO_ACTION
-  }
 }
 
 table "taxi_call_ticket" {
@@ -256,7 +228,7 @@ table "taxi_call_last_received_ticket" {
       table.driver.column.id,
     ]
 
-    on_delete = NO_ACTION
+    on_delete = CASCADE
     on_update = NO_ACTION
   }
 }

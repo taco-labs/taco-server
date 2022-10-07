@@ -7,6 +7,7 @@ import (
 
 type requestTimeKey struct{}
 type userIdKey struct{}
+type driverIdKey struct{}
 
 func SetRequestTime(ctx context.Context, requestTime time.Time) context.Context {
 	return context.WithValue(ctx, requestTimeKey{}, requestTime)
@@ -30,4 +31,12 @@ func SetUserId(ctx context.Context, userId string) context.Context {
 
 func GetUserId(ctx context.Context) string {
 	return ctx.Value(userIdKey{}).(string)
+}
+
+func SetDriverId(ctx context.Context, driverId string) context.Context {
+	return context.WithValue(ctx, driverIdKey{}, driverId)
+}
+
+func GetDriverId(ctx context.Context) string {
+	return ctx.Value(driverIdKey{}).(string)
 }

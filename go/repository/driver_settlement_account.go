@@ -8,19 +8,18 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/uptrace/bun"
 )
 
 type DriverSettlementAccountRepository interface {
-	GetByDriverId(context.Context, string) (entity.DriverSettlementAccount, error)
-	Create(context.Context, entity.DriverSettlementAccount) error
-	Update(context.Context, entity.DriverSettlementAccount) error
+	GetByDriverId(context.Context, bun.IDB, string) (entity.DriverSettlementAccount, error)
+	Create(context.Context, bun.IDB, entity.DriverSettlementAccount) error
+	Update(context.Context, bun.IDB, entity.DriverSettlementAccount) error
 }
 
 type driverSettlementAccountRepository struct{}
 
-func (d driverSettlementAccountRepository) GetByDriverId(ctx context.Context, driverId string) (entity.DriverSettlementAccount, error) {
-	db := GetQueryContext(ctx)
-
+func (d driverSettlementAccountRepository) GetByDriverId(ctx context.Context, db bun.IDB, driverId string) (entity.DriverSettlementAccount, error) {
 	account := entity.DriverSettlementAccount{
 		DriverId: driverId,
 	}
@@ -28,7 +27,7 @@ func (d driverSettlementAccountRepository) GetByDriverId(ctx context.Context, dr
 	err := db.NewSelect().Model(&account).WherePK().Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
-		return entity.DriverSettlementAccount{}, value.ErrDriverNotFound
+		return entity.DriverSettlementAccount{}, value.ErrNotFound
 	}
 	if err != nil {
 		return entity.DriverSettlementAccount{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
@@ -37,9 +36,7 @@ func (d driverSettlementAccountRepository) GetByDriverId(ctx context.Context, dr
 	return account, nil
 }
 
-func (d driverSettlementAccountRepository) Create(ctx context.Context, account entity.DriverSettlementAccount) error {
-	db := GetQueryContext(ctx)
-
+func (d driverSettlementAccountRepository) Create(ctx context.Context, db bun.IDB, account entity.DriverSettlementAccount) error {
 	res, err := db.NewInsert().Model(&account).Exec(ctx)
 
 	if err != nil {
@@ -57,9 +54,7 @@ func (d driverSettlementAccountRepository) Create(ctx context.Context, account e
 	return nil
 }
 
-func (d driverSettlementAccountRepository) Update(ctx context.Context, account entity.DriverSettlementAccount) error {
-	db := GetQueryContext(ctx)
-
+func (d driverSettlementAccountRepository) Update(ctx context.Context, db bun.IDB, account entity.DriverSettlementAccount) error {
 	res, err := db.NewUpdate().Model(&account).WherePK().Exec(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {

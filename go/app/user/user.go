@@ -249,8 +249,7 @@ func (u userApp) GetUser(ctx context.Context, userId string) (entity.User, error
 }
 
 func (u userApp) DeleteUser(ctx context.Context, userId string) error {
-
-	err := u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		user, err := u.repository.user.FindById(ctx, i, userId)
 		if err != nil {
 			return fmt.Errorf("app.user.DeleteUser: error while find user by id:\n %w", err)
@@ -262,8 +261,6 @@ func (u userApp) DeleteUser(ctx context.Context, userId string) error {
 
 		return nil
 	})
-
-	return err
 }
 
 func NewUserApp(opts ...userAppOption) (userApp, error) {

@@ -15,6 +15,16 @@ type driverApp interface {
 	SmsVerificationRequest(context.Context, request.SmsVerificationRequest) (entity.SmsVerification, error)
 	SmsSignin(context.Context, request.SmsSigninRequest) (entity.Driver, string, error)
 	Signup(context.Context, request.DriverSignupRequest) (entity.Driver, string, error)
+	GetDriver(context.Context, string) (entity.Driver, error)
+	UpdateDriver(context.Context, request.DriverUpdateRequest) (entity.Driver, error)
+	UpdateOnDuty(context.Context, request.DriverOnDutyUpdateRequest) error
+	UpdateDriverLocation(context.Context, request.DriverLocationUpdateRequest) error
+	GetDriverSettlementAccount(context.Context, string) (entity.DriverSettlementAccount, error)
+	RegisterDriverSettlementAccount(context.Context,
+		request.DriverSettlementAccountRegisterRequest) (entity.DriverSettlementAccount, error)
+	UpdateDriverSettlementAccount(context.Context,
+		request.DriverSettlementAccountUpdateRequest) (entity.DriverSettlementAccount, error)
+	ActivateDriver(context.Context, string) error
 }
 
 func (d driverServer) SmsVerificationRequest(e echo.Context) error {
@@ -83,4 +93,137 @@ func (d driverServer) Signup(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) GetDriver(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+
+	driver, err := d.app.driver.GetDriver(ctx, driverId)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	resp := response.DriverToResponse(driver)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) UpdateDriver(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.DriverUpdateRequest{}
+
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	driver, err := d.app.driver.UpdateDriver(ctx, req)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	resp := response.DriverToResponse(driver)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) UpdateOnDuty(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.DriverOnDutyUpdateRequest{}
+
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	err := d.app.driver.UpdateOnDuty(ctx, req)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
+}
+
+func (d driverServer) UpdateDriverLocation(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.DriverLocationUpdateRequest{}
+
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	err := d.app.driver.UpdateDriverLocation(ctx, req)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
+}
+
+func (d driverServer) GetDriverSettlemtnAccount(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+
+	account, err := d.app.driver.GetDriverSettlementAccount(ctx, driverId)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	resp := response.DriverSettlemtnAccountToResponse(account)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) RegisterDriverSettlementAccount(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.DriverSettlementAccountRegisterRequest{}
+
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	account, err := d.app.driver.RegisterDriverSettlementAccount(ctx, req)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	resp := response.DriverSettlemtnAccountToResponse(account)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) UpdateDriverSettlemtnAccount(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.DriverSettlementAccountUpdateRequest{}
+
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	account, err := d.app.driver.UpdateDriverSettlementAccount(ctx, req)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	resp := response.DriverSettlemtnAccountToResponse(account)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) ActivateDriver(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+
+	if err := d.app.driver.ActivateDriver(ctx, driverId); err != nil {
+		return server.ToResponse(err)
+	}
+
+	return nil
 }

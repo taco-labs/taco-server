@@ -41,7 +41,6 @@ func (u *userServer) initController() error {
 	userGroup.POST("/signup", u.Signup)
 	userGroup.GET("/:userId", u.GetUser)
 	userGroup.PUT("/:userId", u.UpdateUser)
-	userGroup.DELETE("/:userId", u.DeleteUser)
 	userGroup.GET("/:userId/payment", u.ListCardPayment)
 	userGroup.POST("/:userId/payment/:paymentId/default", u.UpdateDefaultPayment)
 	userGroup.GET("/:userId/taxicall_latest", u.GetLatestTaxiCallRequest)

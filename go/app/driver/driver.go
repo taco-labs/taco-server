@@ -24,6 +24,7 @@ import (
 type sessionInterface interface {
 	RevokeByDriverId(context.Context, string) error
 	Create(context.Context, entity.DriverSession) error
+	ActivateByDriverId(context.Context, string) error
 }
 
 type driverApp struct {
@@ -222,6 +223,38 @@ func (d driverApp) GetDriver(ctx context.Context, driverId string) (entity.Drive
 	return driver, nil
 }
 
+func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateRequest) (entity.Driver, error) {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	var driver entity.Driver
+
+	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		dr, err := d.repository.driver.FindById(ctx, i, req.Id)
+		if err != nil {
+			return fmt.Errorf("app.driver.UpdateDriver: error while find driver by id:\n %w", err)
+		}
+
+		dr.AppOs = enum.OsTypeFromString(req.AppOs)
+		dr.AppVersion = req.AppVersion
+		dr.AppFcmToken = req.AppFcmToken
+		dr.UpdateTime = requestTime
+
+		if err := d.repository.driver.Update(ctx, i, dr); err != nil {
+			return fmt.Errorf("app.Driver.UpdateDriver: error while update driver: %w", err)
+		}
+
+		driver = dr
+
+		return nil
+	})
+
+	if err != nil {
+		return entity.Driver{}, err
+	}
+
+	return driver, nil
+}
+
 func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpdateRequest) error {
 	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driverLocation, err := d.repository.driverLocation.GetByDriverId(ctx, i, req.DriverId)
@@ -252,6 +285,41 @@ func (d driverApp) UpdateDriverLocation(ctx context.Context, req request.DriverL
 
 		if err = d.repository.driverLocation.Upsert(ctx, i, driverLocation); err != nil {
 			return fmt.Errorf("app.Driver.UpdateDriverLocation: error while update driver location:\n%w", err)
+		}
+
+		return nil
+	})
+}
+
+func (d driverApp) DeleteDriver(ctx context.Context, driverId string) error {
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driver, err := d.repository.driver.FindById(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.Driver.DeleteDriver: error while find driver by id:%w", err)
+		}
+
+		if err := d.repository.driver.Delete(ctx, i, driver); err != nil {
+			return fmt.Errorf("app.Driver.DeleteDriver: error while delete driver: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (d driverApp) ActivateDriver(ctx context.Context, driverId string) error {
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driver, err := d.repository.driver.FindById(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.Driver.ActivateDriver: error while find driver by id:%w", err)
+		}
+		driver.Active = true
+
+		if err := d.repository.driver.Update(ctx, i, driver); err != nil {
+			return fmt.Errorf("app.Driver.ActivateDriver: error while activate driver:%w", err)
+		}
+
+		if err := d.service.session.ActivateByDriverId(ctx, driverId); err != nil {
+			return fmt.Errorf("app.Driver.ActivateDriver: error while activate driver session:%w", err)
 		}
 
 		return nil
