@@ -72,6 +72,7 @@ type kakaoAddress struct {
 	RegionDepth2  string `json:"region_2depth_name"`
 	RegionDepth3  string `json:"region_3depth_name"`
 	MainAddressNo string `json:"main_address_no"`
+	SubAddressNo  string `json:"sub_address_no"`
 }
 
 type kakaoAddressResponse struct {

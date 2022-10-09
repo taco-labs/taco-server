@@ -28,6 +28,7 @@ type UserApp interface {
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	CancelTaxiCallRequest(context.Context, string) error
 	SearchLocation(context.Context, request.SearchLocationRequest) ([]value.LocationSummary, error)
+	GetAddress(context.Context, request.GetAddressRequest) (value.Address, error)
 }
 
 func (u userServer) SmsVerificationRequest(e echo.Context) error {
@@ -254,6 +255,22 @@ func (u userServer) SearchLocation(e echo.Context) error {
 	}
 
 	resp, err := u.app.user.SearchLocation(ctx, req)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (u userServer) GetAddress(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.GetAddressRequest{}
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	resp, err := u.app.user.GetAddress(ctx, req)
 	if err != nil {
 		return server.ToResponse(err)
 	}

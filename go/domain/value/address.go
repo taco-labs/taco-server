@@ -11,6 +11,7 @@ type Address struct {
 	RegionDepth2  string `json:"regionDepth2"`
 	RegionDepth3  string `json:"regionDepth3"`
 	MainAddressNo string `json:"mainAddressNo"`
+	SubAddressNo  string `json:"subAddressNo"`
 }
 
 func (r Address) AvailableRegion() bool {
