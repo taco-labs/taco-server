@@ -15,12 +15,13 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (u userApp) ListTaxiCallRequest(ctx context.Context, userId string) ([]entity.TaxiCallRequest, error) {
+func (u userApp) ListTaxiCallRequest(ctx context.Context, req request.ListTaxiCallRequest) ([]entity.TaxiCallRequest, string, error) {
 	var taxiCallRequests []entity.TaxiCallRequest
 	var err error
+	var pageToken string
 
 	err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		taxiCallRequests, err = u.repository.taxiCallRequest.ListByUserId(ctx, i, userId)
+		taxiCallRequests, pageToken, err = u.repository.taxiCallRequest.ListByUserId(ctx, i, req.UserId, req.PageToken, req.Count)
 		if err != nil {
 			return fmt.Errorf("app.user.ListTaxiCallRequest: error while get taxi call requests:\n%w", err)
 		}
@@ -28,10 +29,10 @@ func (u userApp) ListTaxiCallRequest(ctx context.Context, userId string) ([]enti
 	})
 
 	if err != nil {
-		return []entity.TaxiCallRequest{}, nil
+		return []entity.TaxiCallRequest{}, "", nil
 	}
 
-	return taxiCallRequests, nil
+	return taxiCallRequests, pageToken, nil
 }
 
 func (u userApp) GetLatestTaxiCallRequest(ctx context.Context, userId string) (entity.TaxiCallRequest, error) {

@@ -109,6 +109,14 @@ table "taxi_call_request" {
       column.driver_id,
     ]
   }
+
+  index "create_time_brin_idx" {
+    unique = false
+    type = BRIN
+    columns = [
+      column.create_time,
+    ]
+  }
 }
 
 table "taxi_call_ticket" {

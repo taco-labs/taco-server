@@ -32,11 +32,6 @@ type TaxiCallRequestResponse struct {
 	UpdateTime                time.Time              `json:"updateTime"`
 }
 
-type TaxiCallRequestHistoryResponse struct {
-	TaxiCallState string    `json:"taxiCallState"`
-	CreateTime    time.Time `json:"createTime"`
-}
-
 type TaxiCallRequestPageResponse struct {
 	PageToken string                    `json:"pageToken"`
 	Data      []TaxiCallRequestResponse `json:"data"`

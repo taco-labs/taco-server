@@ -19,11 +19,11 @@ type UserApp interface {
 	Signup(context.Context, request.UserSignupRequest) (entity.User, string, error)
 	GetUser(context.Context, string) (entity.User, error)
 	UpdateUser(context.Context, request.UserUpdateRequest) (entity.User, error)
-	ListCardPayment(ctx context.Context, userId string) ([]entity.UserPayment, entity.UserDefaultPayment, error)
-	RegisterCardPayment(ctx context.Context, req request.UserPaymentRegisterRequest) (entity.UserPayment, error)
-	DeleteCardPayment(ctx context.Context, userPaymentId string) error
-	UpdateDefaultPayment(ctx context.Context, req request.DefaultPaymentUpdateRequest) error
-	ListTaxiCallRequest(context.Context, string) ([]entity.TaxiCallRequest, error)
+	ListCardPayment(context.Context, string) ([]entity.UserPayment, entity.UserDefaultPayment, error)
+	RegisterCardPayment(context.Context, request.UserPaymentRegisterRequest) (entity.UserPayment, error)
+	DeleteCardPayment(context.Context, string) error
+	UpdateDefaultPayment(context.Context, request.DefaultPaymentUpdateRequest) error
+	ListTaxiCallRequest(context.Context, request.ListTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	CancelTaxiCallRequest(context.Context, string) error
@@ -220,9 +220,17 @@ func (u userServer) GetLatestTaxiCallRequest(e echo.Context) error {
 func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 	ctx := e.Request().Context()
 
-	userId := e.Param("userId")
+	req := request.ListTaxiCallRequest{}
 
-	taxiCallRequests, err := u.app.user.ListTaxiCallRequest(ctx, userId)
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	if req.Count == 0 {
+		req.Count = 30
+	}
+
+	taxiCallRequests, pageToken, err := u.app.user.ListTaxiCallRequest(ctx, req)
 	if err != nil {
 		return server.ToResponse(err)
 	}
@@ -230,7 +238,8 @@ func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 	resp := slices.Map(taxiCallRequests, response.TaxiCallRequestToResponse)
 
 	return e.JSON(http.StatusOK, response.TaxiCallRequestPageResponse{
-		Data: resp,
+		PageToken: pageToken,
+		Data:      resp,
 	})
 }
 
