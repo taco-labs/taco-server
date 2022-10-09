@@ -9,6 +9,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/response"
 	"github.com/taco-labs/taco/go/server"
+	"github.com/taco-labs/taco/go/utils/slices"
 )
 
 type driverApp interface {
@@ -25,6 +26,8 @@ type driverApp interface {
 	UpdateDriverSettlementAccount(context.Context,
 		request.DriverSettlementAccountUpdateRequest) (entity.DriverSettlementAccount, error)
 	ActivateDriver(context.Context, string) error
+	ListTaxiCallRequest(context.Context, request.ListDriverTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
+	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
 }
 
 func (d driverServer) SmsVerificationRequest(e echo.Context) error {
@@ -226,4 +229,44 @@ func (d driverServer) ActivateDriver(e echo.Context) error {
 	}
 
 	return nil
+}
+
+func (d driverServer) GetLatestTaxiCallRequest(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	userId := e.Param("driverId")
+
+	taxiCallRequest, err := d.app.driver.GetLatestTaxiCallRequest(ctx, userId)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) ListTaxiCallRequest(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.ListDriverTaxiCallRequest{}
+
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	if req.Count == 0 {
+		req.Count = 30
+	}
+
+	taxiCallRequests, pageToken, err := d.app.driver.ListTaxiCallRequest(ctx, req)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	resp := slices.Map(taxiCallRequests, response.TaxiCallRequestToResponse)
+
+	return e.JSON(http.StatusOK, response.TaxiCallRequestPageResponse{
+		PageToken: pageToken,
+		Data:      resp,
+	})
 }

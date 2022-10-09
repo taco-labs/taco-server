@@ -15,7 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (u userApp) ListTaxiCallRequest(ctx context.Context, req request.ListTaxiCallRequest) ([]entity.TaxiCallRequest, string, error) {
+func (u userApp) ListTaxiCallRequest(ctx context.Context, req request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error) {
 	var taxiCallRequests []entity.TaxiCallRequest
 	var err error
 	var pageToken string
@@ -85,8 +85,6 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 
 	// TODO(taekyeom) To be paramterized
 	if !(departure.AvailableRegion() && arrival.AvailableRegion()) {
-		fmt.Printf("%+v / %+v\n", req.Departure, req.Arrival)
-		fmt.Printf("%+v / %+v\n", departure, arrival)
 		return entity.TaxiCallRequest{}, fmt.Errorf("%w: not supported region", value.ErrUnsupportedRegion)
 	}
 

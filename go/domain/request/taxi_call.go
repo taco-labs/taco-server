@@ -16,8 +16,14 @@ func (c CreateTaxiCallRequest) Validate() error {
 	return nil
 }
 
-type ListTaxiCallRequest struct {
+type ListUserTaxiCallRequest struct {
 	UserId    string `param:"userId"`
+	Count     int    `query:"count"`
+	PageToken string `query:"pageToken"`
+}
+
+type ListDriverTaxiCallRequest struct {
+	DriverId  string `param:"userId"`
 	Count     int    `query:"count"`
 	PageToken string `query:"pageToken"`
 }

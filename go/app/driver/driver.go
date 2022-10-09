@@ -34,6 +34,7 @@ type driverApp struct {
 		driverLocation    repository.DriverLocationRepository
 		settlementAccount repository.DriverSettlementAccountRepository
 		smsVerification   repository.SmsVerificationRepository
+		taxiCallRequest   repository.TaxiCallRepository
 	}
 
 	service struct {
@@ -372,7 +373,7 @@ func (d driverApp) ActivateDriver(ctx context.Context, driverId string) error {
 	})
 }
 
-func NewDriverApp(opts ...driverOption) (driverApp, error) {
+func NewDriverApp(opts ...driverAppOption) (driverApp, error) {
 	da := driverApp{}
 
 	for _, opt := range opts {
@@ -401,6 +402,10 @@ func (d driverApp) validateApp() error {
 
 	if d.repository.settlementAccount == nil {
 		return errors.New("driver app need settlement account repository")
+	}
+
+	if d.repository.taxiCallRequest == nil {
+		return errors.New("driver app need taxi call request repository")
 	}
 
 	if d.service.session == nil {

@@ -23,7 +23,7 @@ type UserApp interface {
 	RegisterCardPayment(context.Context, request.UserPaymentRegisterRequest) (entity.UserPayment, error)
 	DeleteCardPayment(context.Context, string) error
 	UpdateDefaultPayment(context.Context, request.DefaultPaymentUpdateRequest) error
-	ListTaxiCallRequest(context.Context, request.ListTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
+	ListTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	CancelTaxiCallRequest(context.Context, string) error
@@ -220,7 +220,7 @@ func (u userServer) GetLatestTaxiCallRequest(e echo.Context) error {
 func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 	ctx := e.Request().Context()
 
-	req := request.ListTaxiCallRequest{}
+	req := request.ListUserTaxiCallRequest{}
 
 	if err := e.Bind(&req); err != nil {
 		return err
