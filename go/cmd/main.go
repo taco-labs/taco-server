@@ -30,13 +30,19 @@ func main() {
 	dbDsnPtr := flag.String("dsn", dsn, "dsn of database")
 	backofficeSecret := "secret!!"
 	backofficeSecretPtr := flag.String("backofficeSecret", backofficeSecret, "secret of backoffice server")
+	queryDebug := false
+	queryDebugPtr := flag.Bool("query_debug", queryDebug, "flag for print queries")
 	flag.Parse()
 	ctx := context.Background()
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(*dbDsnPtr)))
 
 	db := bun.NewDB(sqldb, pgdialect.New())
-	bundebug.NewQueryHook(bundebug.WithVerbose(true))
+
+	if *queryDebugPtr {
+		hook := bundebug.NewQueryHook(bundebug.WithVerbose(true))
+		db.AddQueryHook(hook)
+	}
 
 	transactor := app.NewDefaultTranscator(db)
 

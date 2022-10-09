@@ -64,4 +64,6 @@ var (
 	ErrUnsupportedRegion = TacoError{ERR_UNSUPPORTED, "unsupported region"}
 
 	ErrNotYetActivated = TacoError{ERR_UNAUTHORIZED, "not yet activated account"}
+
+	ErrInternal = TacoError{ERR_INTERNAL, "internal error"}
 )

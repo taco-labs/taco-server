@@ -17,6 +17,7 @@ type DriverResponse struct {
 	AppOs      string `json:"appOs"`
 	AppVersion string `json:"osVersion"`
 	Active     bool   `json:"active"`
+	OnDuty     bool   `json:"onDuty"`
 }
 
 type DriverSignupResponse struct {
@@ -36,6 +37,7 @@ func DriverToResponse(driver entity.Driver) DriverResponse {
 		AppOs:      string(driver.AppOs),
 		AppVersion: driver.AppVersion,
 		Active:     driver.Active,
+		OnDuty:     driver.OnDuty,
 	}
 }
 

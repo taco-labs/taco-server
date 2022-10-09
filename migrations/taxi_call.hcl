@@ -9,7 +9,6 @@ enum "taxi_call_state" {
     "USER_CANCELLED",
     "DRIVER_CANCELLED",
     "TAXI_CALL_FAILED",
-    "DRIVER_SETTLEMENT_DONE",
   ]
 }
 
@@ -264,6 +263,7 @@ table "driver_location" {
     columns = [
       column.location,
     ]
+    where = "on_duty"
   }
 
   foreign_key "driver_location_fk" {
@@ -273,6 +273,39 @@ table "driver_location" {
 
     ref_columns = [
       table.driver.column.id,
+    ]
+
+    on_delete = CASCADE
+
+    on_update = NO_ACTION
+  }
+}
+
+table "driver_taxi_call_settlement" {
+  schema = schema.taco
+
+  column "taxi_call_request_id" {
+    type = uuid
+    null = false
+  }
+
+  column "settlement_done" {
+    type = boolean
+    null = false
+  }
+
+  column "settlement_done_time" {
+    type = timestamp
+    null = false
+  }
+
+  foreign_key "settlement_taxi_call_request_id_fk" {
+    columns = [
+      column.taxi_call_request_id,
+    ]
+
+    ref_columns = [
+      table.taxi_call_request.column.id,
     ]
 
     on_delete = CASCADE

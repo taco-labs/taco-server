@@ -26,6 +26,7 @@ services:
       - "postgres://postgres:postgres@taco_postgres:5432/taco?sslmode=disable&search_path=taco"
       - "-backofficeSecret"
       - "backoffice_secret"
+      - "-query_debug"
     ports:
       - 18881:18881
       - 18882:18882

@@ -86,7 +86,7 @@ func (d driverApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) 
 		if smsVerification.VerificationCode != req.VerificationCode {
 			return fmt.Errorf("app.Driver.SmsSignin: invalid verification code:\n%w", value.ErrInvalidOperation)
 		}
-		driver, err = d.repository.driver.FindByUserUniqueKey(ctx, i, smsVerification.Phone)
+		driverDto, err := d.repository.driver.FindByUserUniqueKey(ctx, i, smsVerification.Phone)
 		if errors.Is(value.ErrDriverNotFound, err) {
 			smsVerification.Verified = true
 			if err := d.repository.smsVerification.Update(ctx, i, smsVerification); err != nil {
@@ -95,7 +95,12 @@ func (d driverApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) 
 			return err
 		}
 		if err != nil {
-			return fmt.Errorf("app.Driver.SmsSignin: error while find user by unique key\n%w", err)
+			return fmt.Errorf("app.Driver.SmsSignin: error while find driver by unique key\n%w", err)
+		}
+
+		locationDto, err := d.repository.driverLocation.GetByDriverId(ctx, i, driverDto.Id)
+		if err != nil && errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.Driver.SmsSignin: error while find driver location by id\n%w", err)
 		}
 
 		// create new session
@@ -117,6 +122,11 @@ func (d driverApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) 
 
 		if err = d.service.session.Create(ctx, driverSession); err != nil {
 			return fmt.Errorf("app.Driver.SmsSignin: error while create new session:\n %w", err)
+		}
+
+		driver = entity.Driver{
+			DriverDto:         driverDto,
+			DriverLocationDto: locationDto,
 		}
 
 		return nil
@@ -160,28 +170,36 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrUnAuthorized)
 		}
 
+		newDriverId := utils.MustNewUUID()
 		newDriver = entity.Driver{
-			Id:                    utils.MustNewUUID(),
-			DriverType:            enum.DriverTypeFromString(req.DriverType),
-			FirstName:             req.FirstName,
-			LastName:              req.LastName,
-			BirthDay:              req.Birthday,
-			Gender:                req.Gender,
-			Phone:                 req.Phone,
-			AppOs:                 enum.OsTypeFromString(req.AppOs),
-			AppVersion:            req.AppVersion,
-			AppFcmToken:           req.AppFcmToken,
-			UserUniqueKey:         req.Phone,
-			DriverLicenseId:       req.DriverLicenseId,
-			DriverLicenseImageUrl: imageUrl,
-			Active:                false,
-			CreateTime:            requestTime,
-			UpdateTime:            requestTime,
-			DeleteTime:            time.Time{},
+			DriverDto: entity.DriverDto{
+				Id:                    newDriverId,
+				DriverType:            enum.DriverTypeFromString(req.DriverType),
+				FirstName:             req.FirstName,
+				LastName:              req.LastName,
+				BirthDay:              req.Birthday,
+				Gender:                req.Gender,
+				Phone:                 req.Phone,
+				AppOs:                 enum.OsTypeFromString(req.AppOs),
+				AppVersion:            req.AppVersion,
+				AppFcmToken:           req.AppFcmToken,
+				UserUniqueKey:         req.Phone,
+				DriverLicenseId:       req.DriverLicenseId,
+				DriverLicenseImageUrl: imageUrl,
+				Active:                false,
+				CreateTime:            requestTime,
+				UpdateTime:            requestTime,
+				DeleteTime:            time.Time{},
+			},
+			DriverLocationDto: entity.NewEmptyDriverLocation(newDriverId),
 		}
 
-		if err := d.repository.driver.Create(ctx, i, newDriver); err != nil {
+		if err := d.repository.driver.Create(ctx, i, newDriver.DriverDto); err != nil {
 			return fmt.Errorf("app.Driver.Signup: error while create driver:%w", err)
+		}
+
+		if err := d.repository.driverLocation.Upsert(ctx, i, newDriver.DriverLocationDto); err != nil {
+			return fmt.Errorf("app.Driver.Signup: error while create driver location:%w", err)
 		}
 
 		driverSession = entity.DriverSession{
@@ -211,14 +229,28 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 func (d driverApp) GetDriver(ctx context.Context, driverId string) (entity.Driver, error) {
 	var driver entity.Driver
 
-	d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		dr, err := d.repository.driver.FindById(ctx, i, driverId)
+	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverDto, err := d.repository.driver.FindById(ctx, i, driverId)
 		if err != nil {
 			return fmt.Errorf("app.Driver.GetDriver: error while find driver by id:\n%w", err)
 		}
-		driver = dr
+		locationDto, err := d.repository.driverLocation.GetByDriverId(ctx, i, driverId)
+		if err != nil && errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.Driver.GetDriver: error while find driver location by id:\n%w", err)
+		}
+		if errors.Is(err, value.ErrNotFound) {
+			locationDto = entity.NewEmptyDriverLocation(driverId)
+		}
+		driver = entity.Driver{
+			DriverDto:         driverDto,
+			DriverLocationDto: locationDto,
+		}
 		return nil
 	})
+
+	if err != nil {
+		return entity.Driver{}, err
+	}
 
 	return driver, nil
 }
@@ -229,21 +261,31 @@ func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateReq
 	var driver entity.Driver
 
 	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		dr, err := d.repository.driver.FindById(ctx, i, req.Id)
+		driverDto, err := d.repository.driver.FindById(ctx, i, req.Id)
 		if err != nil {
 			return fmt.Errorf("app.driver.UpdateDriver: error while find driver by id:\n %w", err)
 		}
+		driverLocationDto, err := d.repository.driverLocation.GetByDriverId(ctx, i, req.Id)
+		if err != nil && errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.driver.UpdateDriver: error while find driver location by id:\n %w", err)
+		}
+		if errors.Is(err, value.ErrNotFound) {
+			driverLocationDto = entity.NewEmptyDriverLocation(req.Id)
+		}
 
-		dr.AppOs = enum.OsTypeFromString(req.AppOs)
-		dr.AppVersion = req.AppVersion
-		dr.AppFcmToken = req.AppFcmToken
-		dr.UpdateTime = requestTime
+		driverDto.AppOs = enum.OsTypeFromString(req.AppOs)
+		driverDto.AppVersion = req.AppVersion
+		driverDto.AppFcmToken = req.AppFcmToken
+		driverDto.UpdateTime = requestTime
 
-		if err := d.repository.driver.Update(ctx, i, dr); err != nil {
+		if err := d.repository.driver.Update(ctx, i, driverDto); err != nil {
 			return fmt.Errorf("app.Driver.UpdateDriver: error while update driver: %w", err)
 		}
 
-		driver = dr
+		driver = entity.Driver{
+			DriverDto:         driverDto,
+			DriverLocationDto: driverLocationDto,
+		}
 
 		return nil
 	})
@@ -258,10 +300,11 @@ func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateReq
 func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpdateRequest) error {
 	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driverLocation, err := d.repository.driverLocation.GetByDriverId(ctx, i, req.DriverId)
-		if !errors.Is(err, value.ErrNotFound) {
-			// driver, err := d.repository.driver.FindById(ctx, req.DriverId)
-			// if err != nil {
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.Driver.UpdateOnDuty: error while find driver location:%w", err)
+		}
+		if errors.Is(err, value.ErrNotFound) {
+			driverLocation = entity.NewEmptyDriverLocation(req.DriverId)
 		}
 
 		driverLocation.OnDuty = req.OnDuty
@@ -276,14 +319,17 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 
 func (d driverApp) UpdateDriverLocation(ctx context.Context, req request.DriverLocationUpdateRequest) error {
 	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		_, err := d.repository.driver.FindById(ctx, i, req.DriverId)
-		if err != nil {
+		driverLocationDto, err := d.repository.driverLocation.GetByDriverId(ctx, i, req.DriverId)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.Driver.UpdateDriverLocation: error while find driver by id:\n%w", err)
 		}
+		if errors.Is(err, value.ErrNotFound) {
+			driverLocationDto = entity.NewEmptyDriverLocation(req.DriverId)
+		}
 
-		driverLocation := entity.NewDriverLocation(req.DriverId, req.Latitude, req.Longitude)
+		driverLocationDto = entity.NewDriverLocation(req.DriverId, req.Latitude, req.Longitude, driverLocationDto.OnDuty)
 
-		if err = d.repository.driverLocation.Upsert(ctx, i, driverLocation); err != nil {
+		if err = d.repository.driverLocation.Upsert(ctx, i, driverLocationDto); err != nil {
 			return fmt.Errorf("app.Driver.UpdateDriverLocation: error while update driver location:\n%w", err)
 		}
 

@@ -3,13 +3,18 @@ package entity
 import (
 	"time"
 
-	"github.com/cridenour/go-postgis"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
+	"github.com/twpayne/go-geom"
 	"github.com/uptrace/bun"
 )
 
 type Driver struct {
+	DriverDto
+	DriverLocationDto
+}
+
+type DriverDto struct {
 	bun.BaseModel `bun:"table:driver"`
 
 	Id                    string          `bun:"id,pk"`
@@ -41,21 +46,31 @@ type DriverSettlementAccount struct {
 	UpdateTime    time.Time `bun:"update_time"`
 }
 
-type DriverLocation struct {
+type DriverLocationDto struct {
 	bun.BaseModel `bun:"driver_location"`
 
-	DriverId string         `bun:"driver_id,pk"`
-	Location postgis.PointS `bun:"location"`
-	OnDuty   bool           `bun:"on_duty"`
+	Location *geom.Point `bun:"location"`
+	DriverId string      `bun:"driver_id,pk"`
+	OnDuty   bool        `bun:"on_duty"`
 }
 
-func NewDriverLocation(driverId string, latitude float64, longitude float64) DriverLocation {
-	return DriverLocation{
+func NewDriverLocation(driverId string, latitude float64, longitude float64, onDuty bool) DriverLocationDto {
+	point := geom.NewPoint(geom.XY).
+		MustSetCoords([]float64{longitude, latitude}).
+		SetSRID(value.SRID_SPHERE)
+
+	return DriverLocationDto{
 		DriverId: driverId,
-		Location: postgis.PointS{
-			SRID: value.SRID_SPHERE,
-			X:    longitude,
-			Y:    latitude,
-		},
+		Location: point,
+		OnDuty:   onDuty,
+	}
+}
+
+func NewEmptyDriverLocation(driverId string) DriverLocationDto {
+	point := geom.NewPointEmpty(geom.XY).SetSRID(value.SRID_SPHERE)
+	return DriverLocationDto{
+		DriverId: driverId,
+		Location: point,
+		OnDuty:   false,
 	}
 }
