@@ -25,42 +25,6 @@ type defaultTransactor struct {
 	db *bun.DB
 }
 
-func (t defaultTransactor) Start(ctx context.Context) (context.Context, error) {
-	qCtx := repository.GetQueryContext(ctx)
-	if qCtx != nil {
-		return context.WithValue(ctx, transactorCurrentScopeKey{}, false), nil
-	}
-
-	tx, err := t.db.BeginTx(ctx, nil)
-	if err != nil {
-		return ctx, fmt.Errorf("%w: error while open transaction:\n%v", value.ErrDBInternal, err)
-	}
-
-	ctx = repository.WithQueryContext(ctx, &tx)
-	ctx = context.WithValue(ctx, transactorCurrentScopeKey{}, true)
-
-	return ctx, nil
-}
-
-func (t defaultTransactor) Done(ctx context.Context, err error) error {
-	tx, ok := repository.GetQueryContext(ctx).(*bun.Tx)
-	if !ok {
-		return err
-	}
-
-	isCurrentScope := ctx.Value(transactorCurrentScopeKey{}).(bool)
-	if !isCurrentScope {
-		return nil
-	}
-
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit()
-}
-
 func (d defaultTransactor) Run(ctx context.Context, fn func(context.Context, bun.IDB) error) error {
 	qCtx := repository.GetQueryContext(ctx)
 	if qCtx != nil {
@@ -71,6 +35,7 @@ func (d defaultTransactor) Run(ctx context.Context, fn func(context.Context, bun
 	if err != nil {
 		return fmt.Errorf("%w: error while open transaction:\n%v", value.ErrDBInternal, err)
 	}
+
 	ctx = repository.WithQueryContext(ctx, &tx)
 	err = fn(ctx, tx)
 	if err != nil {

@@ -13,8 +13,9 @@ type TaxiCallRequest struct {
 	bun.BaseModel `bun:"table:taxi_call_request"`
 
 	// In Memroy
-	Dryrun bool          `bun:"-"`
-	ETA    time.Duration `bun:"-"`
+	Dryrun   bool          `bun:"-"`
+	ETA      time.Duration `bun:"-"`
+	Distance int           `bun:"-"`
 
 	Id                        string               `bun:"id,pk"`
 	UserId                    string               `bun:"user_id"`

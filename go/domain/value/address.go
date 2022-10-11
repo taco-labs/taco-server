@@ -2,7 +2,6 @@ package value
 
 import (
 	"fmt"
-	"time"
 )
 
 type Address struct {
@@ -40,9 +39,4 @@ type Location struct {
 type LocationSummary struct {
 	AddressSummary AddressSummary `json:"addressSummary"`
 	Point          Point          `json:"point"`
-}
-
-type Route struct {
-	ETA   time.Duration `json:"eta"`
-	Price int           `json:"price"`
 }

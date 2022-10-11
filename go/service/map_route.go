@@ -31,6 +31,7 @@ type naverMapsRouteUnit struct {
 	Summary struct {
 		Duration int `json:"duration"`
 		TaxiFare int `json:"taxiFare"`
+		Distance int `json:"distance"`
 	} `json:"summary"`
 }
 
@@ -62,8 +63,9 @@ func (m naverMapsRouteService) GetRoute(ctx context.Context, departure value.Poi
 	routeSummary := naverMapsRouteResp.Route["traoptimal"][0].Summary
 
 	return value.Route{
-		ETA:   time.Millisecond * time.Duration(routeSummary.Duration),
-		Price: routeSummary.TaxiFare,
+		ETA:      time.Millisecond * time.Duration(routeSummary.Duration),
+		Price:    routeSummary.TaxiFare,
+		Distance: routeSummary.Distance,
 	}, nil
 }
 

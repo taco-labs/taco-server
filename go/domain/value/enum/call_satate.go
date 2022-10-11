@@ -29,6 +29,15 @@ func (t TaxiCallState) Active() bool {
 		t == TaxiCallState_DRIVER_TO_ARRIVAL
 }
 
+func (t TaxiCallState) Requested() bool {
+	return t == TaxiCallState_Requested
+}
+
+func (t TaxiCallState) InDriving() bool {
+	return t == TaxiCallState_DRIVER_TO_DEPARTURE ||
+		t == TaxiCallState_DRIVER_TO_ARRIVAL
+}
+
 func (t TaxiCallState) Complete() bool {
 	return !t.Active()
 }

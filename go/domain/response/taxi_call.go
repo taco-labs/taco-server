@@ -15,6 +15,7 @@ type PaymentSummaryResponse struct {
 
 type TaxiCallRequestResponse struct {
 	Dryrun                    bool                   `json:"dryrun"`
+	Distance                  int                    `json:"distance"`
 	ETA                       time.Duration          `json:"eta"`
 	Id                        string                 `json:"id"`
 	UserId                    string                 `json:"userId"`
@@ -47,10 +48,11 @@ func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummar
 
 func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallRequestResponse {
 	return TaxiCallRequestResponse{
-		Dryrun: taxiCallRequest.Dryrun,
-		ETA:    taxiCallRequest.ETA,
-		Id:     taxiCallRequest.Id,
-		UserId: taxiCallRequest.UserId,
+		Dryrun:   taxiCallRequest.Dryrun,
+		Distance: taxiCallRequest.Distance,
+		ETA:      taxiCallRequest.ETA,
+		Id:       taxiCallRequest.Id,
+		UserId:   taxiCallRequest.UserId,
 		DriverId: func() *string {
 			if taxiCallRequest.DriverId.Valid {
 				return &taxiCallRequest.DriverId.String

@@ -133,6 +133,7 @@ func main() {
 		driver.WithSmsSenderService(smsSenderService),
 		driver.WithSmsVerificationRepository(smsVerificationRepository),
 		driver.WithFileUploadService(fileUploadService),
+		driver.WithTaxiCallRequestRepository(taxiCallRequestRepository),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver app: %v\n", err)

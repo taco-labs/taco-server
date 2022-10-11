@@ -88,10 +88,15 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 		return entity.TaxiCallRequest{}, fmt.Errorf("%w: not supported region", value.ErrUnsupportedRegion)
 	}
 
+	route, err := u.service.route.GetRoute(ctx, req.Departure, req.Arrival)
+	if err != nil {
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while get route:\n%w", err)
+	}
+
 	var taxiCallRequest entity.TaxiCallRequest
-	err := u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err = u.Run(ctx, func(tctx context.Context, i bun.IDB) error {
 		// check latest call
-		latestTaxiCallRequest, err := u.repository.taxiCallRequest.GetLatestByUserId(ctx, i, userId)
+		latestTaxiCallRequest, err := u.repository.taxiCallRequest.GetLatestByUserId(tctx, i, userId)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.user.CreateTaxiCallRequest: error while get latest taxi call:\n%w", err)
 		}
@@ -105,15 +110,11 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 		}
 
 		if req.Dryrun {
-			route, err := u.service.route.GetRoute(ctx, req.Departure, req.Arrival)
-			if err != nil {
-				return fmt.Errorf("app.user.CreateTaxiCallRequest: error while get route:\n%w", err)
-			}
-
 			taxiCallRequest = entity.TaxiCallRequest{
-				Dryrun: req.Dryrun,
-				ETA:    route.ETA,
-				UserId: userId,
+				Dryrun:   req.Dryrun,
+				ETA:      route.ETA,
+				Distance: route.Distance,
+				UserId:   userId,
 				Departure: value.Location{
 					Point:   req.Departure,
 					Address: departure,
@@ -134,7 +135,7 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 		}
 
 		// check payment
-		userPayment, err := u.repository.payment.GetUserPayment(ctx, i, req.PaymentId)
+		userPayment, err := u.repository.payment.GetUserPayment(tctx, i, req.PaymentId)
 		if err != nil {
 			return fmt.Errorf("app.user.CreateTaxiCallRequest: error while get user payment:\n%w", err)
 		}
@@ -143,18 +144,13 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 			return fmt.Errorf("app.User.CreateTaxiCallRequest: unaurhorized payment:%w", value.ErrUnAuthorized)
 		}
 
-		// Get route
-		route, err := u.service.route.GetRoute(ctx, req.Departure, req.Arrival)
-		if err != nil {
-			return fmt.Errorf("app.user.CreateTaxiCallRequest: error while get route:\n%w", err)
-		}
-
 		// create taxi call request
 		taxiCallRequest = entity.TaxiCallRequest{
-			Dryrun: req.Dryrun,
-			ETA:    route.ETA,
-			Id:     utils.MustNewUUID(),
-			UserId: userId,
+			Dryrun:   req.Dryrun,
+			ETA:      route.ETA,
+			Distance: route.Distance,
+			Id:       utils.MustNewUUID(),
+			UserId:   userId,
 			Departure: value.Location{
 				Point:   req.Departure,
 				Address: departure,
@@ -176,7 +172,7 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 			UpdateTime:                requestTime,
 		}
 
-		if err = u.repository.taxiCallRequest.Create(ctx, i, taxiCallRequest); err != nil {
+		if err = u.repository.taxiCallRequest.Create(tctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.user.CreateTaxiCallRequest: error while create taxi call request:%w", err)
 		}
 
