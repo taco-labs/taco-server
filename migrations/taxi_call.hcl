@@ -197,56 +197,6 @@ table "taxi_call_ticket" {
   }
 }
 
-table "taxi_call_last_received_ticket" {
-  schema = schema.taco
-
-  column "driver_id" {
-    type = uuid
-    null = false
-  }
-
-  column "taxi_call_ticket_id" {
-    type = uuid
-    null = false
-  }
-
-  column "rejected" {
-    type = boolean
-  }
-
-  column "receive_time" {
-    type = timestamp
-    null = false
-  }
-
-  primary_key {
-    columns = [
-      column.driver_id,
-    ]
-  }
-
-  index "receive_time_brin_idx" {
-    unique = false
-    type = BRIN
-    columns = [
-      column.receive_time,
-    ]
-  }
-
-  foreign_key "driver_id_fk" {
-    columns = [
-      column.driver_id,
-    ]
-
-    ref_columns = [
-      table.driver.column.id,
-    ]
-
-    on_delete = CASCADE
-    on_update = NO_ACTION
-  }
-}
-
 table "driver_taxi_call_context" {
   schema = schema.taco
 
@@ -255,13 +205,7 @@ table "driver_taxi_call_context" {
     null = false
   }
 
-  column "on_duty" {
-    type = boolean
-    null = false
-    comment = "Is taxi driver is activated (가입 승인을 받았는지 여부)"
-  }
-
-  column "can_recieve" {
+  column "can_receive" {
     type = boolean
     null = false
     comment = "현재 ticket을 수신 가능한 상태인지 (eg. 주행 중일 때 false)"
@@ -272,16 +216,27 @@ table "driver_taxi_call_context" {
     null = false
   }
 
-  column "receive_time" {
+  column "rejected_last_request_ticket" {
+    type = boolean
+    null = false
+  }
+
+  column "last_receive_time" {
     type = timestamp
     null = false
+  }
+
+  primary_key {
+    columns = [
+      column.driver_id,
+    ]
   }
 
   index "driver_context_receive_time_brin_idx" {
     unique = false
     type = BRIN
     columns = [
-      column.receive_time,
+      column.last_receive_time,
     ]
   }
 
@@ -357,6 +312,12 @@ table "driver_taxi_call_settlement" {
   column "settlement_done_time" {
     type = timestamp
     null = false
+  }
+
+  primary_key {
+    columns = [
+      column.taxi_call_request_id,
+    ]
   }
 
   foreign_key "settlement_taxi_call_request_id_fk" {

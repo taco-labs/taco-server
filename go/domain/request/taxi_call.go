@@ -27,3 +27,8 @@ type ListDriverTaxiCallRequest struct {
 	Count     int    `query:"count"`
 	PageToken string `query:"pageToken"`
 }
+
+type DoneTaxiCallRequest struct {
+	TaxiCallRequestId string `param:"taxiCallRequestId"`
+	BasePrice         int    `json:"basePrice"`
+}

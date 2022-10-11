@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
@@ -27,11 +28,141 @@ type TaxiCallRepository interface {
 	UpsertTicket(context.Context, bun.IDB, entity.TaxiCallTicket) error
 	DeleteTicketByRequestId(context.Context, bun.IDB, string) error
 
-	// GetLastReceivedTicket(context.Context, bun.IDB, string) (entity.TaxiCallLastReceivedTicket, error)
-	// UpsertLastReceivedTicket(context.Context, bun.IDB, entity.TaxiCallLastReceivedTicket) error
+	GetDriverTaxiCallContext(context.Context, bun.IDB, string) (entity.DriverTaxiCallContext, error)
+	UpsertDriverTaxiCallContext(context.Context, bun.IDB, entity.DriverTaxiCallContext) error
+	BulkUpsertDriverTaxiCallContext(context.Context, bun.IDB, []entity.DriverTaxiCallContext) error
+
+	GetDriverTaxiCallContextWithinRadius(context.Context, bun.IDB,
+		value.Point, int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
+
+	GetDriverTaxiCallSettlement(context.Context, bun.IDB, string) (entity.DriverTaxiCallSettlement, error)
+	CreateDriverTaxiCallSettlement(context.Context, bun.IDB, entity.DriverTaxiCallSettlement) error
 }
 
 type taxiCallRepository struct{}
+
+func (t taxiCallRepository) GetDriverTaxiCallSettlement(ctx context.Context, db bun.IDB, requestId string) (entity.DriverTaxiCallSettlement, error) {
+	resp := entity.DriverTaxiCallSettlement{
+		TaxiCallRequestId: requestId,
+	}
+
+	err := db.NewSelect().
+		Model(&resp).WherePK().Scan(ctx)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.DriverTaxiCallSettlement{}, value.ErrNotFound
+	}
+	if err != nil {
+		return entity.DriverTaxiCallSettlement{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (t taxiCallRepository) CreateDriverTaxiCallSettlement(ctx context.Context, db bun.IDB, settlement entity.DriverTaxiCallSettlement) error {
+	res, err := db.NewInsert().Model(&settlement).Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Context, db bun.IDB,
+	point value.Point, raidus int, ticketId string, requestTime time.Time) ([]entity.DriverTaxiCallContext, error) {
+
+	var resp []entity.DriverTaxiCallContext
+
+	locationWithDistance := db.NewSelect().
+		TableExpr("driver_location").
+		ColumnExpr("driver_id").
+		// TODO (taekyeom) Handle public search path...
+		ColumnExpr("public.ST_DistanceSphere(location, public.ST_GeomFromText('POINT(? ?)',4326)) as distance", point.Longitude, point.Latitude)
+
+	locationWithDistanceFiltered := db.NewSelect().
+		TableExpr("driver_distance").
+		ColumnExpr("driver_id").
+		ColumnExpr("distance").
+		Where("distance <= ?", raidus)
+
+	err := db.NewSelect().
+		With("driver_distance", locationWithDistance).
+		With("driver_distance_filtered", locationWithDistanceFiltered).
+		Model(&resp).
+		Join("JOIN driver_distance_filtered AS t2 ON t2.driver_id = ?TableName.driver_id").
+		Where("can_receive").
+		Where("last_received_request_ticket <> ? AND (rejected_last_request_ticket OR ? - last_receive_time > '10 seconds')", ticketId, requestTime).
+		Order("distance").
+		Limit(20). // TODO (taekyeom) To be smart limit..
+		Scan(ctx)
+
+	if err != nil {
+		return []entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (t taxiCallRepository) GetDriverTaxiCallContext(ctx context.Context, db bun.IDB, driverId string) (entity.DriverTaxiCallContext, error) {
+	resp := entity.DriverTaxiCallContext{
+		DriverId: driverId,
+	}
+
+	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
+
+	if errors.Is(sql.ErrNoRows, err) {
+		return entity.DriverTaxiCallContext{}, value.ErrNotFound
+	}
+	if err != nil {
+		return entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (t taxiCallRepository) UpsertDriverTaxiCallContext(ctx context.Context, db bun.IDB, callContext entity.DriverTaxiCallContext) error {
+	_, err := db.NewInsert().
+		Model(&callContext).
+		On("CONFLICT (driver_id) DO UPDATE").
+		Set("can_receive = EXCLUDED.can_receive").
+		Set("last_received_request_ticket = EXCLUDED.last_received_request_ticket").
+		Set("rejected_last_request_ticket = EXCLUDED.rejected_last_request_ticket").
+		Set("last_receive_time = EXCLUDED.last_receive_time").
+		Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	return nil
+}
+
+func (t taxiCallRepository) BulkUpsertDriverTaxiCallContext(ctx context.Context, db bun.IDB,
+	callContexts []entity.DriverTaxiCallContext) error {
+	_, err := db.NewInsert().
+		Model(&callContexts).
+		On("CONFLICT (driver_id) DO UPDATE").
+		Set("can_receive = EXCLUDED.can_receive").
+		Set("last_received_request_ticket = EXCLUDED.last_received_request_ticket").
+		Set("rejected_last_request_ticket = EXCLUDED.rejected_last_request_ticket").
+		Set("last_receive_time = EXCLUDED.last_receive_time").
+		Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	return nil
+}
 
 func (t taxiCallRepository) GetLatestTicketByRequestId(ctx context.Context, db bun.IDB, requestId string) (entity.TaxiCallTicket, error) {
 	resp := entity.TaxiCallTicket{}
@@ -46,7 +177,7 @@ func (t taxiCallRepository) GetLatestTicketByRequestId(ctx context.Context, db b
 		return entity.TaxiCallTicket{}, value.ErrNotFound
 	}
 	if err != nil {
-		return resp, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+		return entity.TaxiCallTicket{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
 	}
 
 	return resp, nil

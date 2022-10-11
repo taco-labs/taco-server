@@ -5,16 +5,10 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
-	"github.com/twpayne/go-geom"
 	"github.com/uptrace/bun"
 )
 
 type Driver struct {
-	DriverDto
-	DriverLocationDto
-}
-
-type DriverDto struct {
 	bun.BaseModel `bun:"table:driver"`
 
 	Id                    string          `bun:"id,pk"`
@@ -31,6 +25,7 @@ type DriverDto struct {
 	DriverLicenseId       string          `bun:"driver_license_id"`
 	DriverLicenseImageUrl string          `bun:"driver_license_image_url"`
 	Active                bool            `bun:"active"`
+	OnDuty                bool            `bun:"on_duty"`
 	CreateTime            time.Time       `bun:"create_time"`
 	UpdateTime            time.Time       `bun:"update_time"`
 	DeleteTime            time.Time       `bun:"delete_time"`
@@ -46,31 +41,7 @@ type DriverSettlementAccount struct {
 	UpdateTime    time.Time `bun:"update_time"`
 }
 
-type DriverLocationDto struct {
-	bun.BaseModel `bun:"driver_location"`
-
-	Location *geom.Point `bun:"location"`
-	DriverId string      `bun:"driver_id,pk"`
-	OnDuty   bool        `bun:"on_duty"`
-}
-
-func NewDriverLocation(driverId string, latitude float64, longitude float64, onDuty bool) DriverLocationDto {
-	point := geom.NewPoint(geom.XY).
-		MustSetCoords([]float64{longitude, latitude}).
-		SetSRID(value.SRID_SPHERE)
-
-	return DriverLocationDto{
-		DriverId: driverId,
-		Location: point,
-		OnDuty:   onDuty,
-	}
-}
-
-func NewEmptyDriverLocation(driverId string) DriverLocationDto {
-	point := geom.NewPointEmpty(geom.XY).SetSRID(value.SRID_SPHERE)
-	return DriverLocationDto{
-		DriverId: driverId,
-		Location: point,
-		OnDuty:   false,
-	}
+type DriverLocation struct {
+	Location value.Point
+	DriverId string
 }

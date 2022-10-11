@@ -13,6 +13,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/utils"
+	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
 )
 
@@ -124,7 +125,7 @@ func (a actor) tick(ctx context.Context, t time.Time) (bool, time.Time, error) {
 			validTicketOperation = ticket.IncreasePrice(taxiCallRequest.RequestMaxAdditionalPrice, t)
 		}
 
-		if validTicketOperation {
+		if !validTicketOperation {
 			// TODO (taekyeom) terminate & push message
 			if err := taxiCallRequest.UpdateState(t, enum.TaxiCallState_FAILED); err != nil {
 				return fmt.Errorf("service.actor.ticket [%s]: failed to update state: %w", a.callRequestId, err)
@@ -145,6 +146,26 @@ func (a actor) tick(ctx context.Context, t time.Time) (bool, time.Time, error) {
 		}
 
 		// Get drivers
+		driverContexts, err := a.repository.taxiCallRequest.
+			GetDriverTaxiCallContextWithinRadius(ctx, i, taxiCallRequest.Departure.Point, ticket.GetRadius(), ticket.Id, t)
+		if err != nil {
+			return fmt.Errorf("service.actor.ticket: [%s] error while get driver contexts within radius: %w", a.callRequestId, err)
+		}
+
+		if len(driverContexts) > 0 {
+			driverContexts = slices.Map(driverContexts, func(dctx entity.DriverTaxiCallContext) entity.DriverTaxiCallContext {
+				dctx.LastReceivedRequestTicket = ticket.Id
+				dctx.LastReceiveTime = t
+				dctx.RejectedLastRequestTicket = false
+				return dctx
+			})
+
+			// TODO (taekyeom) pick tit-for-tat drivers
+
+			if err := a.repository.taxiCallRequest.BulkUpsertDriverTaxiCallContext(ctx, i, driverContexts); err != nil {
+				return fmt.Errorf("service.actor.ticket: [%s] error while upsert driver contexts within radius: %w", a.callRequestId, err)
+			}
+		}
 
 		// Send pushes
 

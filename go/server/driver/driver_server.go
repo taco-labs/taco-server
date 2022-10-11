@@ -28,6 +28,9 @@ type driverApp interface {
 	ActivateDriver(context.Context, string) error
 	ListTaxiCallRequest(context.Context, request.ListDriverTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
+	AcceptTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
+	RejectTaxiCallRequest(context.Context, string) error
+	DoneTaxiCallRequest(context.Context, request.DoneTaxiCallRequest) error
 }
 
 func (d driverServer) SmsVerificationRequest(e echo.Context) error {
@@ -269,4 +272,49 @@ func (d driverServer) ListTaxiCallRequest(e echo.Context) error {
 		PageToken: pageToken,
 		Data:      resp,
 	})
+}
+
+func (d driverServer) AcceptTaxiCallRequest(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	ticketId := e.Param("ticketId")
+
+	taxiCallRequest, err := d.app.driver.AcceptTaxiCallRequest(ctx, ticketId)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) RejectTaxiCallRequest(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	ticketId := e.Param("ticketId")
+
+	err := d.app.driver.RejectTaxiCallRequest(ctx, ticketId)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
+}
+
+func (d driverServer) DoneTaxiCallRequest(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.DoneTaxiCallRequest{}
+
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	err := d.app.driver.DoneTaxiCallRequest(ctx, req)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
 }

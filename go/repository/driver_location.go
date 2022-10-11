@@ -19,18 +19,17 @@ type driverLocationModel struct {
 
 	Location string `bun:"location"`
 	DriverId string `bun:"driver_id,pk"`
-	OnDuty   bool   `bun:"on_duty"`
 }
 
 type DriverLocationRepository interface {
-	GetByDriverId(context.Context, bun.IDB, string) (entity.DriverLocationDto, error)
-	GetByRadius(context.Context, bun.IDB, postgis.PointS, float64) ([]entity.DriverLocationDto, error)
-	Upsert(context.Context, bun.IDB, entity.DriverLocationDto) error
+	GetByDriverId(context.Context, bun.IDB, string) (entity.DriverLocation, error)
+	GetByRadius(context.Context, bun.IDB, postgis.PointS, float64) ([]entity.DriverLocation, error)
+	Upsert(context.Context, bun.IDB, entity.DriverLocation) error
 }
 
 type driverLocationRepository struct{}
 
-func (d driverLocationRepository) GetByDriverId(ctx context.Context, db bun.IDB, driverId string) (entity.DriverLocationDto, error) {
+func (d driverLocationRepository) GetByDriverId(ctx context.Context, db bun.IDB, driverId string) (entity.DriverLocation, error) {
 	driverLocation := driverLocationModel{
 		DriverId: driverId,
 	}
@@ -38,21 +37,21 @@ func (d driverLocationRepository) GetByDriverId(ctx context.Context, db bun.IDB,
 	err := db.NewSelect().Model(&driverLocation).WherePK().Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
-		return entity.DriverLocationDto{}, value.ErrNotFound
+		return entity.DriverLocation{}, value.ErrNotFound
 	}
 	if err != nil {
-		return entity.DriverLocationDto{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+		return entity.DriverLocation{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return DriverLocationFromModel(driverLocation)
 }
 
-func (d driverLocationRepository) GetByRadius(ctx context.Context, db bun.IDB, point postgis.PointS, radiusMeter float64) ([]entity.DriverLocationDto, error) {
+func (d driverLocationRepository) GetByRadius(ctx context.Context, db bun.IDB, point postgis.PointS, radiusMeter float64) ([]entity.DriverLocation, error) {
 	// TODO (taekyeom) make query
-	return []entity.DriverLocationDto{}, nil
+	return []entity.DriverLocation{}, nil
 }
 
-func (d driverLocationRepository) Upsert(ctx context.Context, db bun.IDB, location entity.DriverLocationDto) error {
+func (d driverLocationRepository) Upsert(ctx context.Context, db bun.IDB, location entity.DriverLocation) error {
 	model, err := DriverLocationToModel(location)
 	if err != nil {
 		return err
@@ -74,8 +73,12 @@ func NewDriverLocationRepository() driverLocationRepository {
 	return driverLocationRepository{}
 }
 
-func DriverLocationToModel(dto entity.DriverLocationDto) (driverLocationModel, error) {
-	ewkbHex, err := ewkbhex.Encode(dto.Location, ewkbhex.NDR)
+func DriverLocationToModel(dto entity.DriverLocation) (driverLocationModel, error) {
+	geomPoint := geom.NewPoint(geom.XY).
+		MustSetCoords([]float64{dto.Location.Longitude, dto.Location.Latitude}).
+		SetSRID(value.SRID_SPHERE)
+
+	ewkbHex, err := ewkbhex.Encode(geomPoint, ewkbhex.NDR)
 	if err != nil {
 		return driverLocationModel{}, fmt.Errorf("%w: error while encode location: %v", value.ErrInternal, err)
 	}
@@ -83,18 +86,23 @@ func DriverLocationToModel(dto entity.DriverLocationDto) (driverLocationModel, e
 	return driverLocationModel{
 		DriverId: dto.DriverId,
 		Location: ewkbHex,
-		OnDuty:   dto.OnDuty,
 	}, nil
 }
 
-func DriverLocationFromModel(model driverLocationModel) (entity.DriverLocationDto, error) {
+func DriverLocationFromModel(model driverLocationModel) (entity.DriverLocation, error) {
 	point, err := ewkbhex.Decode(model.Location)
 	if err != nil {
-		return entity.DriverLocationDto{}, fmt.Errorf("%w: error while decode location: %v", value.ErrInternal, err)
+		return entity.DriverLocation{}, fmt.Errorf("%w: error while decode location: %v", value.ErrInternal, err)
 	}
 	if point.Layout() != geom.XY {
-		return entity.DriverLocationDto{}, fmt.Errorf("%w: invalid location data", value.ErrDBInternal)
+		return entity.DriverLocation{}, fmt.Errorf("%w: invalid location data", value.ErrDBInternal)
 	}
 	coords := point.FlatCoords()
-	return entity.NewDriverLocation(model.DriverId, coords[1], coords[0], model.OnDuty), nil
+	return entity.DriverLocation{
+		DriverId: model.DriverId,
+		Location: value.Point{
+			Longitude: coords[0],
+			Latitude:  coords[1],
+		},
+	}, nil
 }

@@ -10,8 +10,6 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type transactorCurrentScopeKey struct{}
-
 var (
 	nilFunc = func() error { return nil }
 )
@@ -64,7 +62,7 @@ func (d defaultTransactor) RunWithNonRollbackError(ctx context.Context, nonRollb
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("Error while commit: %v, %w", err, value.ErrDBInternal)
+		return fmt.Errorf("transactor: error while commit: %v, %w", err, value.ErrDBInternal)
 	}
 
 	return err

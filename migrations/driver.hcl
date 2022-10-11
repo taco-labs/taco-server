@@ -65,6 +65,11 @@ table "driver" {
     comment = "Is taxi driver is activated (가입 승인을 받았는지 여부)"
   }
 
+  column "on_duty" {
+    type = boolean
+    null = false
+    comment = "Is taxi driver is on duty (출근 중인지 여부)"
+  }
 
   column "driver_license_id" {
     type = text

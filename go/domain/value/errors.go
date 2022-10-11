@@ -7,18 +7,19 @@ import (
 type ErrCode string
 
 const (
-	ERR_UNAUTHENTICATED     ErrCode = "ERR_UNAUTHENTICATED"
-	ERR_UNAUTHORIZED        ErrCode = "ERR_UNAUTHORIZED"
-	ERR_SESSION_EXPIRED     ErrCode = "ERR_SESSION_EXPIRED"
-	ERR_DB_INTERNAL         ErrCode = "ERR_DB_INTERNAL"
-	ERR_NOTFOUND            ErrCode = "ERR_NOT_FOUND"
-	ERR_EXTERNAL            ErrCode = "ERR_EXTERNAL"
-	ERR_ALREADY_EXISTS      ErrCode = "ERR_ALREADY_EXISTS"
-	ERR_INVALID             ErrCode = "ERR_INVALID"
-	ERR_INTERNAL            ErrCode = "ERR_INTERNAL"
-	ERR_NEED_CONFIRMATION   ErrCode = "ERR_NEED_CONFIRMATION"
-	ERR_UNSUPPORTED         ErrCode = "ERR_UNSUPPORTED"
-	ERR_CALL_REQUEST_FAILED ErrCode = "ERR_CALL_REQUEST_FAILED"
+	ERR_UNAUTHENTICATED      ErrCode = "ERR_UNAUTHENTICATED"
+	ERR_UNAUTHORIZED         ErrCode = "ERR_UNAUTHORIZED"
+	ERR_SESSION_EXPIRED      ErrCode = "ERR_SESSION_EXPIRED"
+	ERR_DB_INTERNAL          ErrCode = "ERR_DB_INTERNAL"
+	ERR_NOTFOUND             ErrCode = "ERR_NOT_FOUND"
+	ERR_EXTERNAL             ErrCode = "ERR_EXTERNAL"
+	ERR_ALREADY_EXISTS       ErrCode = "ERR_ALREADY_EXISTS"
+	ERR_INVALID              ErrCode = "ERR_INVALID"
+	ERR_INTERNAL             ErrCode = "ERR_INTERNAL"
+	ERR_NEED_CONFIRMATION    ErrCode = "ERR_NEED_CONFIRMATION"
+	ERR_UNSUPPORTED          ErrCode = "ERR_UNSUPPORTED"
+	ERR_CALL_REQUEST_FAILED  ErrCode = "ERR_CALL_REQUEST_FAILED"
+	ERR_CALL_REQUEST_EXPIRED ErrCode = "ERR_CALL_REQUEST_EXPIRED"
 )
 
 type TacoError struct {
@@ -69,4 +70,8 @@ var (
 	ErrInternal = TacoError{ERR_INTERNAL, "internal error"}
 
 	ErrRequestPriceLimitExceed = TacoError{ERR_CALL_REQUEST_FAILED, "additional price limit exceeded"}
+
+	ErrActiveTaxiCallRequestExists = TacoError{ERR_ALREADY_EXISTS, "active taxi call exists"}
+
+	ErrAlreadyExpiredCallRequest = TacoError{ERR_CALL_REQUEST_EXPIRED, "taxi call request expired"}
 )

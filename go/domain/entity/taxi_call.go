@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
@@ -96,11 +97,43 @@ func (t *TaxiCallTicket) IncreasePrice(maxPrice int, updateTime time.Time) bool 
 	return t.ValidAdditionalPrice(maxPrice)
 }
 
-type TaxiCallLastReceivedTicket struct {
-	bun.BaseModel `bun:"table:taxi_call_last_received_ticket"`
+func (t *TaxiCallTicket) GetRadius() int {
+	switch t.Attempt {
+	case 1:
+		return 3000
+	case 2:
+		return 5000
+	case 3:
+		return 7000
+	default:
+		return 3000
+	}
+}
 
-	DriverId         string    `bun:"driver_id"`
-	TaxiCallTicketId string    `bun:"taxi_call_ticket_id"`
-	Rejected         bool      `bun:"rejected"`
-	ReceiveTime      time.Time `bun:"receive_time"`
+type DriverTaxiCallContext struct {
+	bun.BaseModel `bun:"table:driver_taxi_call_context"`
+
+	DriverId                  string    `bun:"driver_id,pk"`
+	CanReceive                bool      `bun:"can_receive"`
+	LastReceivedRequestTicket string    `bun:"last_received_request_ticket"`
+	RejectedLastRequestTicket bool      `bun:"rejected_last_request_ticket"`
+	LastReceiveTime           time.Time `bun:"last_receive_time"`
+}
+
+func NewEmptyDriverTaxiCallContext(driverId string, canReceive bool, t time.Time) DriverTaxiCallContext {
+	return DriverTaxiCallContext{
+		DriverId:                  driverId,
+		CanReceive:                canReceive,
+		LastReceivedRequestTicket: uuid.Nil.String(),
+		RejectedLastRequestTicket: true,
+		LastReceiveTime:           t,
+	}
+}
+
+type DriverTaxiCallSettlement struct {
+	bun.BaseModel `bun:"table:driver_taxi_call_settlement"`
+
+	TaxiCallRequestId  string    `bun:"taxi_call_request_id,pk"`
+	SettlementDone     bool      `bun:"settlement_done"`
+	SettlementDoneTime time.Time `bun:"settlement_done_time"`
 }

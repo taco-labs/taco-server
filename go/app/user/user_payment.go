@@ -21,12 +21,12 @@ func (u userApp) ListCardPayment(ctx context.Context, userId string) ([]entity.U
 	err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		userPayments, err = u.repository.payment.ListUserPayment(ctx, i, userId)
 		if err != nil {
-			return fmt.Errorf("Error while list payments:%w", err)
+			return fmt.Errorf("app.user.ListCardPayment: Error while list payments:%w", err)
 		}
 
 		userDefaultPayment, err = u.repository.payment.GetDefaultPaymentByUserId(ctx, i, userId)
 		if err != nil {
-			return fmt.Errorf("Error while get default payment payments:%w", err)
+			return fmt.Errorf("app.user.ListCardPayment: Error while get default payment payments:%w", err)
 		}
 
 		return nil
@@ -52,7 +52,7 @@ func (u userApp) RegisterCardPayment(ctx context.Context, req request.UserPaymen
 	err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		user, err := u.repository.user.FindById(ctx, i, userId)
 		if err != nil {
-			return fmt.Errorf("Error while find user by id:%w", err)
+			return fmt.Errorf("app.user.RegisterCardPayment: Error while find user by id:%w", err)
 		}
 
 		userPayment = entity.UserPayment{
@@ -98,16 +98,16 @@ func (u userApp) DeleteCardPayment(ctx context.Context, userPaymentId string) er
 	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		user, err := u.repository.user.FindById(ctx, i, userId)
 		if err != nil {
-			return fmt.Errorf("Error while find by user id:%w", err)
+			return fmt.Errorf("app.user.ListCardPayment: Error while find by user id:%w", err)
 		}
 
 		userPayment, err := u.repository.payment.GetUserPayment(ctx, i, userPaymentId)
 		if err != nil {
-			return err
+			return fmt.Errorf("app.user.ListCardPayment: Error while find user payment:%w", err)
 		}
 
 		if user.Id != userPayment.UserId {
-			return value.ErrUnAuthorized
+			return fmt.Errorf("app.user.ListCardPayment: user id does not matched:%w", value.ErrUnAuthorized)
 		}
 
 		err = u.repository.payment.DeleteUserPayment(ctx, i, userPaymentId)
