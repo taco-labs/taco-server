@@ -123,8 +123,8 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 					Address: arrival,
 				},
 				RequestBasePrice:          route.Price,
-				RequestMinAdditionalPrice: 0,           // TODO(taekyeom) To be paramterized
-				RequestMaxAdditionalPrice: route.Price, // TODO(taekyeom) To be paramterized
+				RequestMinAdditionalPrice: 0,                           // TODO(taekyeom) To be paramterized
+				RequestMaxAdditionalPrice: (route.Price / 1000) * 1000, // TODO(taekyeom) To be paramterized
 				CurrentState:              enum.TaxiCallState_DRYRUN,
 				CreateTime:                requestTime,
 				UpdateTime:                requestTime,
