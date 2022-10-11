@@ -129,11 +129,6 @@ table "user_payment" {
     null = false
   }
 
-  column "delete_time" {
-    type = timestamp
-    null = false
-  }
-
   primary_key {
     columns = [
       column.id,

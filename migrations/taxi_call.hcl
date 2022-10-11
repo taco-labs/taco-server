@@ -277,7 +277,7 @@ table "driver_taxi_call_context" {
     null = false
   }
 
-  index "receive_time_brin_idx" {
+  index "driver_context_receive_time_brin_idx" {
     unique = false
     type = BRIN
     columns = [

@@ -38,7 +38,6 @@ type UserPayment struct {
 	BillingKey          string    `bun:"billing_key"`
 	DefaultPayment      bool      `bun:"default_payment"`
 	CreateTime          time.Time `bun:"create_time"`
-	DeleteTime          time.Time `bun:"delete_time"`
 }
 
 type UserDefaultPayment struct {

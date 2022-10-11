@@ -18,3 +18,12 @@ type PaymentSummary struct {
 	Company    string `json:"company"`
 	CardNumber string `json:"cardNumber"`
 }
+
+type CardPaymentInfo struct {
+	CustomerKey         string
+	CardCompany         string
+	CardNumber          string
+	CardExpirationYear  string
+	CardExpirationMonth string
+	BillingKey          string
+}

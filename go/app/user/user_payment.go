@@ -41,22 +41,36 @@ func (u userApp) ListCardPayment(ctx context.Context, userId string) ([]entity.U
 
 func (u userApp) RegisterCardPayment(ctx context.Context, req request.UserPaymentRegisterRequest) (entity.UserPayment, error) {
 	userId := utils.GetUserId(ctx)
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	payment, err := u.service.payment.RegisterCard(ctx, utils.MustNewUUID(), req)
+	if err != nil {
+		return entity.UserPayment{}, fmt.Errorf("app.user.RegisterCardPayment: Error while register card: %w", err)
+	}
 
 	var userPayment entity.UserPayment
-	err := u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		user, err := u.repository.user.FindById(ctx, i, userId)
 		if err != nil {
 			return fmt.Errorf("Error while find user by id:%w", err)
 		}
 
-		userPayment, err = u.service.payment.RegisterCard(ctx, user, req)
-		if err != nil {
-			return fmt.Errorf("Error while register card: %w", err)
+		userPayment = entity.UserPayment{
+			Id:                  payment.CustomerKey,
+			UserId:              user.Id,
+			Name:                req.Name,
+			CardCompany:         payment.CardCompany,
+			RedactedCardNumber:  payment.CardNumber,
+			CardExpirationYear:  payment.CardExpirationYear,
+			CardExpirationMonth: payment.CardExpirationMonth,
+			BillingKey:          payment.BillingKey,
+			DefaultPayment:      req.DefaultPayment,
+			CreateTime:          requestTime,
 		}
 
 		err = u.repository.payment.CreateUserPayment(ctx, i, userPayment)
 		if err != nil {
-			return fmt.Errorf("Error while create user payment:%w", err)
+			return fmt.Errorf("app.user.RegisterCardPayment: Error while create user payment:%w", err)
 		}
 
 		if userPayment.DefaultPayment {
@@ -65,7 +79,7 @@ func (u userApp) RegisterCardPayment(ctx context.Context, req request.UserPaymen
 				PaymentId: userPayment.Id,
 			}
 			if err = u.repository.payment.UpsertDefaultPayment(ctx, i, userDefaultPayment); err != nil {
-				return fmt.Errorf("Error while update default payment: %w", err)
+				return fmt.Errorf("app.user.RegisterCardPayment: Error while update default payment: %w", err)
 			}
 		}
 		return nil

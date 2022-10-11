@@ -3,13 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
-	"github.com/taco-labs/taco/go/utils"
 )
 
 const (
@@ -18,7 +16,7 @@ const (
 )
 
 type CardPaymentService interface {
-	RegisterCard(context.Context, entity.User, request.UserPaymentRegisterRequest) (entity.UserPayment, error)
+	RegisterCard(context.Context, string, request.UserPaymentRegisterRequest) (value.CardPaymentInfo, error)
 	Transaction(context.Context, entity.UserPayment, value.Payment) error // TODO(taekyeom) 결제 기록 별도 보관 필요
 }
 
@@ -61,9 +59,9 @@ type tossPaymentTransactionResponse struct {
 	// TODO (taekyeom) Fill...
 }
 
-func (t tossPaymentService) RegisterCard(ctx context.Context, user entity.User, req request.UserPaymentRegisterRequest) (entity.UserPayment, error) {
+func (t tossPaymentService) RegisterCard(ctx context.Context, customerKey string, req request.UserPaymentRegisterRequest) (value.CardPaymentInfo, error) {
 	tossPaymentRequest := tossPaymentCardRegisterRequest{
-		CustomerKey:            utils.MustNewUUID(), // TODO (taekyeom) inject id from outside
+		CustomerKey:            customerKey,
 		CardNumber:             req.CardNumber,
 		CardExpirationYear:     req.ExpirationYear,
 		CardExpirationMonth:    req.ExpirationMonth,
@@ -75,22 +73,18 @@ func (t tossPaymentService) RegisterCard(ctx context.Context, user entity.User, 
 		Post(tossPaymentCardReigstrationPath)
 	if err != nil {
 		// TODO(taekyeom) Error handling
-		return entity.UserPayment{}, fmt.Errorf("%w: error from card registration: %v", value.ErrExternal, err)
+		return value.CardPaymentInfo{}, fmt.Errorf("%w: error from card registration: %v", value.ErrExternal, err)
 	}
 
 	tossPaymentResp := resp.Result().(*tossPaymentCardRegisterResponse)
 
-	return entity.UserPayment{
-		Id:                  tossPaymentResp.CustomerKey,
-		UserId:              user.Id,
-		Name:                req.Name,
+	return value.CardPaymentInfo{
+		CustomerKey:         tossPaymentResp.CustomerKey,
 		CardCompany:         tossPaymentResp.Card.Comany,
-		RedactedCardNumber:  tossPaymentResp.Card.Number,
+		CardNumber:          tossPaymentResp.Card.Number,
 		CardExpirationYear:  req.ExpirationYear,
 		CardExpirationMonth: req.ExpirationMonth,
 		BillingKey:          tossPaymentResp.BillingKey,
-		DefaultPayment:      req.DefaultPayment,
-		CreateTime:          time.Now().UTC(),
 	}, nil
 }
 
