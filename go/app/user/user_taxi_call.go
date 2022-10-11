@@ -111,10 +111,9 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 
 		if req.Dryrun {
 			taxiCallRequest = entity.TaxiCallRequest{
-				Dryrun:   req.Dryrun,
-				ETA:      route.ETA,
-				Distance: route.Distance,
-				UserId:   userId,
+				Dryrun: req.Dryrun,
+				UserId: userId,
+				Route:  route,
 				Departure: value.Location{
 					Point:   req.Departure,
 					Address: departure,
@@ -146,11 +145,10 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 
 		// create taxi call request
 		taxiCallRequest = entity.TaxiCallRequest{
-			Dryrun:   req.Dryrun,
-			ETA:      route.ETA,
-			Distance: route.Distance,
-			Id:       utils.MustNewUUID(),
-			UserId:   userId,
+			Dryrun: req.Dryrun,
+			Route:  route,
+			Id:     utils.MustNewUUID(),
+			UserId: userId,
 			Departure: value.Location{
 				Point:   req.Departure,
 				Address: departure,
@@ -179,12 +177,14 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 		return nil
 	})
 
-	if err = u.actor.taxiCallRequest.Add(taxiCallRequest.Id); err != nil {
-		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while adding actor:%w", err)
-	}
-
 	if err != nil {
 		return entity.TaxiCallRequest{}, err
+	}
+
+	if !req.Dryrun {
+		if err = u.actor.taxiCallRequest.Add(taxiCallRequest.Id); err != nil {
+			return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while adding actor:%w", err)
+		}
 	}
 
 	return taxiCallRequest, nil

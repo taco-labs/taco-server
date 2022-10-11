@@ -19,9 +19,8 @@ type TaxiCallRequest struct {
 	bun.BaseModel `bun:"table:taxi_call_request"`
 
 	// In Memroy
-	Dryrun   bool          `bun:"-"`
-	ETA      time.Duration `bun:"-"`
-	Distance int           `bun:"-"`
+	Dryrun bool        `bun:"-"`
+	Route  value.Route `bun:"-"`
 
 	Id                        string               `bun:"id,pk"`
 	UserId                    string               `bun:"user_id"`
@@ -39,7 +38,7 @@ type TaxiCallRequest struct {
 	UpdateTime                time.Time            `bun:"update_time"`
 }
 
-// TODO (update state)
+// TODO (taekyeom) 취소 수수료 같은 로직을 나중에 고려해야 할듯
 func (t *TaxiCallRequest) UpdateState(transitionTime time.Time, nextState enum.TaxiCallState) error {
 	if !t.CurrentState.TryChangeState(nextState) {
 		return value.ErrInvalidTaxiCallStateTransition
@@ -81,6 +80,22 @@ func (t TaxiCallTicket) ValidAdditionalPrice(maxAdditionlPrice int) bool {
 	return t.AdditionalPrice <= maxAdditionlPrice
 }
 
+func (t *TaxiCallTicket) IncreaseAttempt(updateTime time.Time) bool {
+	t.Attempt += 1
+	t.UpdateTime = updateTime
+	return t.ValidAttempt()
+}
+
+func (t *TaxiCallTicket) IncreasePrice(maxPrice int, updateTime time.Time) bool {
+	t.Id = utils.MustNewUUID()
+	t.Attempt = 1
+	t.AdditionalPrice += PriceStep
+	t.CreateTime = updateTime
+	t.UpdateTime = updateTime
+
+	return t.ValidAdditionalPrice(maxPrice)
+}
+
 type TaxiCallLastReceivedTicket struct {
 	bun.BaseModel `bun:"table:taxi_call_last_received_ticket"`
 
@@ -88,23 +103,4 @@ type TaxiCallLastReceivedTicket struct {
 	TaxiCallTicketId string    `bun:"taxi_call_ticket_id"`
 	Rejected         bool      `bun:"rejected"`
 	ReceiveTime      time.Time `bun:"receive_time"`
-}
-
-func NewAttempt(ticket TaxiCallTicket, t time.Time) TaxiCallTicket {
-	newTicket := ticket.Copy()
-	newTicket.Attempt += 1
-	newTicket.UpdateTime = t
-
-	return newTicket
-}
-
-func NewTicket(ticket TaxiCallTicket, t time.Time) TaxiCallTicket {
-	newTicket := ticket.Copy()
-	newTicket.Id = utils.MustNewUUID()
-	newTicket.Attempt = 1
-	newTicket.AdditionalPrice += PriceStep
-	newTicket.CreateTime = t
-	newTicket.UpdateTime = t
-
-	return newTicket
 }

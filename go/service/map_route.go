@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/utils/slices"
 )
 
 type MapRouteService interface {
@@ -28,6 +29,7 @@ type naverMapsRouteService struct {
 }
 
 type naverMapsRouteUnit struct {
+	Path    [][]float64 `json:"path"`
 	Summary struct {
 		Duration int `json:"duration"`
 		TaxiFare int `json:"taxiFare"`
@@ -60,12 +62,22 @@ func (m naverMapsRouteService) GetRoute(ctx context.Context, departure value.Poi
 	}
 
 	// TODO (taekyeom) handle waypoints
-	routeSummary := naverMapsRouteResp.Route["traoptimal"][0].Summary
+	routeUnit := naverMapsRouteResp.Route["traoptimal"][0]
+	routeSummary := routeUnit.Summary
+	path := slices.Map(routeUnit.Path, func(lnglat []float64) value.Point {
+		longitude := lnglat[0]
+		latitude := lnglat[1]
+		return value.Point{
+			Longitude: longitude,
+			Latitude:  latitude,
+		}
+	})
 
 	return value.Route{
 		ETA:      time.Millisecond * time.Duration(routeSummary.Duration),
 		Price:    routeSummary.TaxiFare,
 		Distance: routeSummary.Distance,
+		Path:     path,
 	}, nil
 }
 

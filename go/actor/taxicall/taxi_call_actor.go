@@ -119,12 +119,12 @@ func (a actor) tick(ctx context.Context, t time.Time) (bool, time.Time, error) {
 			return nil
 		}
 
-		ticket = entity.NewAttempt(ticket, t)
-		if !ticket.ValidAttempt() {
-			ticket = entity.NewTicket(ticket, t)
+		validTicketOperation := true
+		if !ticket.IncreaseAttempt(t) {
+			validTicketOperation = ticket.IncreasePrice(taxiCallRequest.RequestMaxAdditionalPrice, t)
 		}
 
-		if !ticket.ValidAdditionalPrice(taxiCallRequest.RequestMaxAdditionalPrice) {
+		if validTicketOperation {
 			// TODO (taekyeom) terminate & push message
 			if err := taxiCallRequest.UpdateState(t, enum.TaxiCallState_FAILED); err != nil {
 				return fmt.Errorf("service.actor.ticket [%s]: failed to update state: %w", a.callRequestId, err)
