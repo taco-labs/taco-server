@@ -94,9 +94,9 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 	}
 
 	var taxiCallRequest entity.TaxiCallRequest
-	err = u.Run(ctx, func(tctx context.Context, i bun.IDB) error {
+	err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// check latest call
-		latestTaxiCallRequest, err := u.repository.taxiCallRequest.GetLatestByUserId(tctx, i, userId)
+		latestTaxiCallRequest, err := u.repository.taxiCallRequest.GetLatestByUserId(ctx, i, userId)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.user.CreateTaxiCallRequest: error while get latest taxi call:\n%w", err)
 		}
@@ -135,7 +135,7 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 		}
 
 		// check payment
-		userPayment, err := u.repository.payment.GetUserPayment(tctx, i, req.PaymentId)
+		userPayment, err := u.repository.payment.GetUserPayment(ctx, i, req.PaymentId)
 		if err != nil {
 			return fmt.Errorf("app.user.CreateTaxiCallRequest: error while get user payment:\n%w", err)
 		}
@@ -172,12 +172,16 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 			UpdateTime:                requestTime,
 		}
 
-		if err = u.repository.taxiCallRequest.Create(tctx, i, taxiCallRequest); err != nil {
+		if err = u.repository.taxiCallRequest.Create(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.user.CreateTaxiCallRequest: error while create taxi call request:%w", err)
 		}
 
 		return nil
 	})
+
+	if err = u.actor.taxiCallRequest.Add(taxiCallRequest.Id); err != nil {
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while adding actor:%w", err)
+	}
 
 	if err != nil {
 		return entity.TaxiCallRequest{}, err

@@ -6,7 +6,13 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
+)
+
+const (
+	AttemptLimit = 3
+	PriceStep    = 1000
 )
 
 type TaxiCallRequest struct {
@@ -43,4 +49,62 @@ func (t *TaxiCallRequest) UpdateState(transitionTime time.Time, nextState enum.T
 	t.UpdateTime = transitionTime
 
 	return nil
+}
+
+type TaxiCallTicket struct {
+	bun.BaseModel `bun:"table:taxi_call_ticket"`
+
+	Id                string    `bun:"id,pk"`
+	TaxiCallRequestId string    `bun:"taxi_call_request_id"`
+	Attempt           int       `bun:"attempt"`
+	AdditionalPrice   int       `bun:"additional_price"`
+	CreateTime        time.Time `bun:"create_time"`
+	UpdateTime        time.Time `bun:"update_time"`
+}
+
+func (t TaxiCallTicket) Copy() TaxiCallTicket {
+	return TaxiCallTicket{
+		Id:                t.Id,
+		TaxiCallRequestId: t.TaxiCallRequestId,
+		Attempt:           t.Attempt,
+		AdditionalPrice:   t.AdditionalPrice,
+		CreateTime:        t.CreateTime,
+		UpdateTime:        t.UpdateTime,
+	}
+}
+
+func (t TaxiCallTicket) ValidAttempt() bool {
+	return t.Attempt <= AttemptLimit
+}
+
+func (t TaxiCallTicket) ValidAdditionalPrice(maxAdditionlPrice int) bool {
+	return t.AdditionalPrice <= maxAdditionlPrice
+}
+
+type TaxiCallLastReceivedTicket struct {
+	bun.BaseModel `bun:"table:taxi_call_last_received_ticket"`
+
+	DriverId         string    `bun:"driver_id"`
+	TaxiCallTicketId string    `bun:"taxi_call_ticket_id"`
+	Rejected         bool      `bun:"rejected"`
+	ReceiveTime      time.Time `bun:"receive_time"`
+}
+
+func NewAttempt(ticket TaxiCallTicket, t time.Time) TaxiCallTicket {
+	newTicket := ticket.Copy()
+	newTicket.Attempt += 1
+	newTicket.UpdateTime = t
+
+	return newTicket
+}
+
+func NewTicket(ticket TaxiCallTicket, t time.Time) TaxiCallTicket {
+	newTicket := ticket.Copy()
+	newTicket.Id = utils.MustNewUUID()
+	newTicket.Attempt = 1
+	newTicket.AdditionalPrice += PriceStep
+	newTicket.CreateTime = t
+	newTicket.UpdateTime = t
+
+	return newTicket
 }

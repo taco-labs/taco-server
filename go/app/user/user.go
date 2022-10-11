@@ -7,6 +7,7 @@ import (
 
 	"context"
 
+	"github.com/taco-labs/taco/go/actor/taxicall"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
@@ -41,6 +42,7 @@ type userApp struct {
 	}
 
 	actor struct {
+		taxiCallRequest *taxicall.TaxiCallActorService
 	}
 }
 
@@ -316,6 +318,10 @@ func (u userApp) validateApp() error {
 
 	if u.service.location == nil {
 		return errors.New("user app need location service")
+	}
+
+	if u.actor.taxiCallRequest == nil {
+		return errors.New("user app need taxi call request actor service")
 	}
 
 	return nil

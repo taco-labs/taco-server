@@ -117,6 +117,14 @@ table "taxi_call_request" {
       column.create_time,
     ]
   }
+
+  index "active_taxi_call_idx" {
+    type = HASH
+    columns = [
+      column.id
+    ]
+    where = "taxi_call_state IN ('TAXI_CALL_REQUESTED', 'DRIVER_TO_DEPARTURE', 'DRIVER_TO_ARRIVAL')"
+  }
 }
 
 table "taxi_call_ticket" {
@@ -166,6 +174,14 @@ table "taxi_call_ticket" {
     ]
   }
 
+  index "ticket_create_time_brin_idx" {
+    unique = false
+    type = BRIN
+    columns = [
+      column.create_time,
+    ]
+  }
+
   foreign_key "taxi_call_request_id_fk" {
     columns = [
       column.taxi_call_request_id,
@@ -194,6 +210,10 @@ table "taxi_call_last_received_ticket" {
     null = false
   }
 
+  column "rejected" {
+    type = boolean
+  }
+
   column "receive_time" {
     type = timestamp
     null = false
@@ -213,17 +233,56 @@ table "taxi_call_last_received_ticket" {
     ]
   }
 
-  foreign_key "taxi_call_ticket_id_fk" {
+  foreign_key "driver_id_fk" {
     columns = [
-      column.taxi_call_ticket_id,
+      column.driver_id,
     ]
 
     ref_columns = [
-      table.taxi_call_ticket.column.id,
+      table.driver.column.id,
     ]
 
-    on_delete = NO_ACTION
+    on_delete = CASCADE
     on_update = NO_ACTION
+  }
+}
+
+table "driver_taxi_call_context" {
+  schema = schema.taco
+
+  column "driver_id" {
+    type = uuid
+    null = false
+  }
+
+  column "on_duty" {
+    type = boolean
+    null = false
+    comment = "Is taxi driver is activated (가입 승인을 받았는지 여부)"
+  }
+
+  column "can_recieve" {
+    type = boolean
+    null = false
+    comment = "현재 ticket을 수신 가능한 상태인지 (eg. 주행 중일 때 false)"
+  }
+
+  column "last_received_request_ticket" {
+    type = uuid
+    null = false
+  }
+
+  column "receive_time" {
+    type = timestamp
+    null = false
+  }
+
+  index "receive_time_brin_idx" {
+    unique = false
+    type = BRIN
+    columns = [
+      column.receive_time,
+    ]
   }
 
   foreign_key "driver_id_fk" {
@@ -253,12 +312,6 @@ table "driver_location" {
     type = sql("geometry(point,4326)")
   }
 
-  column "on_duty" {
-    type = boolean
-    null = false
-    comment = "Is taxi driver is activated (가입 승인을 받았는지 여부)"
-  }
-
   primary_key {
     columns = [
       column.driver_id,
@@ -271,7 +324,6 @@ table "driver_location" {
     columns = [
       column.location,
     ]
-    where = "on_duty"
   }
 
   foreign_key "driver_location_fk" {

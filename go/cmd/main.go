@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/taco-labs/taco/go/actor/taxicall"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/driver"
 	"github.com/taco-labs/taco/go/app/driversession"
@@ -79,6 +80,22 @@ func main() {
 
 	fileUploadService := service.NewMockFileUploadService()
 
+	taxiCallRequestActorService, err := taxicall.NewTaxiCallActorService(
+		taxicall.WithTransactor(transactor),
+		taxicall.WithUserRepository(userRepository),
+		taxicall.WithDriverRepository(driverRepository),
+		taxicall.WithTaxiCallRequestRepository(taxiCallRequestRepository),
+	)
+	if err != nil {
+		fmt.Printf("Failed to setup taxi call request actor service: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := taxiCallRequestActorService.Init(ctx); err != nil {
+		fmt.Printf("Failed to init actor system: %v\n", err)
+		os.Exit(1)
+	}
+
 	userSessionApp, err := usersession.NewUserSessionApp(
 		usersession.WithTransactor(transactor),
 		usersession.WithUserSessionRepository(userSessionRepository),
@@ -116,6 +133,7 @@ func main() {
 		user.WithTaxiCallRequestRepository(taxiCallRequestRepository),
 		user.WithMapRouteService(mapRouteService),
 		user.WithLocationService(locationService),
+		user.WithTaxiCallRequestActorService(taxiCallRequestActorService),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup user app: %v\n", err)

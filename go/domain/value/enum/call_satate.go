@@ -47,7 +47,8 @@ func (t TaxiCallState) TryChangeState(nextState TaxiCallState) bool {
 	switch t {
 	case TaxiCallState_Requested:
 		return nextState == TaxiCallState_DRIVER_TO_DEPARTURE ||
-			nextState == TaxiCallState_USER_CANCELLED
+			nextState == TaxiCallState_USER_CANCELLED ||
+			nextState == TaxiCallState_FAILED
 	case TaxiCallState_DRIVER_TO_DEPARTURE:
 		return nextState == TaxiCallState_DRIVER_TO_ARRIVAL ||
 			nextState == TaxiCallState_DRIVER_CANCELLED

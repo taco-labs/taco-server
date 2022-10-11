@@ -1,6 +1,7 @@
 package user
 
 import (
+	"github.com/taco-labs/taco/go/actor/taxicall"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
@@ -66,5 +67,11 @@ func WithMapRouteService(svc service.MapRouteService) userAppOption {
 func WithLocationService(svc service.LocationService) userAppOption {
 	return func(ua *userApp) {
 		ua.service.location = svc
+	}
+}
+
+func WithTaxiCallRequestActorService(svc *taxicall.TaxiCallActorService) userAppOption {
+	return func(ua *userApp) {
+		ua.actor.taxiCallRequest = svc
 	}
 }
