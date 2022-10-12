@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"flag"
 	"fmt"
 	"os"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/taco-labs/taco/go/app/driversession"
 	"github.com/taco-labs/taco/go/app/user"
 	"github.com/taco-labs/taco/go/app/usersession"
+	"github.com/taco-labs/taco/go/config"
 	"github.com/taco-labs/taco/go/repository"
 	backofficeserver "github.com/taco-labs/taco/go/server/backoffice"
 	driverserver "github.com/taco-labs/taco/go/server/driver"
@@ -26,26 +26,35 @@ import (
 )
 
 func main() {
-	// TODO (taekyeom) Config
-	dsn := "postgres://postgres:postgres@localhost:25432/taco?sslmode=disable&search_path=taco"
-	dbDsnPtr := flag.String("dsn", dsn, "dsn of database")
-	backofficeSecret := "secret!!"
-	backofficeSecretPtr := flag.String("backofficeSecret", backofficeSecret, "secret of backoffice server")
-	queryDebug := false
-	queryDebugPtr := flag.Bool("query_debug", queryDebug, "flag for print queries")
-	flag.Parse()
+	config, err := config.NewTacoConfig()
+	if err != nil {
+		fmt.Println("Failed to initialize taco config: ", err)
+		os.Exit(1)
+	}
+
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&search_path=%s",
+		config.Database.UserName,
+		config.Database.Password,
+		config.Database.Host,
+		config.Database.Port,
+		config.Database.Database,
+		config.Database.Schema,
+	)
+
 	ctx := context.Background()
 
-	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(*dbDsnPtr)))
+	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 
 	db := bun.NewDB(sqldb, pgdialect.New())
 
-	if *queryDebugPtr {
+	if config.Log.Query {
 		hook := bundebug.NewQueryHook(bundebug.WithVerbose(true))
 		db.AddQueryHook(hook)
 	}
 
 	transactor := app.NewDefaultTranscator(db)
+
+	// Init repositories
 
 	smsVerificationRepository := repository.NewSmsVerificationRepository()
 
@@ -60,25 +69,33 @@ func main() {
 	driverSettlementAccountRepository := repository.NewDriverSettlementAccountRepository()
 	driverSessionRepository := repository.NewDriverSessionRepository()
 
+	// Init services
+
 	smsSenderService := service.NewCoolSmsSenderService(
-		"api.coolsms.co.kr",
-		"01083047880",
-		"NCSCVKFUSA8TPSED",
-		"L25KAYEICPWCPHTIXMKLTEAKWLFFGIHQ",
+		config.SmsSender.Endpoint,
+		config.SmsSender.SenderPhone,
+		config.SmsSender.ApiKey,
+		config.SmsSender.ApiSecret,
 	)
 
 	mapRouteService := service.NewNaverMapsRouteService(
-		"https://naveropenapi.apigw.ntruss.com",
-		"s9i06iew36",
-		"hvVaEKpxiu6XT9RqvEdH7JTF3uGJpDShdjZ6nIJi",
+		config.RouteService.Endpoint,
+		config.RouteService.ApiKey,
+		config.RouteService.ApiSecret,
 	)
 
 	locationService := service.NewKakaoLocationService(
-		"https://dapi.kakao.com",
-		"c46bd6c102717c6453ae7f0e6630a408",
+		config.LocationService.Endpoint,
+		config.LocationService.ApiSecret,
 	)
 
 	fileUploadService := service.NewMockFileUploadService()
+
+	// TODO(taekyeom) Replace mock to real one
+	tossPaymentService := service.NewTossPaymentService(
+		config.PaymentService.Endpoint,
+		config.PaymentService.ApiSecret,
+	)
 
 	taxiCallRequestActorService, err := taxicall.NewTaxiCallActorService(
 		taxicall.WithTransactor(transactor),
@@ -95,6 +112,8 @@ func main() {
 		fmt.Printf("Failed to init actor system: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Init apps
 
 	userSessionApp, err := usersession.NewUserSessionApp(
 		usersession.WithTransactor(transactor),
@@ -114,14 +133,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	userSessionMiddleware := userserver.NewSessionMiddleware(userSessionApp)
-
-	// TODO(taekyeom) Replace mock to real one
-	tossPaymentService := service.NewTossPaymentService(
-		"https://api.tosspayments.com",
-		"dGVzdF9za196WExrS0V5cE5BcldtbzUwblgzbG1lYXhZRzVSOg==",
-	)
-
 	userApp, err := user.NewUserApp(
 		user.WithTransactor(transactor),
 		user.WithUserRepository(userRepository),
@@ -140,8 +151,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	driverSessionMiddleware := driverserver.NewSessionMiddleware(driverSessionApp)
-
 	driverApp, err := driver.NewDriverApp(
 		driver.WithTransactor(transactor),
 		driver.WithDriverRepository(driverRepository),
@@ -158,6 +167,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Init middlewares
+	userSessionMiddleware := userserver.NewSessionMiddleware(userSessionApp)
+
+	driverSessionMiddleware := driverserver.NewSessionMiddleware(driverSessionApp)
+
+	backofficeSessionMiddleware := backofficeserver.NewSessionMiddleware(config.Backoffice.Secret)
+
+	// Init servers
 	userServer, err := userserver.NewUserServer(
 		userserver.WithEndpoint("0.0.0.0"),
 		userserver.WithPort(18881),
@@ -182,7 +199,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	backofficeSessionMiddleware := backofficeserver.NewSessionMiddleware(*backofficeSecretPtr)
 	backofficeServer, err := backofficeserver.NewBackofficeServer(
 		backofficeserver.WithEndpoint("0.0.0.0"),
 		backofficeserver.WithPort(18883),
@@ -195,6 +211,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Run servers
 	group, ctx := errgroup.WithContext(ctx)
 
 	group.Go(func() error {
