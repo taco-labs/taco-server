@@ -265,7 +265,10 @@ func sendPushMessage(svc service.NotificationService, notification value.Notific
 }
 
 func bulkSendPushMessage(svc service.NotificationService, notifications []value.Notification) {
-	fmt.Println("Send Messages: ", notifications)
+	if len(notifications) == 0 {
+		return
+	}
+
 	go func() {
 		ctx := context.Background()
 		err := svc.BulkSendNotification(ctx, notifications)
