@@ -32,8 +32,8 @@ type DatabaseConfig struct {
 
 type SmsSenderConfig struct {
 	Endpoint    string `envconfig:"TACO_SMS_SENDER_ENDPOINT" required:"true"`
-	SenderPhone string `envconfig:"TACO_SMS_SENDER_ENDPOINT" required:"true"`
-	ApiKey      string `envconfig:"TACO_SMS_SENDER_ENDPOINT" required:"true"`
+	SenderPhone string `envconfig:"TACO_SMS_SENDER_PHONE" required:"true"`
+	ApiKey      string `envconfig:"TACO_SMS_SENDER_API_KEY" required:"true"`
 	ApiSecret   string `envconfig:"TACO_SMS_SENDER_API_SECRET" required:"true"`
 }
 
@@ -58,6 +58,7 @@ type BackofficeConfig struct {
 }
 
 type FirebaseConfig struct {
+	DryRun bool `envconfig:"TACO_FIREBASE_DRY_RUN" default:"true"`
 }
 
 func NewTacoConfig() (TacoConfig, error) {
