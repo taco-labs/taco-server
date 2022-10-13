@@ -10,6 +10,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
+	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
 )
 
@@ -72,75 +73,6 @@ func (t taxiCallRepository) CreateDriverTaxiCallSettlement(ctx context.Context, 
 	}
 	if rowsAffected != 1 {
 		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
-	}
-
-	return nil
-}
-
-func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Context, db bun.IDB,
-	point value.Point, raidus int, ticketId string, requestTime time.Time) ([]entity.DriverTaxiCallContext, error) {
-
-	var resp []entity.DriverTaxiCallContext
-
-	locationWithDistance := db.NewSelect().
-		TableExpr("driver_location").
-		ColumnExpr("driver_id").
-		// TODO (taekyeom) Handle public schema search path...
-		ColumnExpr("public.ST_DistanceSphere(location, public.ST_GeomFromText('POINT(? ?)',4326)) as distance", point.Longitude, point.Latitude)
-
-	locationWithDistanceFiltered := db.NewSelect().
-		TableExpr("driver_distance").
-		ColumnExpr("driver_id").
-		ColumnExpr("distance").
-		Where("distance <= ?", raidus)
-
-	err := db.NewSelect().
-		With("driver_distance", locationWithDistance).
-		With("driver_distance_filtered", locationWithDistanceFiltered).
-		Model(&resp).
-		Join("JOIN driver_distance_filtered AS t2 ON t2.driver_id = ?TableName.driver_id").
-		Where("can_receive").
-		Where("last_received_request_ticket <> ? AND (rejected_last_request_ticket OR ? - last_receive_time > '10 seconds')", ticketId, requestTime).
-		Order("distance").
-		Limit(20). // TODO (taekyeom) To be smart limit..
-		Scan(ctx)
-
-	if err != nil {
-		return []entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	return resp, nil
-}
-
-func (t taxiCallRepository) GetDriverTaxiCallContext(ctx context.Context, db bun.IDB, driverId string) (entity.DriverTaxiCallContext, error) {
-	resp := entity.DriverTaxiCallContext{
-		DriverId: driverId,
-	}
-
-	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
-
-	if errors.Is(sql.ErrNoRows, err) {
-		return entity.DriverTaxiCallContext{}, value.ErrNotFound
-	}
-	if err != nil {
-		return entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	return resp, nil
-}
-
-func (t taxiCallRepository) UpsertDriverTaxiCallContext(ctx context.Context, db bun.IDB, callContext entity.DriverTaxiCallContext) error {
-	_, err := db.NewInsert().
-		Model(&callContext).
-		On("CONFLICT (driver_id) DO UPDATE").
-		Set("can_receive = EXCLUDED.can_receive").
-		Set("last_received_request_ticket = EXCLUDED.last_received_request_ticket").
-		Set("rejected_last_request_ticket = EXCLUDED.rejected_last_request_ticket").
-		Set("last_receive_time = EXCLUDED.last_receive_time").
-		Exec(ctx)
-
-	if err != nil {
-		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return nil
@@ -350,6 +282,108 @@ func (t taxiCallRepository) Update(ctx context.Context, db bun.IDB, taxiCallRequ
 	}
 	if rowsAffected != 1 {
 		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Context, db bun.IDB,
+	point value.Point, raidus int, ticketId string, requestTime time.Time) ([]entity.DriverTaxiCallContext, error) {
+
+	type tempModel struct {
+		entity.DriverTaxiCallContext `bun:",extend"`
+
+		EwkbHex string `bun:"location"`
+	}
+
+	var resp []tempModel
+
+	locationWithDistance := db.NewSelect().
+		TableExpr("driver_location").
+		ColumnExpr("driver_id").
+		ColumnExpr("location").
+		// TODO (taekyeom) Handle public schema search path...
+		ColumnExpr("public.ST_DistanceSphere(location, public.ST_GeomFromText('POINT(? ?)',4326)) as distance", point.Longitude, point.Latitude)
+
+	locationWithDistanceFiltered := db.NewSelect().
+		TableExpr("driver_distance").
+		ColumnExpr("driver_id").
+		ColumnExpr("location").
+		ColumnExpr("distance").
+		Where("distance <= ?", raidus)
+
+	err := db.NewSelect().
+		With("driver_distance", locationWithDistance).
+		With("driver_distance_filtered", locationWithDistanceFiltered).
+		Model(&resp).
+		ColumnExpr("driver_taxi_call_context.*").
+		ColumnExpr("location").
+		Join("JOIN driver_distance_filtered AS t2 ON t2.driver_id = ?TableName.driver_id").
+		Where("can_receive").
+		Where("last_received_request_ticket <> ? AND (rejected_last_request_ticket OR ? - last_receive_time > '10 seconds')", ticketId, requestTime).
+		Order("distance").
+		Limit(20). // TODO (taekyeom) To be smart limit..
+		Scan(ctx)
+
+	if err != nil {
+		return []entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return slices.MapErr(resp, func(i tempModel) (entity.DriverTaxiCallContext, error) {
+		if err := i.Location.FromEwkbHex(i.EwkbHex); err != nil {
+			return entity.DriverTaxiCallContext{}, err
+		}
+
+		return i.DriverTaxiCallContext, nil
+	})
+}
+
+func (t taxiCallRepository) GetDriverTaxiCallContext(ctx context.Context, db bun.IDB, driverId string) (entity.DriverTaxiCallContext, error) {
+	// resp := entity.DriverTaxiCallContext{
+	// 	DriverId: driverId,
+	// }
+
+	resp := struct {
+		entity.DriverTaxiCallContext `bun:",extend"`
+
+		EwkbHex string `bun:"location"`
+	}{
+		DriverTaxiCallContext: entity.DriverTaxiCallContext{
+			DriverId: driverId,
+		},
+	}
+
+	err := db.NewSelect().Model(&resp).
+		ColumnExpr("driver_taxi_call_context.*").
+		ColumnExpr("location").
+		WherePK().Scan(ctx)
+
+	if errors.Is(sql.ErrNoRows, err) {
+		return entity.DriverTaxiCallContext{}, value.ErrNotFound
+	}
+	if err != nil {
+		return entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	if err := resp.Location.FromEwkbHex(resp.EwkbHex); err != nil {
+		return entity.DriverTaxiCallContext{}, err
+	}
+
+	return resp.DriverTaxiCallContext, nil
+}
+
+func (t taxiCallRepository) UpsertDriverTaxiCallContext(ctx context.Context, db bun.IDB, callContext entity.DriverTaxiCallContext) error {
+	_, err := db.NewInsert().
+		Model(&callContext).
+		On("CONFLICT (driver_id) DO UPDATE").
+		Set("can_receive = EXCLUDED.can_receive").
+		Set("last_received_request_ticket = EXCLUDED.last_received_request_ticket").
+		Set("rejected_last_request_ticket = EXCLUDED.rejected_last_request_ticket").
+		Set("last_receive_time = EXCLUDED.last_receive_time").
+		Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return nil

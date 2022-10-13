@@ -27,6 +27,11 @@ type sessionInterface interface {
 	ActivateByDriverId(context.Context, string) error
 }
 
+type pushInterface interface {
+	SendTaxiCallRequestAccept(context.Context, entity.TaxiCallRequest, entity.DriverTaxiCallContext) error
+	SendTaxiCallRequestDone(context.Context, entity.TaxiCallRequest) error
+}
+
 type driverApp struct {
 	app.Transactor
 	repository struct {
@@ -41,6 +46,7 @@ type driverApp struct {
 		smsSender  service.SmsSenderService
 		session    sessionInterface
 		fileUpload service.FileUploadService
+		push       pushInterface
 	}
 
 	actor struct {

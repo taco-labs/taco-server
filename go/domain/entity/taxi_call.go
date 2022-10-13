@@ -97,7 +97,7 @@ func (t *TaxiCallTicket) IncreasePrice(maxPrice int, updateTime time.Time) bool 
 	return t.ValidAdditionalPrice(maxPrice)
 }
 
-func (t *TaxiCallTicket) GetRadius() int {
+func (t TaxiCallTicket) GetRadius() int {
 	switch t.Attempt {
 	case 1:
 		return 3000
@@ -110,6 +110,19 @@ func (t *TaxiCallTicket) GetRadius() int {
 	}
 }
 
+func (t TaxiCallTicket) GetRadiusMinutes() int {
+	switch t.Attempt {
+	case 1:
+		return 3
+	case 2:
+		return 5
+	case 3:
+		return 7
+	default:
+		return 3
+	}
+}
+
 type DriverTaxiCallContext struct {
 	bun.BaseModel `bun:"table:driver_taxi_call_context"`
 
@@ -118,6 +131,9 @@ type DriverTaxiCallContext struct {
 	LastReceivedRequestTicket string    `bun:"last_received_request_ticket"`
 	RejectedLastRequestTicket bool      `bun:"rejected_last_request_ticket"`
 	LastReceiveTime           time.Time `bun:"last_receive_time"`
+
+	// Read Only
+	Location value.Point `bun:"-"`
 }
 
 func NewEmptyDriverTaxiCallContext(driverId string, canReceive bool, t time.Time) DriverTaxiCallContext {

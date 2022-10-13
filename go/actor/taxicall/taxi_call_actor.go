@@ -17,6 +17,13 @@ import (
 	"github.com/uptrace/bun"
 )
 
+type pushInterface interface {
+	DistributeTaxiCallRequest(context.Context,
+		entity.TaxiCallRequest, entity.TaxiCallTicket, []entity.DriverTaxiCallContext) error
+	SendTaxiCallRequestFailure(context.Context, entity.TaxiCallRequest) error
+	SendTaxiCallRequestProgress(context.Context, entity.TaxiCallRequest, entity.TaxiCallTicket) error
+}
+
 type actor struct {
 	app.Transactor // TODO(taekyeom) Do not use transactor?
 	termChan       chan string
@@ -27,6 +34,9 @@ type actor struct {
 		user            repository.UserRepository
 		driver          repository.DriverRepository
 		taxiCallRequest repository.TaxiCallRepository
+	}
+	service struct {
+		push pushInterface
 	}
 }
 
@@ -70,18 +80,17 @@ func (a actor) loop(ctx context.Context) {
 	}()
 }
 
-func (a actor) callMatched(ctx context.Context, ticketId string, t time.Time) error {
-	return a.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		return nil
-	})
-}
-
 func (a actor) tick(ctx context.Context, t time.Time) (bool, time.Time, error) {
 	// get taxi call ticket & taxi call request
 	var nextSchedule time.Time
 	var terminate bool
-	err := a.Run(context.Background(), func(ctx context.Context, i bun.IDB) error {
-		taxiCallRequest, err := a.repository.taxiCallRequest.GetById(ctx, i, a.callRequestId)
+	var taxiCallRequest entity.TaxiCallRequest
+	var taxiCallTicket entity.TaxiCallTicket
+	var driverTaxiCallContexts []entity.DriverTaxiCallContext
+	var err error
+
+	err = a.Run(context.Background(), func(ctx context.Context, i bun.IDB) error {
+		taxiCallRequest, err = a.repository.taxiCallRequest.GetById(ctx, i, a.callRequestId)
 		if err != nil {
 			return fmt.Errorf("service.actor.tick [%s]: error while get call request: %w", a.callRequestId, err)
 		}
@@ -100,12 +109,12 @@ func (a actor) tick(ctx context.Context, t time.Time) (bool, time.Time, error) {
 			return nil
 		}
 
-		ticket, err := a.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
+		taxiCallTicket, err = a.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("service.actor.tick [%s]: error while get call request ticket: %w", a.callRequestId, err)
 		}
 		if err != nil && errors.Is(err, value.ErrNotFound) {
-			ticket = entity.TaxiCallTicket{
+			taxiCallTicket = entity.TaxiCallTicket{
 				Id:                utils.MustNewUUID(),
 				TaxiCallRequestId: taxiCallRequest.Id,
 				Attempt:           0,
@@ -114,19 +123,18 @@ func (a actor) tick(ctx context.Context, t time.Time) (bool, time.Time, error) {
 			}
 		}
 
-		expectedSchedule := ticket.UpdateTime.Add(time.Second * 10)
+		expectedSchedule := taxiCallTicket.UpdateTime.Add(time.Second * 10)
 		if t.Before(expectedSchedule) {
 			nextSchedule = expectedSchedule
 			return nil
 		}
 
 		validTicketOperation := true
-		if !ticket.IncreaseAttempt(t) {
-			validTicketOperation = ticket.IncreasePrice(taxiCallRequest.RequestMaxAdditionalPrice, t)
+		if !taxiCallTicket.IncreaseAttempt(t) {
+			validTicketOperation = taxiCallTicket.IncreasePrice(taxiCallRequest.RequestMaxAdditionalPrice, t)
 		}
 
 		if !validTicketOperation {
-			// TODO (taekyeom) terminate & push message
 			if err := taxiCallRequest.UpdateState(t, enum.TaxiCallState_FAILED); err != nil {
 				return fmt.Errorf("service.actor.ticket [%s]: failed to update state: %w", a.callRequestId, err)
 			}
@@ -141,38 +149,50 @@ func (a actor) tick(ctx context.Context, t time.Time) (bool, time.Time, error) {
 		}
 
 		// Update new ticket
-		if err := a.repository.taxiCallRequest.UpsertTicket(ctx, i, ticket); err != nil {
+		if err := a.repository.taxiCallRequest.UpsertTicket(ctx, i, taxiCallTicket); err != nil {
 			return fmt.Errorf("service.actor.ticket: [%s] error while update new ticket: %w", a.callRequestId, err)
 		}
 
 		// Get drivers
-		driverContexts, err := a.repository.taxiCallRequest.
-			GetDriverTaxiCallContextWithinRadius(ctx, i, taxiCallRequest.Departure.Point, ticket.GetRadius(), ticket.Id, t)
+		driverTaxiCallContexts, err = a.repository.taxiCallRequest.
+			GetDriverTaxiCallContextWithinRadius(ctx, i, taxiCallRequest.Departure.Point, taxiCallTicket.GetRadius(), taxiCallTicket.Id, t)
 		if err != nil {
 			return fmt.Errorf("service.actor.ticket: [%s] error while get driver contexts within radius: %w", a.callRequestId, err)
 		}
 
-		if len(driverContexts) > 0 {
-			driverContexts = slices.Map(driverContexts, func(dctx entity.DriverTaxiCallContext) entity.DriverTaxiCallContext {
-				dctx.LastReceivedRequestTicket = ticket.Id
+		if len(driverTaxiCallContexts) > 0 {
+			driverTaxiCallContexts = slices.Map(driverTaxiCallContexts, func(dctx entity.DriverTaxiCallContext) entity.DriverTaxiCallContext {
+				dctx.LastReceivedRequestTicket = taxiCallTicket.Id
 				dctx.LastReceiveTime = t
 				dctx.RejectedLastRequestTicket = false
 				return dctx
 			})
 
 			// TODO (taekyeom) pick tit-for-tat drivers
-
-			if err := a.repository.taxiCallRequest.BulkUpsertDriverTaxiCallContext(ctx, i, driverContexts); err != nil {
+			if err := a.repository.taxiCallRequest.BulkUpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContexts); err != nil {
 				return fmt.Errorf("service.actor.ticket: [%s] error while upsert driver contexts within radius: %w", a.callRequestId, err)
 			}
 		}
 
-		// Send pushes
-
-		nextSchedule = ticket.UpdateTime.Add(10 * time.Second)
+		nextSchedule = taxiCallTicket.UpdateTime.Add(10 * time.Second)
 
 		return nil
 	})
+
+	if err != nil {
+		return terminate, nextSchedule, err
+	}
+
+	switch taxiCallRequest.CurrentState {
+	case enum.TaxiCallState_Requested:
+		err = a.service.push.DistributeTaxiCallRequest(ctx, taxiCallRequest, taxiCallTicket, driverTaxiCallContexts)
+		if err != nil {
+			return terminate, nextSchedule, err
+		}
+		err = a.service.push.SendTaxiCallRequestProgress(ctx, taxiCallRequest, taxiCallTicket)
+	case enum.TaxiCallState_FAILED:
+		err = a.service.push.SendTaxiCallRequestFailure(ctx, taxiCallRequest)
+	}
 
 	return terminate, nextSchedule, err
 }
@@ -187,6 +207,9 @@ type TaxiCallActorService struct {
 		user            repository.UserRepository
 		driver          repository.DriverRepository
 		taxiCallRequest repository.TaxiCallRepository
+	}
+	service struct {
+		push pushInterface
 	}
 }
 
@@ -204,6 +227,7 @@ func (t *TaxiCallActorService) Add(requestId string) error {
 		Transactor:    t.Transactor,
 		callRequestId: requestId,
 		repository:    t.repository,
+		service:       t.service,
 		termChan:      t.actorTermChan,
 	}
 	t.lock.Lock()
@@ -271,6 +295,10 @@ func (t *TaxiCallActorService) validate() error {
 
 	if t.repository.taxiCallRequest == nil {
 		return errors.New("actor system needs taxi call request repository")
+	}
+
+	if t.service.push == nil {
+		return errors.New("actor system needs push notification service")
 	}
 
 	return nil

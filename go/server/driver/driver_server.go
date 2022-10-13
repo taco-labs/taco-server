@@ -28,7 +28,7 @@ type driverApp interface {
 	ActivateDriver(context.Context, string) error
 	ListTaxiCallRequest(context.Context, request.ListDriverTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
-	AcceptTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
+	AcceptTaxiCallRequest(context.Context, string) error
 	RejectTaxiCallRequest(context.Context, string) error
 	DoneTaxiCallRequest(context.Context, request.DoneTaxiCallRequest) error
 }
@@ -279,14 +279,12 @@ func (d driverServer) AcceptTaxiCallRequest(e echo.Context) error {
 
 	ticketId := e.Param("ticketId")
 
-	taxiCallRequest, err := d.app.driver.AcceptTaxiCallRequest(ctx, ticketId)
+	err := d.app.driver.AcceptTaxiCallRequest(ctx, ticketId)
 	if err != nil {
 		return server.ToResponse(err)
 	}
 
-	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
-
-	return e.JSON(http.StatusOK, resp)
+	return e.JSON(http.StatusOK, struct{}{})
 }
 
 func (d driverServer) RejectTaxiCallRequest(e echo.Context) error {

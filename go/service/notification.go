@@ -10,7 +10,8 @@ import (
 )
 
 type NotificationService interface {
-	SendNotification(context.Context, string, map[string]string) error
+	SendNotification(context.Context, value.Notification) error
+	BulkSendNotification(context.Context, []value.Notification) error
 }
 
 type firebaseNotificationService struct {

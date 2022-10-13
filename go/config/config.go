@@ -59,6 +59,7 @@ type BackofficeConfig struct {
 
 type FirebaseConfig struct {
 	DryRun bool `envconfig:"TACO_FIREBASE_DRY_RUN" default:"true"`
+	Mock   bool `envconfig:"TACO_FIREBASE_MOCK" default:"true"`
 }
 
 func NewTacoConfig() (TacoConfig, error) {

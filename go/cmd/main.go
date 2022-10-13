@@ -11,6 +11,7 @@ import (
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/driver"
 	"github.com/taco-labs/taco/go/app/driversession"
+	"github.com/taco-labs/taco/go/app/push"
 	"github.com/taco-labs/taco/go/app/user"
 	"github.com/taco-labs/taco/go/app/usersession"
 	"github.com/taco-labs/taco/go/config"
@@ -98,22 +99,6 @@ func main() {
 		config.PaymentService.ApiSecret,
 	)
 
-	taxiCallRequestActorService, err := taxicall.NewTaxiCallActorService(
-		taxicall.WithTransactor(transactor),
-		taxicall.WithUserRepository(userRepository),
-		taxicall.WithDriverRepository(driverRepository),
-		taxicall.WithTaxiCallRequestRepository(taxiCallRequestRepository),
-	)
-	if err != nil {
-		fmt.Printf("Failed to setup taxi call request actor service: %v\n", err)
-		os.Exit(1)
-	}
-
-	if err := taxiCallRequestActorService.Init(ctx); err != nil {
-		fmt.Printf("Failed to init actor system: %v\n", err)
-		os.Exit(1)
-	}
-
 	firebaseApp, err := firebase.NewApp(ctx, nil)
 	if err != nil {
 		fmt.Println("Failed to instantiate firebase: ", err)
@@ -125,9 +110,33 @@ func main() {
 		fmt.Println("Failed to instantiate firebase cloud messaging client: ", err)
 		os.Exit(1)
 	}
-	_ = service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
+	notificationService := service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
 
 	// Init apps
+	pushApp, err := push.NewPushApp(
+		push.WithTransactor(transactor),
+		push.WithUserRepository(userRepository),
+		push.WithDriverRepository(driverRepository),
+		push.WithRouteService(mapRouteService),
+		push.WithNotificationService(notificationService),
+	)
+
+	taxiCallRequestActorService, err := taxicall.NewTaxiCallActorService(
+		taxicall.WithTransactor(transactor),
+		taxicall.WithUserRepository(userRepository),
+		taxicall.WithDriverRepository(driverRepository),
+		taxicall.WithTaxiCallRequestRepository(taxiCallRequestRepository),
+		taxicall.WithPushService(pushApp),
+	)
+	if err != nil {
+		fmt.Printf("Failed to setup taxi call request actor service: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := taxiCallRequestActorService.Init(ctx); err != nil {
+		fmt.Printf("Failed to init actor system: %v\n", err)
+		os.Exit(1)
+	}
 
 	userSessionApp, err := usersession.NewUserSessionApp(
 		usersession.WithTransactor(transactor),
@@ -175,6 +184,7 @@ func main() {
 		driver.WithSmsVerificationRepository(smsVerificationRepository),
 		driver.WithFileUploadService(fileUploadService),
 		driver.WithTaxiCallRequestRepository(taxiCallRequestRepository),
+		driver.WithPushService(pushApp),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver app: %v\n", err)

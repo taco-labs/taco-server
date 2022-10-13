@@ -61,3 +61,9 @@ func WithFileUploadService(svc service.FileUploadService) driverAppOption {
 		da.service.fileUpload = svc
 	}
 }
+
+func WithPushService(svc pushInterface) driverAppOption {
+	return func(da *driverApp) {
+		da.service.push = svc
+	}
+}

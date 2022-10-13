@@ -30,3 +30,9 @@ func WithTaxiCallRequestRepository(repo repository.TaxiCallRepository) actorOpti
 		tcas.repository.taxiCallRequest = repo
 	}
 }
+
+func WithPushService(svc pushInterface) actorOption {
+	return func(tcas *TaxiCallActorService) {
+		tcas.service.push = svc
+	}
+}

@@ -12,58 +12,58 @@ type NotificationMessage struct {
 	Body  string
 }
 
-type dataOnlyNotification struct {
+type DataOnlyNotification struct {
 	principal string
 	data      map[string]string
 }
 
-func (d dataOnlyNotification) DataOnly() bool {
+func (d DataOnlyNotification) DataOnly() bool {
 	return true
 }
 
-func (d dataOnlyNotification) Data() map[string]string {
+func (d DataOnlyNotification) Data() map[string]string {
 	return d.data
 }
 
-func (d dataOnlyNotification) NotificationMessage() NotificationMessage {
+func (d DataOnlyNotification) NotificationMessage() NotificationMessage {
 	return NotificationMessage{}
 }
 
-func (d dataOnlyNotification) Principal() string {
+func (d DataOnlyNotification) Principal() string {
 	return d.principal
 }
 
-func NewDataOnlyNotification(principal string, data map[string]string) dataOnlyNotification {
-	return dataOnlyNotification{
+func NewDataOnlyNotification(principal string, data map[string]string) DataOnlyNotification {
+	return DataOnlyNotification{
 		principal: principal,
 		data:      data,
 	}
 }
 
-type notification struct {
+type TitledNotification struct {
 	principal           string
 	notificationMessage NotificationMessage
 	data                map[string]string
 }
 
-func (d notification) DataOnly() bool {
+func (d TitledNotification) DataOnly() bool {
 	return false
 }
 
-func (d notification) Data() map[string]string {
+func (d TitledNotification) Data() map[string]string {
 	return d.data
 }
 
-func (d notification) NotificationMessage() NotificationMessage {
+func (d TitledNotification) NotificationMessage() NotificationMessage {
 	return d.notificationMessage
 }
 
-func (d notification) Principal() string {
+func (d TitledNotification) Principal() string {
 	return d.principal
 }
 
-func NewNotification(principal string, message NotificationMessage, data map[string]string) notification {
-	return notification{
+func NewTitledNotification(principal string, message NotificationMessage, data map[string]string) TitledNotification {
+	return TitledNotification{
 		principal:           principal,
 		notificationMessage: message,
 		data:                data,
