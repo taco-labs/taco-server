@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	firebase "firebase.google.com/go"
 	"github.com/taco-labs/taco/go/actor/taxicall"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/driver"
@@ -112,6 +113,14 @@ func main() {
 		fmt.Printf("Failed to init actor system: %v\n", err)
 		os.Exit(1)
 	}
+
+	firebaseApp, err := firebase.NewApp(ctx, nil)
+	if err != nil {
+		fmt.Println("Failed to instantiate firebase: ", err)
+		os.Exit(1)
+	}
+	// TODO (taekyeom) use it in actor
+	_ = service.NewFirebaseNotificationService(firebaseApp)
 
 	// Init apps
 

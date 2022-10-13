@@ -19,4 +19,5 @@ TACO_ENABLE_QUERY_DEBUG_LOG=true \
   TACO_LOCATION_SERVICE_ENDPOINT="https://dapi.kakao.com" \
   TACO_LOCATION_SERVICE_API_SECRET="c46bd6c102717c6453ae7f0e6630a408" \
   TACO_BACKOFFICE_SECRET="backoffice_secret" \
+  GOOGLE_APPLICATION_CREDENTIALS=/Users/kimtkyeom/.firebase/service_account.json \
   go run go/cmd/main.go

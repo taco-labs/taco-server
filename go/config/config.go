@@ -14,6 +14,7 @@ type TacoConfig struct {
 	RouteService    RouteServiceConfig
 	LocationService LocationServiceConfig
 	Backoffice      BackofficeConfig
+	Firebase        FirebaseConfig
 }
 
 type LogConfig struct {
@@ -54,6 +55,9 @@ type LocationServiceConfig struct {
 
 type BackofficeConfig struct {
 	Secret string `envconfig:"TACO_BACKOFFICE_SECRET" required:"true"`
+}
+
+type FirebaseConfig struct {
 }
 
 func NewTacoConfig() (TacoConfig, error) {
