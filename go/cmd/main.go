@@ -120,7 +120,12 @@ func main() {
 		os.Exit(1)
 	}
 	// TODO (taekyeom) use it in actor
-	_ = service.NewFirebaseNotificationService(firebaseApp)
+	messagingClient, err := firebaseApp.Messaging(ctx)
+	if err != nil {
+		fmt.Println("Failed to instantiate firebase cloud messaging client: ", err)
+		os.Exit(1)
+	}
+	_ = service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
 
 	// Init apps
 

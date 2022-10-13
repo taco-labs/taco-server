@@ -85,7 +85,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 	locationWithDistance := db.NewSelect().
 		TableExpr("driver_location").
 		ColumnExpr("driver_id").
-		// TODO (taekyeom) Handle public search path...
+		// TODO (taekyeom) Handle public schema search path...
 		ColumnExpr("public.ST_DistanceSphere(location, public.ST_GeomFromText('POINT(? ?)',4326)) as distance", point.Longitude, point.Latitude)
 
 	locationWithDistanceFiltered := db.NewSelect().
