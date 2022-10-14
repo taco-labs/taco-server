@@ -54,6 +54,26 @@ func (d driverApp) GetLatestTaxiCallRequest(ctx context.Context, driverId string
 	return latestTaxiCallRequest, nil
 }
 
+func (d driverApp) DriverToArrival(ctx context.Context, callRequestId string) error {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		taxiCallRequest, err := d.repository.taxiCallRequest.GetById(ctx, i, callRequestId)
+		if err != nil {
+			return fmt.Errorf("app.Driver.DriverToArrival: error while get taxi call request: %w", err)
+		}
+		if err := taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_DRIVER_TO_ARRIVAL); err != nil {
+			return fmt.Errorf("app.Driver.DriverToArrival: invalid state change: %w", err)
+		}
+
+		if err := d.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
+			return fmt.Errorf("app.Driver.DriverToArrival: error while update taxi call request: %w", err)
+		}
+
+		return nil
+	})
+}
+
 func (d driverApp) AcceptTaxiCallRequest(ctx context.Context, ticketId string) error {
 	driverId := utils.GetDriverId(ctx)
 	requestTime := utils.GetRequestTimeOrNow(ctx)
@@ -86,7 +106,7 @@ func (d driverApp) AcceptTaxiCallRequest(ctx context.Context, ticketId string) e
 
 		taxiCallRequest, err = d.repository.taxiCallRequest.GetById(ctx, i, driverTaxiCallContext.LastReceivedRequestTicket)
 		if err != nil {
-			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: error while get taxi call context:%w", err)
+			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: error while get taxi call request:%w", err)
 		}
 		if !taxiCallRequest.CurrentState.Requested() {
 			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: already expired taxi call request:%w", value.ErrAlreadyExpiredCallRequest)

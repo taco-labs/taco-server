@@ -54,7 +54,9 @@ func (d *driverServer) initController() error {
 	taxiCallGroup.PUT("/ticket/:ticketId", d.AcceptTaxiCallRequest)
 	taxiCallGroup.DELETE("/ticket/:ticketId", d.RejectTaxiCallRequest)
 
-	taxiCallGroup.PUT("/:taxiCallRequestId", d.DoneTaxiCallRequest)
+	// TODO (taekyeom) Proper url pattern..
+	taxiCallGroup.PUT("/:taxiCallRequestId/to_arrival", d.DriverToArrival)
+	taxiCallGroup.PUT("/:taxiCallRequestId/done", d.DoneTaxiCallRequest)
 
 	return nil
 }

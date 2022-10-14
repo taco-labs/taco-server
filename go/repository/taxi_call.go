@@ -356,6 +356,8 @@ func (t taxiCallRepository) GetDriverTaxiCallContext(ctx context.Context, db bun
 	err := db.NewSelect().Model(&resp).
 		ColumnExpr("driver_taxi_call_context.*").
 		ColumnExpr("location").
+		Join("JOIN driver_location").
+		JoinOn("driver_taxi_call_context.driver_id = driver_location.driver_id").
 		WherePK().Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
