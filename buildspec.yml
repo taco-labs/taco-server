@@ -42,12 +42,13 @@ phases:
       - echo Build started on `date` 
       - echo Building the Docker image...    
       - docker build --tag taco:dev . -f ./docker/Dockerfile.server.base
-      - docker build --tag 069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend:latest . -f ./docker/Dockerfile.server.prod
+      - docker tag taco:dev 069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend:latest
       - docker build --tag taco-migration:dev . -f ./docker/Dockerfile.migration.base
-      - docker build --tag 069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend-migration:latest . -f ./docker/Dockerfile.migration.prod
+      - docker tag taco-migration:dev 069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend-migration:latest
   post_build:
     commands:
       - docker push 069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend:latest
+      - docker push 069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend-migration:latest
       - | 
         printf '[{"name":"taco-backend","imageUri":"%s"},{"name":"taco-backend-migration","imageUri":"%s"}]' \
           069049357473.dkr.ecr.ap-northeast-2.amazonaws.com/taco/taco-backend:latest \ 
