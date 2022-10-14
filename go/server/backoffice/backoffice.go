@@ -10,12 +10,18 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/request"
 )
 
 type driverApp interface {
 	GetDriver(context.Context, string) (entity.Driver, error)
 	DeleteDriver(context.Context, string) error
 	ActivateDriver(context.Context, string) error
+
+	// TODO(taekyeom) Must remove before production
+	DriverToArrival(context.Context, string) error
+	ForceAcceptTaxiCallRequest(context.Context, string, string) error
+	DoneTaxiCallRequest(context.Context, request.DoneTaxiCallRequest) error
 }
 
 type userApp interface {
@@ -51,6 +57,9 @@ func (b *backofficeServer) initController() error {
 	driverGroup.GET("/:driverId", b.GetDriver)
 	driverGroup.DELETE("/:driverId", b.DeleteDriver)
 	driverGroup.PUT("/:driverId/activate", b.ActivateDriver)
+	driverGroup.PUT("/:driverId/force_accept/:taxiCallRequestId", b.ForceAcceptTaxiCallRequest)
+	driverGroup.PUT("/:driverId/to_arrival/:taxiCallRequestId", b.DriverToArrival)
+	driverGroup.POST("/:driverId/done/:taxiCallRequestId", b.DoneTaxiCallRequest)
 
 	userGroup := b.echo.Group("/user")
 	userGroup.GET("/:userId", b.GetUser)
