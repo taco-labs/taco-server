@@ -2,9 +2,9 @@ FROM golang:1.19.2-bullseye as builder
 
 WORKDIR /go/src/github.com/ktk1012/taco
 COPY ./go.mod ./go.sum ./
-COPY ./go ./go
 
-RUN git init
-RUN go mod tidy
+RUN go mod download
+
+COPY ./go ./go
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-w -s' -o main ./go/cmd/main.go
