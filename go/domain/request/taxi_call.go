@@ -17,13 +17,13 @@ func (c CreateTaxiCallRequest) Validate() error {
 }
 
 type ListUserTaxiCallRequest struct {
-	UserId    string `param:"userId"`
+	UserId    string `param:"driverId"`
 	Count     int    `query:"count"`
 	PageToken string `query:"pageToken"`
 }
 
 type ListDriverTaxiCallRequest struct {
-	DriverId  string `param:"userId"`
+	DriverId  string `param:"driverId"`
 	Count     int    `query:"count"`
 	PageToken string `query:"pageToken"`
 }
