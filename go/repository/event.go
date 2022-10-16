@@ -54,6 +54,10 @@ func (e eventRepository) BatchCommit(ctx context.Context, db bun.IDB, events []e
 func (e eventRepository) BatchCreate(ctx context.Context, db bun.IDB, events []entity.Event) error {
 	res, err := db.NewInsert().Model(&events).Exec(ctx)
 
+	if err != nil {
+		return fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)

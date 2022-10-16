@@ -44,6 +44,12 @@ func WithTaxiCallRequestRepository(repo repository.TaxiCallRepository) driverApp
 	}
 }
 
+func WithEventRepository(repo repository.EventRepository) driverAppOption {
+	return func(da *driverApp) {
+		da.repository.event = repo
+	}
+}
+
 func WithSessionService(svc sessionInterface) driverAppOption {
 	return func(da *driverApp) {
 		da.service.session = svc
@@ -59,11 +65,5 @@ func WithSmsSenderService(svc service.SmsSenderService) driverAppOption {
 func WithFileUploadService(svc service.FileUploadService) driverAppOption {
 	return func(da *driverApp) {
 		da.service.fileUpload = svc
-	}
-}
-
-func WithPushService(svc pushInterface) driverAppOption {
-	return func(da *driverApp) {
-		da.service.push = svc
 	}
 }

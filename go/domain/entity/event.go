@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -10,7 +11,8 @@ import (
 )
 
 const (
-	MetaDataKey_EventUri = "event_uri"
+	MetaDataKey_EventUri  = "event_uri"
+	MetaDataKey_MessageId = "message_id"
 )
 
 type Event struct {
@@ -20,9 +22,17 @@ type Event struct {
 	EventUri     string          `bun:"event_uri"`
 	DelaySeconds int64           `bun:"delay_seconds"`
 	Payload      json.RawMessage `bun:"payload,type:jsonb"`
-	CreateTime   time.Time       `bun:"create_time,nullzero,notnull,default:current_timestamp"`
+	CreateTime   time.Time       `bun:"create_time"`
 	AttemtCount  int             `bun:"-"`
 	ackFn        func() error
+}
+
+func (u *Event) BeforeAppendModel(ctx context.Context, query bun.Query) error {
+	switch query.(type) {
+	case *bun.InsertQuery:
+		u.CreateTime = time.Now()
+	}
+	return nil
 }
 
 func (e *Event) SetAck(fn func() error) {

@@ -68,11 +68,11 @@ func (d *driverServer) Run(ctx context.Context) error {
 		for {
 			select {
 			case <-c:
-				fmt.Println("shutting down [User API] server... because of interrupt")
+				fmt.Println("shutting down [Driver API] server... because of interrupt")
 				d.echo.Shutdown(ctx)
 				return
 			case <-ctx.Done():
-				fmt.Println("shutting down [User API] server... because of context cancel")
+				fmt.Println("shutting down [Driver API] server... because of context cancel")
 				d.echo.Shutdown(ctx)
 				return
 			}

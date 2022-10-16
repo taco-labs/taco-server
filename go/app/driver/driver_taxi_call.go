@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
@@ -70,25 +71,25 @@ func (d driverApp) ForceAcceptTaxiCallRequest(ctx context.Context, driverId, cal
 		// TODO(taeykeom) Do we need check on duty & last call request?
 		driverTaxiCallContext, err = d.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
 		if err != nil {
-			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: error while get taxi call context:%w", err)
+			return fmt.Errorf("app.Driver.ForceAcceptTaxiCallRequest: error while get taxi call context:%w", err)
 		}
 
 		driverTaxiCallContext.CanReceive = false
 		driverTaxiCallContext.LastReceivedRequestTicket = ticket.Id
 		if err := d.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
-			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: error while upsert taxi call context: %w", value.ErrInvalidOperation)
+			return fmt.Errorf("app.Driver.ForceAcceptTaxiCallRequest: error while upsert taxi call context: %w", value.ErrInvalidOperation)
 		}
 
 		taxiCallRequest, err = d.repository.taxiCallRequest.GetById(ctx, i, callRequestId)
 		if err != nil {
-			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: error while get taxi requestt:%w", err)
+			return fmt.Errorf("app.Driver.ForceAcceptTaxiCallRequest: error while get taxi requestt:%w", err)
 		}
 		if !taxiCallRequest.CurrentState.Requested() {
-			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: already expired taxi call request:%w", value.ErrAlreadyExpiredCallRequest)
+			return fmt.Errorf("app.Driver.ForceAcceptTaxiCallRequest: already expired taxi call request:%w", value.ErrAlreadyExpiredCallRequest)
 		}
 
 		if err := taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_DRIVER_TO_DEPARTURE); err != nil {
-			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: invalid state change:%w", err)
+			return fmt.Errorf("app.Driver.ForceAcceptTaxiCallRequest: invalid state change:%w", err)
 		}
 
 		taxiCallRequest.AdditionalPrice = ticket.AdditionalPrice
@@ -97,7 +98,12 @@ func (d driverApp) ForceAcceptTaxiCallRequest(ctx context.Context, driverId, cal
 			String: driverId,
 		}
 		if err := d.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
-			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: error while update taxi call request :%w", err)
+			return fmt.Errorf("app.Driver.ForceAcceptTaxiCallRequest: error while update taxi call request :%w", err)
+		}
+
+		userCmd := command.NewUserTaxiCallNotificationCommand(taxiCallRequest, ticket, driverTaxiCallContext)
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{userCmd}); err != nil {
+			return fmt.Errorf("app.Driver.ForceAcceptTaxiCallRequest: error while create event: %w", err)
 		}
 
 		return nil
@@ -105,10 +111,6 @@ func (d driverApp) ForceAcceptTaxiCallRequest(ctx context.Context, driverId, cal
 
 	if err != nil {
 		return err
-	}
-
-	if err := d.service.push.SendTaxiCallRequestAccept(ctx, taxiCallRequest, driverTaxiCallContext); err != nil {
-		return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: error while send taxi call accept push: %w", err)
 	}
 
 	return nil
@@ -129,6 +131,8 @@ func (d driverApp) DriverToArrival(ctx context.Context, callRequestId string) er
 		if err := d.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.Driver.DriverToArrival: error while update taxi call request: %w", err)
 		}
+
+		// TODO (taekyeom) send push?
 
 		return nil
 	})
@@ -185,16 +189,17 @@ func (d driverApp) AcceptTaxiCallRequest(ctx context.Context, ticketId string) e
 			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: error while update taxi call request :%w", err)
 		}
 
+		userCmd := command.NewUserTaxiCallNotificationCommand(taxiCallRequest, entity.TaxiCallTicket{}, entity.DriverTaxiCallContext{})
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{userCmd}); err != nil {
+			return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: error while create event: %w", err)
+		}
+
 		return nil
 	})
 
 	// TODO (taekyeom) send push message to user
 	if err != nil {
 		return err
-	}
-
-	if err := d.service.push.SendTaxiCallRequestAccept(ctx, taxiCallRequest, driverTaxiCallContext); err != nil {
-		return fmt.Errorf("app.Driver.AcceptTaxiCallRequest: error while send taxi call accept push: %w", err)
 	}
 
 	return nil
@@ -262,7 +267,7 @@ func (d driverApp) DoneTaxiCallRequest(ctx context.Context, req request.DoneTaxi
 
 		driverTaxiCallContext.CanReceive = true
 		if err := d.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
-			return fmt.Errorf("app.Driver.DoneTaxiCallRequest: error while upsert taxi call context: %w", value.ErrInvalidOperation)
+			return fmt.Errorf("app.Driver.DoneTaxiCallRequest: error while upsert taxi call context: %w", err)
 		}
 
 		taxiCallSettlement := entity.DriverTaxiCallSettlement{
@@ -270,8 +275,15 @@ func (d driverApp) DoneTaxiCallRequest(ctx context.Context, req request.DoneTaxi
 			SettlementDone:    false,
 		}
 		if err := d.repository.taxiCallRequest.CreateDriverTaxiCallSettlement(ctx, i, taxiCallSettlement); err != nil {
-			return fmt.Errorf("app.Driver.DoneTaxiCallRequest: error while create taxi call settlement: %w", value.ErrInvalidOperation)
+			return fmt.Errorf("app.Driver.DoneTaxiCallRequest: error while create taxi call settlement: %w", err)
 		}
+
+		userCmd := command.NewUserTaxiCallNotificationCommand(taxiCallRequest, entity.TaxiCallTicket{}, entity.DriverTaxiCallContext{})
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{userCmd}); err != nil {
+			return fmt.Errorf("app.Driver.DoneTaxiCallRequest: error while create event: %w", err)
+		}
+
+		// TODO (taekyeom) Do payment command
 
 		return nil
 	})
@@ -279,12 +291,6 @@ func (d driverApp) DoneTaxiCallRequest(ctx context.Context, req request.DoneTaxi
 	if err != nil {
 		return err
 	}
-
-	if err := d.service.push.SendTaxiCallRequestDone(ctx, taxiCallRequest); err != nil {
-		return fmt.Errorf("app.Driver.DoneTaxiCallRequest: error while send taxi call accept push: %w", err)
-	}
-
-	// TODO (taekyeom) Do payment
 
 	return nil
 }

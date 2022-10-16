@@ -8,7 +8,7 @@ TACO_ENABLE_QUERY_DEBUG_LOG=true \
   TACO_DATABASE_PASSWORD=postgres \
   TACO_DATABASE_SCHEMA=taco \
   TACO_NOTIFICATION_OUTBOX_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs" \
-  TACO_NOTIFICATION_OUTBOX_EVENT_URIS="notification/blah_blah" \
+  TACO_NOTIFICATION_OUTBOX_EVENT_URIS="TaxiCallNotification/User,TaxiCallNotification/Driver" \
   TACO_NOTIFICATION_OUTBOX_POLL_INTERVAL="200ms" \
   TACO_NOTIFICATION_OUTBOX_MAX_MESSAGES=50 \
   go run go/cmd/outbox/main.go

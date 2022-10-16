@@ -9,6 +9,7 @@ import (
 
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/repository"
@@ -34,9 +35,7 @@ type actor struct {
 		user            repository.UserRepository
 		driver          repository.DriverRepository
 		taxiCallRequest repository.TaxiCallRepository
-	}
-	service struct {
-		push pushInterface
+		event           repository.EventRepository
 	}
 }
 
@@ -176,22 +175,21 @@ func (a actor) tick(ctx context.Context, t time.Time) (bool, time.Time, error) {
 
 		nextSchedule = taxiCallTicket.UpdateTime.Add(10 * time.Second)
 
+		userCmd := command.NewUserTaxiCallNotificationCommand(taxiCallRequest, taxiCallTicket, entity.DriverTaxiCallContext{})
+		driverCmds := slices.Map(driverTaxiCallContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+			return command.NewDriverTaxiCallNotificationCommand(taxiCallRequest, taxiCallTicket, i)
+		})
+		cmds := append(driverCmds, userCmd)
+
+		if err := a.repository.event.BatchCreate(ctx, i, cmds); err != nil {
+			return fmt.Errorf("service.actor.tick: [%s] error while insert notification command events: %w", a.callRequestId, err)
+		}
+
 		return nil
 	})
 
 	if err != nil {
 		return terminate, nextSchedule, err
-	}
-
-	switch taxiCallRequest.CurrentState {
-	case enum.TaxiCallState_Requested:
-		err = a.service.push.DistributeTaxiCallRequest(ctx, taxiCallRequest, taxiCallTicket, driverTaxiCallContexts)
-		if err != nil {
-			return terminate, nextSchedule, err
-		}
-		err = a.service.push.SendTaxiCallRequestProgress(ctx, taxiCallRequest, taxiCallTicket)
-	case enum.TaxiCallState_FAILED:
-		err = a.service.push.SendTaxiCallRequestFailure(ctx, taxiCallRequest)
 	}
 
 	return terminate, nextSchedule, err
@@ -207,9 +205,7 @@ type TaxiCallActorService struct {
 		user            repository.UserRepository
 		driver          repository.DriverRepository
 		taxiCallRequest repository.TaxiCallRepository
-	}
-	service struct {
-		push pushInterface
+		event           repository.EventRepository
 	}
 }
 
@@ -227,7 +223,6 @@ func (t *TaxiCallActorService) Add(requestId string) error {
 		Transactor:    t.Transactor,
 		callRequestId: requestId,
 		repository:    t.repository,
-		service:       t.service,
 		termChan:      t.actorTermChan,
 	}
 	t.lock.Lock()
@@ -297,8 +292,8 @@ func (t *TaxiCallActorService) validate() error {
 		return errors.New("actor system needs taxi call request repository")
 	}
 
-	if t.service.push == nil {
-		return errors.New("actor system needs push notification service")
+	if t.repository.event == nil {
+		return errors.New("actor system needs event repository")
 	}
 
 	return nil

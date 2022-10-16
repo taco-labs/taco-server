@@ -31,8 +31,8 @@ func WithTaxiCallRequestRepository(repo repository.TaxiCallRepository) actorOpti
 	}
 }
 
-func WithPushService(svc pushInterface) actorOption {
+func WithEventRepository(repo repository.EventRepository) actorOption {
 	return func(tcas *TaxiCallActorService) {
-		tcas.service.push = svc
+		tcas.repository.event = repo
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/taco-labs/taco/go/app"
-	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
 )
 
@@ -13,18 +12,6 @@ type pushAppOption func(*taxiCallPushApp)
 func WithTransactor(transactor app.Transactor) pushAppOption {
 	return func(tcpa *taxiCallPushApp) {
 		tcpa.Transactor = transactor
-	}
-}
-
-func WithUserRepository(repo repository.UserRepository) pushAppOption {
-	return func(tcpa *taxiCallPushApp) {
-		tcpa.repository.user = repo
-	}
-}
-
-func WithDriverRepository(repo repository.DriverRepository) pushAppOption {
-	return func(tcpa *taxiCallPushApp) {
-		tcpa.repository.driver = repo
 	}
 }
 
@@ -41,14 +28,6 @@ func WithNotificationService(svc service.NotificationService) pushAppOption {
 }
 
 func (t taxiCallPushApp) validate() error {
-	if t.repository.user == nil {
-		return errors.New("taxi call push app need user repository")
-	}
-
-	if t.repository.driver == nil {
-		return errors.New("taxi call push app need driver repository")
-	}
-
 	if t.service.route == nil {
 		return errors.New("taxi call push app need route service")
 	}

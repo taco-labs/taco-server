@@ -87,11 +87,11 @@ func (b *backofficeServer) Run(ctx context.Context) error {
 		for {
 			select {
 			case <-c:
-				fmt.Println("shutting down [User API] server... because of interrupt")
+				fmt.Println("shutting down [Backoffice API] server... because of interrupt")
 				b.echo.Shutdown(ctx)
 				return
 			case <-ctx.Done():
-				fmt.Println("shutting down [User API] server... because of context cancel")
+				fmt.Println("shutting down [Backoffice API] server... because of context cancel")
 				b.echo.Shutdown(ctx)
 				return
 			}

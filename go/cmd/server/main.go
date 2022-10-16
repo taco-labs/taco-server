@@ -71,6 +71,8 @@ func main() {
 	driverSettlementAccountRepository := repository.NewDriverSettlementAccountRepository()
 	driverSessionRepository := repository.NewDriverSessionRepository()
 
+	eventRepository := repository.NewEventRepository()
+
 	// Init services
 
 	smsSenderService := service.NewCoolSmsSenderService(
@@ -113,20 +115,22 @@ func main() {
 	notificationService := service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
 
 	// Init apps
-	pushApp, err := push.NewPushApp(
+	_, err = push.NewPushApp(
 		push.WithTransactor(transactor),
-		push.WithUserRepository(userRepository),
-		push.WithDriverRepository(driverRepository),
 		push.WithRouteService(mapRouteService),
 		push.WithNotificationService(notificationService),
 	)
+	if err != nil {
+		fmt.Printf("Failed to setup push app: %v\n", err)
+		os.Exit(1)
+	}
 
 	taxiCallRequestActorService, err := taxicall.NewTaxiCallActorService(
 		taxicall.WithTransactor(transactor),
 		taxicall.WithUserRepository(userRepository),
 		taxicall.WithDriverRepository(driverRepository),
 		taxicall.WithTaxiCallRequestRepository(taxiCallRequestRepository),
-		taxicall.WithPushService(pushApp),
+		taxicall.WithEventRepository(eventRepository),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup taxi call request actor service: %v\n", err)
@@ -184,7 +188,7 @@ func main() {
 		driver.WithSmsVerificationRepository(smsVerificationRepository),
 		driver.WithFileUploadService(fileUploadService),
 		driver.WithTaxiCallRequestRepository(taxiCallRequestRepository),
-		driver.WithPushService(pushApp),
+		driver.WithEventRepository(eventRepository),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver app: %v\n", err)

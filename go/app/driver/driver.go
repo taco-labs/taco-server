@@ -40,13 +40,13 @@ type driverApp struct {
 		settlementAccount repository.DriverSettlementAccountRepository
 		smsVerification   repository.SmsVerificationRepository
 		taxiCallRequest   repository.TaxiCallRepository
+		event             repository.EventRepository
 	}
 
 	service struct {
 		smsSender  service.SmsSenderService
 		session    sessionInterface
 		fileUpload service.FileUploadService
-		push       pushInterface
 	}
 
 	actor struct {
@@ -406,6 +406,10 @@ func (d driverApp) validateApp() error {
 
 	if d.repository.taxiCallRequest == nil {
 		return errors.New("driver app need taxi call request repository")
+	}
+
+	if d.repository.event == nil {
+		return errors.New("driver app need event repository")
 	}
 
 	if d.service.session == nil {
