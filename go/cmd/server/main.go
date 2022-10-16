@@ -28,7 +28,9 @@ import (
 )
 
 func main() {
-	config, err := config.NewTacoConfig()
+	ctx := context.Background()
+
+	config, err := config.NewServerConfig(ctx)
 	if err != nil {
 		fmt.Println("Failed to initialize taco config: ", err)
 		os.Exit(1)
@@ -42,8 +44,6 @@ func main() {
 		config.Database.Database,
 		config.Database.Schema,
 	)
-
-	ctx := context.Background()
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 

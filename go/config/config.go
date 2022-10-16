@@ -1,70 +1,61 @@
 package config
 
 import (
-	"github.com/kelseyhightower/envconfig"
+	"fmt"
+	"time"
 )
 
-var Config TacoConfig
-
-type TacoConfig struct {
-	Log             LogConfig
-	Database        DatabaseConfig
-	SmsSender       SmsSenderConfig
-	PaymentService  PaymentServiceConfig
-	RouteService    RouteServiceConfig
-	LocationService LocationServiceConfig
-	Backoffice      BackofficeConfig
-	Firebase        FirebaseConfig
-}
-
 type LogConfig struct {
-	Query bool `envconfig:"TACO_ENABLE_QUERY_DEBUG_LOG" default:"false"`
+	Query bool `env:"TACO_ENABLE_QUERY_DEBUG_LOG,default=true"`
 }
 
 type DatabaseConfig struct {
-	Host     string `envconfig:"TACO_DATABASE_HOST" required:"true"`
-	Port     int    `envconfig:"TACO_DATABASE_PORT" required:"true"`
-	Database string `envconfig:"TACO_DATABASE_DATABASE" required:"true"`
-	UserName string `envconfig:"TACO_DATABASE_USERNAME" required:"true"`
-	Password string `envconfig:"TACO_DATABASE_PASSWORD" required:"true"`
-	Schema   string `envconfig:"TACO_DATABASE_SCHEMA" required:"true"`
+	Host     string `env:"TACO_DATABASE_HOST,required"`
+	Port     int    `env:"TACO_DATABASE_PORT,required"`
+	Database string `env:"TACO_DATABASE_DATABASE,required"`
+	UserName string `env:"TACO_DATABASE_USERNAME,required"`
+	Password string `env:"TACO_DATABASE_PASSWORD,required"`
+	Schema   string `env:"TACO_DATABASE_SCHEMA,required"`
 }
 
 type SmsSenderConfig struct {
-	Endpoint    string `envconfig:"TACO_SMS_SENDER_ENDPOINT" required:"true"`
-	SenderPhone string `envconfig:"TACO_SMS_SENDER_PHONE" required:"true"`
-	ApiKey      string `envconfig:"TACO_SMS_SENDER_API_KEY" required:"true"`
-	ApiSecret   string `envconfig:"TACO_SMS_SENDER_API_SECRET" required:"true"`
+	Endpoint    string `env:"TACO_SMS_SENDER_ENDPOINT,required"`
+	SenderPhone string `env:"TACO_SMS_SENDER_PHONE,required"`
+	ApiKey      string `env:"TACO_SMS_SENDER_API_KEY,required"`
+	ApiSecret   string `env:"TACO_SMS_SENDER_API_SECRET,required"`
 }
 
 type PaymentServiceConfig struct {
-	Endpoint  string `envconfig:"TACO_PAYMENT_SERVICE_ENDPOINT" required:"true"`
-	ApiSecret string `envconfig:"TACO_PAYMENT_SERVICE_API_SECRET" required:"true"`
+	Endpoint  string `env:"TACO_PAYMENT_SERVICE_ENDPOINT,required"`
+	ApiSecret string `env:"TACO_PAYMENT_SERVICE_API_SECRET,required"`
 }
 
 type RouteServiceConfig struct {
-	Endpoint  string `envconfig:"TACO_ROUTE_SERVICE_ENDPOINT" required:"true"`
-	ApiKey    string `envconfig:"TACO_ROUTE_SERVICE_API_KEY" required:"true"`
-	ApiSecret string `envconfig:"TACO_ROUTE_SERVICE_API_SECRET" required:"true"`
+	Endpoint  string `env:"TACO_ROUTE_SERVICE_ENDPOINT,required"`
+	ApiKey    string `env:"TACO_ROUTE_SERVICE_API_KEY,required"`
+	ApiSecret string `env:"TACO_ROUTE_SERVICE_API_SECRET,required"`
 }
 
 type LocationServiceConfig struct {
-	Endpoint  string `envconfig:"TACO_LOCATION_SERVICE_ENDPOINT" required:"true"`
-	ApiSecret string `envconfig:"TACO_LOCATION_SERVICE_API_SECRET" required:"true"`
+	Endpoint  string `env:"TACO_LOCATION_SERVICE_ENDPOINT,required"`
+	ApiSecret string `env:"TACO_LOCATION_SERVICE_API_SECRET,required"`
 }
 
 type BackofficeConfig struct {
-	Secret string `envconfig:"TACO_BACKOFFICE_SECRET" required:"true"`
+	Secret string `env:"TACO_BACKOFFICE_SECRET,required"`
 }
 
 type FirebaseConfig struct {
-	DryRun bool `envconfig:"TACO_FIREBASE_DRY_RUN" default:"true"`
+	DryRun bool `env:"TACO_FIREBASE_DRY_RUN,default=true"`
 }
 
-func NewTacoConfig() (TacoConfig, error) {
-	config := TacoConfig{}
+type EventTopicConfig struct {
+	TopicUri     string        `env:"TOPIC_URI,required"`
+	EventUris    []string      `env:"EVENT_URIS,required"`
+	PollInterval time.Duration `env:"POLL_INTERVAL,required"`
+	MaxMessages  int           `env:"MAX_MESSAGES,required"`
+}
 
-	err := envconfig.Process("taco", &config)
-
-	return config, err
+func (e EventTopicConfig) GetSqsUri() string {
+	return fmt.Sprintf("awssqs://%s?awssdk=v2", e.TopicUri)
 }
