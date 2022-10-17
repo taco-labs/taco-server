@@ -23,6 +23,7 @@ import (
 
 func main() {
 	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
 
 	config, err := config.NewOutboxConfig(ctx)
 	if err != nil {
@@ -84,4 +85,5 @@ func main() {
 	signal.Notify(quit, os.Interrupt)
 	<-quit
 	fmt.Println("shutting down [Outbox] service... because of interrupt")
+	cancel()
 }

@@ -14,7 +14,6 @@ import (
 
 type outboxApp struct {
 	app.Transactor
-	cancel     context.CancelFunc
 	waitCh     chan struct{}
 	repository struct {
 		event repository.EventRepository
@@ -30,14 +29,11 @@ type outboxApp struct {
 }
 
 func (o *outboxApp) Start(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	o.cancel = cancel
 	go o.loop(ctx)
 	return nil
 }
 
 func (o outboxApp) Shuwdown() error {
-	o.cancel()
 	<-o.waitCh
 	return nil
 }

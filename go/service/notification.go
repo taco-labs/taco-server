@@ -57,14 +57,13 @@ func NewFirebaseNotificationService(client *messaging.Client, dryRun bool) fireb
 
 func notificationToFcmMessage(notification value.Notification) *messaging.Message {
 	message := messaging.Message{
-		Token: notification.Principal(),
-		Data:  notification.Data(),
+		Token: notification.Principal,
+		Data:  notification.Data,
 	}
-	if !notification.DataOnly() {
-		notificationMessage := notification.NotificationMessage()
+	if notification.Message.Title != "" {
 		message.Notification = &messaging.Notification{
-			Title: notificationMessage.Title,
-			Body:  notificationMessage.Body,
+			Title: notification.Message.Title,
+			Body:  notification.Message.Body,
 		}
 	}
 

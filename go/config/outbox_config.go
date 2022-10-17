@@ -9,7 +9,7 @@ import (
 type OutboxConfig struct {
 	Log                    LogConfig
 	Database               DatabaseConfig
-	NotificationEventTopic EventTopicConfig `env:",prefix=TACO_NOTIFICATION_OUTBOX_"`
+	NotificationEventTopic EventTopicPublisherConfig `env:",prefix=TACO_NOTIFICATION_OUTBOX_"`
 }
 
 func NewOutboxConfig(ctx context.Context) (OutboxConfig, error) {

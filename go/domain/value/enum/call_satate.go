@@ -57,3 +57,26 @@ func (t TaxiCallState) TryChangeState(nextState TaxiCallState) bool {
 	}
 	return false
 }
+
+func FromTaxiCallStateString(taxiCallStateString string) TaxiCallState {
+	switch taxiCallStateString {
+	case string(TaxiCallState_Requested):
+		return TaxiCallState_Requested
+	case string(TaxiCallState_DRIVER_TO_DEPARTURE):
+		return TaxiCallState_DRIVER_TO_DEPARTURE
+	case string(TaxiCallState_DRIVER_TO_ARRIVAL):
+		return TaxiCallState_DRIVER_TO_ARRIVAL
+	case string(TaxiCallState_DONE):
+		return TaxiCallState_DONE
+	case string(TaxiCallState_USER_CANCELLED):
+		return TaxiCallState_USER_CANCELLED
+	case string(TaxiCallState_DRIVER_CANCELLED):
+		return TaxiCallState_DRIVER_CANCELLED
+	case string(TaxiCallState_FAILED):
+		return TaxiCallState_FAILED
+	case string(TaxiCallState_DRYRUN):
+		return TaxiCallState_DRYRUN
+	default:
+		return TaxiCallState_INVALID
+	}
+}

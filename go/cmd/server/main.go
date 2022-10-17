@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"os"
+	"os/signal"
 
 	firebase "firebase.google.com/go"
 	"github.com/taco-labs/taco/go/actor/taxicall"
@@ -24,11 +26,13 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/extra/bundebug"
-	"golang.org/x/sync/errgroup"
+	"gocloud.dev/pubsub"
+	_ "gocloud.dev/pubsub/awssnssqs"
 )
 
 func main() {
 	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
 
 	config, err := config.NewServerConfig(ctx)
 	if err != nil {
@@ -73,6 +77,8 @@ func main() {
 
 	eventRepository := repository.NewEventRepository()
 
+	pushTokenRepository := repository.NewPushTokenRepository()
+
 	// Init services
 
 	smsSenderService := service.NewCoolSmsSenderService(
@@ -106,7 +112,7 @@ func main() {
 		fmt.Println("Failed to instantiate firebase: ", err)
 		os.Exit(1)
 	}
-	// TODO (taekyeom) use it in actor
+
 	messagingClient, err := firebaseApp.Messaging(ctx)
 	if err != nil {
 		fmt.Println("Failed to instantiate firebase cloud messaging client: ", err)
@@ -114,16 +120,32 @@ func main() {
 	}
 	notificationService := service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
 
+	notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationSubscribe.GetSqsUri())
+	if err != nil {
+		fmt.Println("Failed to initialize notification sqs subscription topic: ", err)
+		os.Exit(1)
+	}
+	defer notificationSubscriber.Shutdown(ctx)
+	notificationSubscriberService := service.NewSqsSubService(notificationSubscriber)
+
 	// Init apps
-	_, err = push.NewPushApp(
+	pushApp, err := push.NewPushApp(
 		push.WithTransactor(transactor),
 		push.WithRouteService(mapRouteService),
 		push.WithNotificationService(notificationService),
+		push.WithPushTokenRepository(pushTokenRepository),
+		push.WithEventSubscribeService(notificationSubscriberService),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup push app: %v\n", err)
 		os.Exit(1)
 	}
+
+	if err := pushApp.Start(ctx); err != nil {
+		fmt.Printf("Failed to start push app event loop:  %v\n", err)
+		os.Exit(1)
+	}
+	defer pushApp.Stop(ctx)
 
 	taxiCallRequestActorService, err := taxicall.NewTaxiCallActorService(
 		taxicall.WithTransactor(transactor),
@@ -137,6 +159,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO (taekyeom) remove
 	if err := taxiCallRequestActorService.Init(ctx); err != nil {
 		fmt.Printf("Failed to init actor system: %v\n", err)
 		os.Exit(1)
@@ -214,6 +237,7 @@ func main() {
 		fmt.Printf("Failed to setup user server: %v\n", err)
 		os.Exit(1)
 	}
+	defer userServer.Stop(ctx)
 
 	driverServer, err := driverserver.NewDriverServer(
 		driverserver.WithEndpoint("0.0.0.0"),
@@ -226,6 +250,7 @@ func main() {
 		fmt.Printf("Failed to setup driver server: %v\n", err)
 		os.Exit(1)
 	}
+	defer driverServer.Stop(ctx)
 
 	backofficeServer, err := backofficeserver.NewBackofficeServer(
 		backofficeserver.WithEndpoint("0.0.0.0"),
@@ -238,33 +263,33 @@ func main() {
 		fmt.Printf("Failed to setup backoffice server: %v\n", err)
 		os.Exit(1)
 	}
+	defer backofficeServer.Stop(ctx)
 
-	// Run servers
-	group, ctx := errgroup.WithContext(ctx)
-
-	group.Go(func() error {
-		if err = userServer.Run(ctx); err != nil {
-			return fmt.Errorf("failed to start user server:\n%v", err)
+	go func() {
+		if err := userServer.Run(ctx); err != nil && err != http.ErrServerClosed {
+			// TODO (taekyeom) fatal log
+			fmt.Printf("shutting down user server:\n%v", err)
 		}
-		return nil
-	})
+	}()
 
-	group.Go(func() error {
-		if err = driverServer.Run(ctx); err != nil {
-			return fmt.Errorf("failed to start driver server:\n%v", err)
+	go func() {
+		if err := driverServer.Run(ctx); err != nil && err != http.ErrServerClosed {
+			// TODO (taekyeom) fatal log
+			fmt.Printf("shutting down driver server:\n%v", err)
 		}
-		return nil
-	})
+	}()
 
-	group.Go(func() error {
-		if err = backofficeServer.Run(ctx); err != nil {
-			return fmt.Errorf("failed to start backoffice server:\n%v", err)
+	go func() {
+		if err := backofficeServer.Run(ctx); err != nil && err != http.ErrServerClosed {
+			// TODO (taekyeom) fatal log
+			fmt.Printf("shutting down backoffice server:\n%v", err)
 		}
-		return nil
-	})
+	}()
 
-	if err := group.Wait(); err != nil {
-		fmt.Printf("Failed to start services: %v\n", err)
-		os.Exit(1)
-	}
+	// Use a buffered channel to avoid missing signals as recommended for signal.Notify
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+	fmt.Println("shutting down [Taco-Backend] service... because of interrupt")
+	cancel()
 }

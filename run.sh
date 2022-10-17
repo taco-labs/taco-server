@@ -20,4 +20,6 @@ TACO_ENABLE_QUERY_DEBUG_LOG=true \
   TACO_LOCATION_SERVICE_API_SECRET="c46bd6c102717c6453ae7f0e6630a408" \
   TACO_BACKOFFICE_SECRET="backoffice_secret" \
   GOOGLE_APPLICATION_CREDENTIALS=/Users/kimtkyeom/.firebase/service_account.json \
+  TACO_NOTIFICATION_SUBSCRIBER_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs" \
+  TACO_NOTIFICATION_SUBSCRIBER_POLL_INTERVAL="100ms" \
   go run go/cmd/server/main.go

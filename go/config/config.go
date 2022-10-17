@@ -49,13 +49,22 @@ type FirebaseConfig struct {
 	DryRun bool `env:"TACO_FIREBASE_DRY_RUN,default=true"`
 }
 
-type EventTopicConfig struct {
+type EventTopicPublisherConfig struct {
 	TopicUri     string        `env:"TOPIC_URI,required"`
 	EventUris    []string      `env:"EVENT_URIS,required"`
 	PollInterval time.Duration `env:"POLL_INTERVAL,required"`
 	MaxMessages  int           `env:"MAX_MESSAGES,required"`
 }
 
-func (e EventTopicConfig) GetSqsUri() string {
+func (e EventTopicPublisherConfig) GetSqsUri() string {
+	return fmt.Sprintf("awssqs://%s?awssdk=v2", e.TopicUri)
+}
+
+type EventTopicSubscriberConfig struct {
+	TopicUri     string        `env:"TOPIC_URI,required"`
+	PollInterval time.Duration `env:"POLL_INTERVAL,required"`
+}
+
+func (e EventTopicSubscriberConfig) GetSqsUri() string {
 	return fmt.Sprintf("awssqs://%s?awssdk=v2", e.TopicUri)
 }

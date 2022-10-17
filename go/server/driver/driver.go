@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
 
 	"github.com/labstack/echo/v4"
 	"github.com/taco-labs/taco/go/server"
@@ -62,26 +60,15 @@ func (d *driverServer) initController() error {
 }
 
 func (d *driverServer) Run(ctx context.Context) error {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for {
-			select {
-			case <-c:
-				fmt.Println("shutting down [Driver API] server... because of interrupt")
-				d.echo.Shutdown(ctx)
-				return
-			case <-ctx.Done():
-				fmt.Println("shutting down [Driver API] server... because of context cancel")
-				d.echo.Shutdown(ctx)
-				return
-			}
-		}
-	}()
 	if err := d.echo.Start(fmt.Sprintf("%s:%d", d.endpoint, d.port)); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (d driverServer) Stop(ctx context.Context) error {
+	fmt.Println("shutting down [Driver API] server...")
+	return d.echo.Shutdown(ctx)
 }
 
 func NewDriverServer(opts ...driverServerOption) (driverServer, error) {

@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
 
 	"github.com/labstack/echo/v4"
 	"github.com/taco-labs/taco/go/server"
@@ -61,26 +59,15 @@ func (u *userServer) initController() error {
 }
 
 func (u *userServer) Run(ctx context.Context) error {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for {
-			select {
-			case <-c:
-				fmt.Println("shutting down [User API] server... because of interrupt")
-				u.echo.Shutdown(ctx)
-				return
-			case <-ctx.Done():
-				fmt.Println("shutting down [User API] server... because of context cancel")
-				u.echo.Shutdown(ctx)
-				return
-			}
-		}
-	}()
 	if err := u.echo.Start(fmt.Sprintf("%s:%d", u.endpoint, u.port)); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (u *userServer) Stop(ctx context.Context) error {
+	fmt.Println("shutting down [User API] server...")
+	return u.echo.Shutdown(ctx)
 }
 
 func NewUserServer(opts ...userServerOption) (userServer, error) {

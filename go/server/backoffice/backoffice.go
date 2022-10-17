@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
 
 	"github.com/labstack/echo/v4"
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -81,26 +79,15 @@ func (b backofficeServer) validate() error {
 }
 
 func (b *backofficeServer) Run(ctx context.Context) error {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for {
-			select {
-			case <-c:
-				fmt.Println("shutting down [Backoffice API] server... because of interrupt")
-				b.echo.Shutdown(ctx)
-				return
-			case <-ctx.Done():
-				fmt.Println("shutting down [Backoffice API] server... because of context cancel")
-				b.echo.Shutdown(ctx)
-				return
-			}
-		}
-	}()
 	if err := b.echo.Start(fmt.Sprintf("%s:%d", b.endpoint, b.port)); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (b *backofficeServer) Stop(ctx context.Context) error {
+	fmt.Println("shutting down [Backoffice API] server...")
+	return b.echo.Shutdown(ctx)
 }
 
 func NewBackofficeServer(opts ...backofficeOption) (backofficeServer, error) {
