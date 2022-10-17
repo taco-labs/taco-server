@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
 )
 
 const (
-	MetaDataKey_EventUri  = "event_uri"
-	MetaDataKey_MessageId = "message_id"
+	MetadataKey_RetryCount = "retry_count"
+	MetaDataKey_EventUri   = "event_uri"
+	MetaDataKey_MessageId  = "message_id"
 )
 
 type Event struct {
@@ -23,8 +25,19 @@ type Event struct {
 	DelaySeconds int64           `bun:"delay_seconds"`
 	Payload      json.RawMessage `bun:"payload,type:jsonb"`
 	CreateTime   time.Time       `bun:"create_time"`
-	AttemtCount  int             `bun:"-"`
+	RetryCount   int             `bun:"-"`
 	ackFn        func() error
+}
+
+func (e Event) NewEventWithRetry() Event {
+	return Event{
+		MessageId:    utils.MustNewUUID(),
+		EventUri:     e.EventUri,
+		DelaySeconds: e.DelaySeconds,
+		Payload:      e.Payload,
+		CreateTime:   time.Now().UTC(),
+		RetryCount:   e.RetryCount + 1,
+	}
 }
 
 func (u *Event) BeforeAppendModel(ctx context.Context, query bun.Query) error {

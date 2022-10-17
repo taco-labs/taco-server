@@ -1,6 +1,8 @@
 package driver
 
 import (
+	"errors"
+
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
@@ -50,7 +52,7 @@ func WithEventRepository(repo repository.EventRepository) driverAppOption {
 	}
 }
 
-func WithSessionService(svc sessionInterface) driverAppOption {
+func WithSessionService(svc sessionServiceInterface) driverAppOption {
 	return func(da *driverApp) {
 		da.service.session = svc
 	}
@@ -66,4 +68,58 @@ func WithFileUploadService(svc service.FileUploadService) driverAppOption {
 	return func(da *driverApp) {
 		da.service.fileUpload = svc
 	}
+}
+
+func WithPushService(svc pushServiceInterface) driverAppOption {
+	return func(da *driverApp) {
+		da.service.push = svc
+	}
+}
+
+func (d driverApp) validateApp() error {
+	if d.Transactor == nil {
+		return errors.New("driver app need transactor")
+	}
+
+	if d.repository.driver == nil {
+		return errors.New("driver app need driver repository")
+	}
+
+	if d.repository.driverLocation == nil {
+		return errors.New("driver app need driver location repostiroy")
+	}
+
+	if d.repository.smsVerification == nil {
+		return errors.New("driver app need sms verification repository")
+	}
+
+	if d.repository.settlementAccount == nil {
+		return errors.New("driver app need settlement account repository")
+	}
+
+	if d.repository.taxiCallRequest == nil {
+		return errors.New("driver app need taxi call request repository")
+	}
+
+	if d.repository.event == nil {
+		return errors.New("driver app need event repository")
+	}
+
+	if d.service.session == nil {
+		return errors.New("driver app need driver session service")
+	}
+
+	if d.service.smsSender == nil {
+		return errors.New("driver app need sms sender service")
+	}
+
+	if d.service.fileUpload == nil {
+		return errors.New("driver app need file upload service")
+	}
+
+	if d.service.push == nil {
+		return errors.New("driver app need push service")
+	}
+
+	return nil
 }

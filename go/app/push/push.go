@@ -23,6 +23,7 @@ type taxiCallPushApp struct {
 	service struct {
 		route        service.MapRouteService
 		notification service.NotificationService
+		eventPub     service.EventPublishService
 		eventSub     service.EventSubscriptionService
 	}
 	waitCh chan struct{}
@@ -38,7 +39,7 @@ func (t taxiCallPushApp) CreatePushToken(ctx context.Context, req request.Create
 	}
 	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		pt, err := t.repository.pushToken.Get(ctx, i, pushToken.PrincipalId)
-		if err != nil {
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.push.CreatePushToken: error while get push token: %w", err)
 		}
 		if pt.PrincipalId != "" {
@@ -75,6 +76,24 @@ func (t taxiCallPushApp) UpdatePushToken(ctx context.Context, req request.Update
 
 		if err := t.repository.pushToken.Create(ctx, i, pt); err != nil {
 			return fmt.Errorf("app.push.UpdatePushToken: error while update push token: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (t taxiCallPushApp) DeletePushToken(ctx context.Context, principalId string) error {
+	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		pt, err := t.repository.pushToken.Get(ctx, i, principalId)
+		if err != nil && errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.push.DeletePushToken: push token not found: %w", err)
+		}
+		if err != nil {
+			return fmt.Errorf("app.push.DeletePushToken: error while get push token: %w", err)
+		}
+
+		if err := t.repository.pushToken.Delete(ctx, i, pt); err != nil {
+			return fmt.Errorf("app.push.DeletePushToken: error while delete push token: %w", err)
 		}
 
 		return nil

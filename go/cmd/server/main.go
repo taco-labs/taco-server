@@ -120,13 +120,21 @@ func main() {
 	}
 	notificationService := service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
 
-	notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationSubscribe.GetSqsUri())
+	notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationSubscribe.Topic.GetSqsUri())
 	if err != nil {
 		fmt.Println("Failed to initialize notification sqs subscription topic: ", err)
 		os.Exit(1)
 	}
 	defer notificationSubscriber.Shutdown(ctx)
 	notificationSubscriberService := service.NewSqsSubService(notificationSubscriber)
+
+	notificationPublisher, err := pubsub.OpenTopic(ctx, config.NotificationPublish.GetSqsUri())
+	if err != nil {
+		fmt.Println("Failed to initialize notification sqs publisher topic: ", err)
+		os.Exit(1)
+	}
+	defer notificationPublisher.Shutdown(ctx)
+	notificationPublisherService := service.NewSqsPubService(notificationPublisher)
 
 	// Init apps
 	pushApp, err := push.NewPushApp(
@@ -135,6 +143,7 @@ func main() {
 		push.WithNotificationService(notificationService),
 		push.WithPushTokenRepository(pushTokenRepository),
 		push.WithEventSubscribeService(notificationSubscriberService),
+		push.WithEventPublisherService(notificationPublisherService),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup push app: %v\n", err)
@@ -195,6 +204,7 @@ func main() {
 		user.WithMapRouteService(mapRouteService),
 		user.WithLocationService(locationService),
 		user.WithTaxiCallRequestActorService(taxiCallRequestActorService),
+		user.WithPushService(pushApp),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup user app: %v\n", err)
@@ -212,6 +222,7 @@ func main() {
 		driver.WithFileUploadService(fileUploadService),
 		driver.WithTaxiCallRequestRepository(taxiCallRequestRepository),
 		driver.WithEventRepository(eventRepository),
+		driver.WithPushService(pushApp),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver app: %v\n", err)

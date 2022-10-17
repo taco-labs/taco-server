@@ -50,21 +50,21 @@ type FirebaseConfig struct {
 }
 
 type EventTopicPublisherConfig struct {
-	TopicUri     string        `env:"TOPIC_URI,required"`
+	Topic        TopicConfig   `env:",prefix="`
 	EventUris    []string      `env:"EVENT_URIS,required"`
 	PollInterval time.Duration `env:"POLL_INTERVAL,required"`
 	MaxMessages  int           `env:"MAX_MESSAGES,required"`
 }
 
-func (e EventTopicPublisherConfig) GetSqsUri() string {
-	return fmt.Sprintf("awssqs://%s?awssdk=v2", e.TopicUri)
-}
-
 type EventTopicSubscriberConfig struct {
-	TopicUri     string        `env:"TOPIC_URI,required"`
+	Topic        TopicConfig   `env:",prefix="`
 	PollInterval time.Duration `env:"POLL_INTERVAL,required"`
 }
 
-func (e EventTopicSubscriberConfig) GetSqsUri() string {
-	return fmt.Sprintf("awssqs://%s?awssdk=v2", e.TopicUri)
+type TopicConfig struct {
+	Uri string `env:"TOPIC_URI,required"`
+}
+
+func (e TopicConfig) GetSqsUri() string {
+	return fmt.Sprintf("awssqs://%s?awssdk=v2", e.Uri)
 }

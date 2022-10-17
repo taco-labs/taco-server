@@ -34,6 +34,12 @@ func WithNotificationService(svc service.NotificationService) pushAppOption {
 	}
 }
 
+func WithEventPublisherService(svc service.EventPublishService) pushAppOption {
+	return func(tcpa *taxiCallPushApp) {
+		tcpa.service.eventPub = svc
+	}
+}
+
 func WithEventSubscribeService(svc service.EventSubscriptionService) pushAppOption {
 	return func(tcpa *taxiCallPushApp) {
 		tcpa.service.eventSub = svc
@@ -41,6 +47,10 @@ func WithEventSubscribeService(svc service.EventSubscriptionService) pushAppOpti
 }
 
 func (t taxiCallPushApp) validate() error {
+	if t.Transactor == nil {
+		return errors.New("taxi call push app need transactor")
+	}
+
 	if t.repository.pushToken == nil {
 		return errors.New("taxi call push app need push token repository")
 	}
@@ -51,6 +61,10 @@ func (t taxiCallPushApp) validate() error {
 
 	if t.service.notification == nil {
 		return errors.New("taxi call push app need notification service")
+	}
+
+	if t.service.eventPub == nil {
+		return errors.New("taxi call push app need event publisher")
 	}
 
 	if t.service.eventSub == nil {

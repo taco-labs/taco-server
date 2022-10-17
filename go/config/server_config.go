@@ -16,6 +16,7 @@ type ServerConfig struct {
 	Backoffice            BackofficeConfig
 	Firebase              FirebaseConfig
 	NotificationSubscribe EventTopicSubscriberConfig `env:",prefix=TACO_NOTIFICATION_SUBSCRIBER_"`
+	NotificationPublish   TopicConfig                `env:",prefix=TACO_NOTIFICATION_PUBLISHER_"`
 }
 
 func NewServerConfig(ctx context.Context) (ServerConfig, error) {

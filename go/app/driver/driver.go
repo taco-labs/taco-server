@@ -21,15 +21,16 @@ import (
 	"github.com/taco-labs/taco/go/repository"
 )
 
-type sessionInterface interface {
+type sessionServiceInterface interface {
 	RevokeByDriverId(context.Context, string) error
 	Create(context.Context, entity.DriverSession) error
 	ActivateByDriverId(context.Context, string) error
 }
 
-type pushInterface interface {
-	SendTaxiCallRequestAccept(context.Context, entity.TaxiCallRequest, entity.DriverTaxiCallContext) error
-	SendTaxiCallRequestDone(context.Context, entity.TaxiCallRequest) error
+type pushServiceInterface interface {
+	CreatePushToken(context.Context, request.CreatePushTokenRequest) (entity.PushToken, error)
+	UpdatePushToken(context.Context, request.UpdatePushTokenRequest) error
+	DeletePushToken(context.Context, string) error
 }
 
 type driverApp struct {
@@ -45,8 +46,9 @@ type driverApp struct {
 
 	service struct {
 		smsSender  service.SmsSenderService
-		session    sessionInterface
+		session    sessionServiceInterface
 		fileUpload service.FileUploadService
+		push       pushServiceInterface
 	}
 
 	actor struct {
@@ -192,6 +194,14 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: error while create driver:%w", err)
 		}
 
+		// Create push token
+		if _, err := d.service.push.CreatePushToken(ctx, request.CreatePushTokenRequest{
+			PrincipalId: newDriver.Id,
+			FcmToken:    req.AppFcmToken,
+		}); err != nil {
+			return fmt.Errorf("app.Driver.Signup: error while create push token: %w", err)
+		}
+
 		driverSession = entity.DriverSession{
 			Id:         utils.MustNewUUID(),
 			DriverId:   newDriver.Id,
@@ -254,6 +264,14 @@ func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateReq
 
 		if err := d.repository.driver.Update(ctx, i, driver); err != nil {
 			return fmt.Errorf("app.Driver.UpdateDriver: error while update driver: %w", err)
+		}
+
+		// Update push token
+		if err := d.service.push.UpdatePushToken(ctx, request.UpdatePushTokenRequest{
+			PrincipalId: driver.Id,
+			FcmToken:    req.AppFcmToken,
+		}); err != nil {
+			return fmt.Errorf("app.Driver.UpdateDriver: error while update push token: %w", err)
 		}
 
 		return nil
@@ -349,6 +367,11 @@ func (d driverApp) DeleteDriver(ctx context.Context, driverId string) error {
 			return fmt.Errorf("app.Driver.DeleteDriver: error while delete driver: %w", err)
 		}
 
+		// Delete push token
+		if err := d.service.push.DeletePushToken(ctx, driverId); err != nil {
+			return fmt.Errorf("app.Driver.DeleteDriver: error while delete push token: %w", err)
+		}
+
 		return nil
 	})
 }
@@ -381,48 +404,4 @@ func NewDriverApp(opts ...driverAppOption) (driverApp, error) {
 	}
 
 	return da, da.validateApp()
-}
-
-func (d driverApp) validateApp() error {
-	if d.Transactor == nil {
-		return errors.New("driver app need transactor")
-	}
-
-	if d.repository.driver == nil {
-		return errors.New("driver app need driver repository")
-	}
-
-	if d.repository.driverLocation == nil {
-		return errors.New("driver app need driver location repostiroy")
-	}
-
-	if d.repository.smsVerification == nil {
-		return errors.New("driver app need sms verification repository")
-	}
-
-	if d.repository.settlementAccount == nil {
-		return errors.New("driver app need settlement account repository")
-	}
-
-	if d.repository.taxiCallRequest == nil {
-		return errors.New("driver app need taxi call request repository")
-	}
-
-	if d.repository.event == nil {
-		return errors.New("driver app need event repository")
-	}
-
-	if d.service.session == nil {
-		return errors.New("driver app need driver session service")
-	}
-
-	if d.service.smsSender == nil {
-		return errors.New("driver app need sms sender service")
-	}
-
-	if d.service.fileUpload == nil {
-		return errors.New("driver app need file upload service")
-	}
-
-	return nil
 }

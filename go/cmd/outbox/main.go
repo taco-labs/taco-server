@@ -53,7 +53,7 @@ func main() {
 
 	eventRepository := repository.NewEventRepository()
 
-	notificationPublishTopic, err := pubsub.OpenTopic(ctx, config.NotificationEventTopic.GetSqsUri())
+	notificationPublishTopic, err := pubsub.OpenTopic(ctx, config.NotificationEventTopic.Topic.GetSqsUri())
 	if err != nil {
 		fmt.Println("Failed to initialize notification sqs publish topic: ", err)
 		os.Exit(1)

@@ -22,4 +22,5 @@ TACO_ENABLE_QUERY_DEBUG_LOG=true \
   GOOGLE_APPLICATION_CREDENTIALS=/Users/kimtkyeom/.firebase/service_account.json \
   TACO_NOTIFICATION_SUBSCRIBER_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs" \
   TACO_NOTIFICATION_SUBSCRIBER_POLL_INTERVAL="100ms" \
+  TACO_NOTIFICATION_PUBLISHER_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs" \
   go run go/cmd/server/main.go

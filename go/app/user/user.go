@@ -19,9 +19,15 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type SessionInterface interface {
+type sessionServiceInterface interface {
 	RevokeSessionByUserId(context.Context, string) error
 	CreateSession(context.Context, entity.UserSession) error
+}
+
+type pushServiceInterface interface {
+	CreatePushToken(context.Context, request.CreatePushTokenRequest) (entity.PushToken, error)
+	UpdatePushToken(context.Context, request.UpdatePushTokenRequest) error
+	DeletePushToken(context.Context, string) error
 }
 
 type userApp struct {
@@ -35,10 +41,11 @@ type userApp struct {
 
 	service struct {
 		smsSender service.SmsSenderService
-		session   SessionInterface
+		session   sessionServiceInterface
 		payment   service.CardPaymentService
 		route     service.MapRouteService
 		location  service.LocationService
+		push      pushServiceInterface
 	}
 
 	actor struct {
@@ -175,6 +182,14 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			return fmt.Errorf("app.User.Signup: error while create user:\n %w", err)
 		}
 
+		// Create push token
+		if _, err := u.service.push.CreatePushToken(ctx, request.CreatePushTokenRequest{
+			PrincipalId: newUser.Id,
+			FcmToken:    req.AppFcmToken,
+		}); err != nil {
+			return fmt.Errorf("app.User.Signup: error while create push token: %w", err)
+		}
+
 		userSession = entity.UserSession{
 			Id:         utils.MustNewUUID(),
 			UserId:     newUser.Id,
@@ -219,6 +234,14 @@ func (u userApp) UpdateUser(ctx context.Context, req request.UserUpdateRequest) 
 			return fmt.Errorf("app.user.UpdateUser: error while update user:\n %w", err)
 		}
 
+		// Update push token
+		if err := u.service.push.UpdatePushToken(ctx, request.UpdatePushTokenRequest{
+			PrincipalId: user.Id,
+			FcmToken:    req.AppFcmToken,
+		}); err != nil {
+			return fmt.Errorf("app.User.UpdateUser: error while update push token: %w", err)
+		}
+
 		return nil
 	})
 
@@ -261,6 +284,11 @@ func (u userApp) DeleteUser(ctx context.Context, userId string) error {
 			return fmt.Errorf("app.user.DeleteUser: error while delete user:\n %w", err)
 		}
 
+		// Delete push token
+		if err := u.service.push.DeletePushToken(ctx, userId); err != nil {
+			return fmt.Errorf("app.User.DeleteUser: error while delete push token: %w", err)
+		}
+
 		return nil
 	})
 }
@@ -277,52 +305,4 @@ func NewUserApp(opts ...userAppOption) (userApp, error) {
 	}
 
 	return ua, nil
-}
-
-func (u userApp) validateApp() error {
-	if u.Transactor == nil {
-		return errors.New("user app need transator")
-	}
-
-	if u.repository.user == nil {
-		return errors.New("user app need user repository")
-	}
-
-	if u.repository.payment == nil {
-		return errors.New("user app need user payment repository")
-	}
-
-	if u.repository.smsVerification == nil {
-		return errors.New("user app need sms verification repository")
-	}
-
-	if u.repository.taxiCallRequest == nil {
-		return errors.New("user app need taxi call request repository")
-	}
-
-	if u.service.session == nil {
-		return errors.New("user app need user session repository")
-	}
-
-	if u.service.payment == nil {
-		return errors.New("user app need card payment service")
-	}
-
-	if u.service.smsSender == nil {
-		return errors.New("user app need sms sender service")
-	}
-
-	if u.service.route == nil {
-		return errors.New("user app need map route service")
-	}
-
-	if u.service.location == nil {
-		return errors.New("user app need location service")
-	}
-
-	if u.actor.taxiCallRequest == nil {
-		return errors.New("user app need taxi call request actor service")
-	}
-
-	return nil
 }

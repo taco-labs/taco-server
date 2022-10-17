@@ -28,7 +28,7 @@ func (p pushTokenRepository) Get(ctx context.Context, db bun.IDB, principalId st
 	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
-		return entity.PushToken{}, value.ErrDriverNotFound
+		return entity.PushToken{}, value.ErrNotFound
 	}
 	if err != nil {
 		return entity.PushToken{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
