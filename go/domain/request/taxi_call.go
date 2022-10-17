@@ -17,7 +17,7 @@ func (c CreateTaxiCallRequest) Validate() error {
 }
 
 type ListUserTaxiCallRequest struct {
-	UserId    string `param:"driverId"`
+	UserId    string `param:"userId"`
 	Count     int    `query:"count"`
 	PageToken string `query:"pageToken"`
 }
