@@ -331,7 +331,7 @@ func (d driverApp) UpdateDriverLocation(ctx context.Context, req request.DriverL
 		if err != nil {
 			return fmt.Errorf("app.Driver.UpdateDriverLocation: error while find driver: %w", err)
 		}
-		if driver.OnDuty {
+		if !driver.OnDuty {
 			return fmt.Errorf("app.Driver.UpdateDriverLocation: driver is not on duty: %w", value.ErrInvalidOperation)
 		}
 

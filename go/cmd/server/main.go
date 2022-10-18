@@ -12,6 +12,7 @@ import (
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/driver"
 	"github.com/taco-labs/taco/go/app/driversession"
+	"github.com/taco-labs/taco/go/app/outbox"
 	"github.com/taco-labs/taco/go/app/push"
 	"github.com/taco-labs/taco/go/app/taxicall"
 	"github.com/taco-labs/taco/go/app/user"
@@ -54,7 +55,7 @@ func main() {
 	db := bun.NewDB(sqldb, pgdialect.New())
 
 	if config.Log.Query {
-		hook := bundebug.NewQueryHook(bundebug.WithVerbose(true))
+		hook := bundebug.NewQueryHook(bundebug.WithVerbose(false))
 		db.AddQueryHook(hook)
 	}
 
@@ -187,6 +188,44 @@ func main() {
 		os.Exit(1)
 	}
 	defer taxicallApp.Shutdown(ctx)
+
+	notificationOutboxApp, err := outbox.NewOutboxApp(
+		outbox.WithTransactor(transactor),
+		outbox.WithEventRepository(eventRepository),
+		outbox.WithEventPublishService(notificationPublisherService),
+		outbox.WithTargetEventUirs(config.NotificationOutbox.EventUris),
+		outbox.WithPollInterval(config.NotificationOutbox.PollInterval),
+		outbox.WithMaxMessages(config.NotificationOutbox.MaxMessages),
+	)
+	if err != nil {
+		fmt.Println("Failed to initialize notification outbox app: ", err)
+		os.Exit(1)
+	}
+
+	if err := notificationOutboxApp.Start(ctx); err != nil {
+		fmt.Println("Failed to start notification outbox app: ", err)
+		os.Exit(1)
+	}
+	defer notificationOutboxApp.Shuwdown()
+
+	taxicallOutboxApp, err := outbox.NewOutboxApp(
+		outbox.WithTransactor(transactor),
+		outbox.WithEventRepository(eventRepository),
+		outbox.WithEventPublishService(taxicallPublisherService),
+		outbox.WithTargetEventUirs(config.TaxicallOutbox.EventUris),
+		outbox.WithPollInterval(config.TaxicallOutbox.PollInterval),
+		outbox.WithMaxMessages(config.TaxicallOutbox.MaxMessages),
+	)
+	if err != nil {
+		fmt.Println("Failed to initialize taxicall outbox app: ", err)
+		os.Exit(1)
+	}
+
+	if err := taxicallOutboxApp.Start(ctx); err != nil {
+		fmt.Println("Failed to start taxicall outbox app: ", err)
+		os.Exit(1)
+	}
+	defer taxicallOutboxApp.Shuwdown()
 
 	if err := taxicallApp.Start(ctx); err != nil {
 		fmt.Printf("Failed to start taxi call app event loop: %v\n", err)

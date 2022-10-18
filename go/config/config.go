@@ -49,7 +49,7 @@ type FirebaseConfig struct {
 	DryRun bool `env:"TACO_FIREBASE_DRY_RUN,default=true"`
 }
 
-type EventTopicPublisherConfig struct {
+type EventOutboxConfig struct {
 	Topic        TopicConfig   `env:",prefix="`
 	EventUris    []string      `env:"EVENT_URIS,required"`
 	PollInterval time.Duration `env:"POLL_INTERVAL,required"`

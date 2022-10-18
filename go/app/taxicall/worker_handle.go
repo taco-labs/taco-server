@@ -29,7 +29,6 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 		case <-time.After(until):
 		}
 	}
-	fmt.Printf("TEST Event: [%s:%d] %+v\n", event.MessageId, event.RetryCount, taxiProgressCmd)
 	return t.process(ctx, event.RetryCount, taxiProgressCmd)
 }
 
@@ -44,7 +43,7 @@ func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.Ta
 
 		// Guard.. commands'state and request's current state must be same
 		if string(taxiCallRequest.CurrentState) != cmd.TaxiCallState {
-			// TODO (taekyeom) logging late message
+			// TODO (taekyeom) logging late message & add metric for anomaly
 			return fmt.Errorf("app.taxicall.process [%s]: taxi call state mismatch %v (actual: %v)",
 				cmd.TaxiCallRequestId, cmd.TaxiCallState, taxiCallRequest.CurrentState)
 		}

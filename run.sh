@@ -26,4 +26,12 @@ TACO_ENABLE_QUERY_DEBUG_LOG=true \
   TACO_TAXICALL_SUBSCRIBER_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs-taxicall" \
   TACO_TAXICALL_SUBSCRIBER_POLL_INTERVAL="100ms" \
   TACO_TAXICALL_PUBLISHER_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs-taxicall" \
+  TACO_NOTIFICATION_OUTBOX_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs" \
+  TACO_NOTIFICATION_OUTBOX_EVENT_URIS="TaxiCallNotification/User,TaxiCallNotification/Driver" \
+  TACO_NOTIFICATION_OUTBOX_POLL_INTERVAL="200ms" \
+  TACO_NOTIFICATION_OUTBOX_MAX_MESSAGES=50 \
+  TACO_TAXICALL_OUTBOX_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs-taxicall" \
+  TACO_TAXICALL_OUTBOX_EVENT_URIS="TaxiCall/Process" \
+  TACO_TAXICALL_OUTBOX_POLL_INTERVAL="200ms" \
+  TACO_TAXICALL_OUTBOX_MAX_MESSAGES=50 \
   go run go/cmd/server/main.go
