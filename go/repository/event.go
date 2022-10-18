@@ -45,7 +45,7 @@ func (e eventRepository) BatchCommit(ctx context.Context, db bun.IDB, events []e
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != int64(len(events)) {
-		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+		return fmt.Errorf("%w: invalid rows affected %d (exptected %d)", value.ErrDBInternal, rowsAffected, len(events))
 	}
 
 	return nil
