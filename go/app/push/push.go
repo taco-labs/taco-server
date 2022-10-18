@@ -74,7 +74,7 @@ func (t taxiCallPushApp) UpdatePushToken(ctx context.Context, req request.Update
 		pt.FcmToken = req.FcmToken
 		pt.UpdateTime = requestTime
 
-		if err := t.repository.pushToken.Create(ctx, i, pt); err != nil {
+		if err := t.repository.pushToken.Update(ctx, i, pt); err != nil {
 			return fmt.Errorf("app.push.UpdatePushToken: error while update push token: %w", err)
 		}
 
