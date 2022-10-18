@@ -40,16 +40,15 @@ func (o outboxApp) Shuwdown() error {
 
 func (o outboxApp) loop(ctx context.Context) error {
 	timer := time.NewTimer(0 * time.Second)
-	for {
-		select {
-		case <-timer.C:
-			err := o.sendBestAffort(ctx)
-			if err != nil {
-				// TODO (taekyeom) logging
-			}
-			timer.Reset(o.conf.pollInterval)
+	for range timer.C {
+		err := o.sendBestAffort(ctx)
+		if err != nil {
+			// TODO (taekyeom) logging
+			fmt.Printf("app.outbox.loop: error from send messages: %+v\n", err)
 		}
+		timer.Reset(o.conf.pollInterval)
 	}
+	return nil
 }
 
 func (o outboxApp) sendBestAffort(ctx context.Context) error {

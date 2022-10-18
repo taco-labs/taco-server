@@ -14,10 +14,11 @@ type taxicallApp struct {
 		event           repository.EventRepository
 	}
 	service struct {
-		route    service.MapRouteService
-		location service.LocationService
-		eventPub service.EventPublishService
-		eventSub service.EventSubscriptionService
+		route      service.MapRouteService
+		location   service.LocationService
+		eventPub   service.EventPublishService
+		eventSub   service.EventSubscriptionService
+		workerPool service.WorkerPoolService
 	}
 	waitCh chan struct{}
 }

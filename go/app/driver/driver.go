@@ -62,9 +62,6 @@ type driverApp struct {
 		push       pushServiceInterface
 		taxiCall   driverTaxiCallInterface
 	}
-
-	actor struct {
-	}
 }
 
 func (d driverApp) SmsVerificationRequest(ctx context.Context, req request.SmsVerificationRequest) (entity.SmsVerification, error) {

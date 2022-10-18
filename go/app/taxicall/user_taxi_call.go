@@ -174,14 +174,14 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 			return fmt.Errorf("app.taxCall.CreateTaxiCallRequest: error while create taxi call request:%w", err)
 		}
 
-		processMessage := command.TaxiCallProcessMessage{
-			TaxiCallRequestId:   taxiCallRequest.Id,
-			TaxiCallState:       string(taxiCallRequest.CurrentState),
-			EventTime:           taxiCallRequest.UpdateTime,
-			DesiredScheduleTime: taxiCallRequest.UpdateTime,
-		}
+		processMessage := command.NewTaxiCallProgressCommand(
+			taxiCallRequest.Id,
+			taxiCallRequest.CurrentState,
+			taxiCallRequest.UpdateTime,
+			taxiCallRequest.UpdateTime,
+		)
 
-		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage.ToEvent()}); err != nil {
+		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
 
@@ -199,21 +199,32 @@ func (t taxicallApp) CancelTaxiCallRequest(ctx context.Context, userId string, t
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		taxiCall, err := t.repository.taxiCallRequest.GetById(ctx, i, taxiCallId)
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, taxiCallId)
 		if err != nil {
 			return fmt.Errorf("app.taxCall.CancelTaxiCall: error while get taxi call:%w", err)
 		}
 
-		if taxiCall.UserId != userId {
+		if taxiCallRequest.UserId != userId {
 			return fmt.Errorf("app.taxCall.CancelTaxiCall: Invalid request:%w", value.ErrUnAuthorized)
 		}
 
-		if err = taxiCall.UpdateState(requestTime, enum.TaxiCallState_USER_CANCELLED); err != nil {
+		if err = taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_USER_CANCELLED); err != nil {
 			return fmt.Errorf("app.taxCall.CancelTaxiCall: error while cancel taxi call:%w", err)
 		}
 
-		if err = t.repository.taxiCallRequest.Update(ctx, i, taxiCall); err != nil {
+		if err = t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxCall.CancelTaxiCall: error while update taxi call:%w", err)
+		}
+
+		processMessage := command.NewTaxiCallProgressCommand(
+			taxiCallRequest.Id,
+			taxiCallRequest.CurrentState,
+			taxiCallRequest.UpdateTime,
+			taxiCallRequest.UpdateTime,
+		)
+
+		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
+			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
 
 		return nil

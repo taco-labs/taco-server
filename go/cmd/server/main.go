@@ -9,6 +9,7 @@ import (
 	"os/signal"
 
 	firebase "firebase.google.com/go"
+	"github.com/panjf2000/ants/v2"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/driver"
 	"github.com/taco-labs/taco/go/app/driversession"
@@ -37,7 +38,7 @@ func main() {
 
 	config, err := config.NewServerConfig(ctx)
 	if err != nil {
-		fmt.Println("Failed to initialize taco config: ", err)
+		fmt.Printf("Failed to initialize taco config: %+v\n", err)
 		os.Exit(1)
 	}
 
@@ -108,22 +109,31 @@ func main() {
 		config.PaymentService.ApiSecret,
 	)
 
+	taxicallAntWorkerPool, err := ants.NewPool(config.TaxicallApp.PoolSize,
+		ants.WithPreAlloc(config.TaxicallApp.PreAlloc),
+	)
+	if err != nil {
+		fmt.Printf("Failed to instantitate taxicall ant worker pool: %+v\n", err)
+		os.Exit(1)
+	}
+	taxicallWorkerPool := service.NewAntWorkerPoolService(taxicallAntWorkerPool)
+
 	firebaseApp, err := firebase.NewApp(ctx, nil)
 	if err != nil {
-		fmt.Println("Failed to instantiate firebase: ", err)
+		fmt.Printf("Failed to instantiate firebase: %+v\n", err)
 		os.Exit(1)
 	}
 
 	messagingClient, err := firebaseApp.Messaging(ctx)
 	if err != nil {
-		fmt.Println("Failed to instantiate firebase cloud messaging client: ", err)
+		fmt.Printf("Failed to instantiate firebase cloud messaging client: %+v\n", err)
 		os.Exit(1)
 	}
 	notificationService := service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
 
 	notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationTopic.GetSqsUri())
 	if err != nil {
-		fmt.Println("Failed to initialize notification sqs subscription topic: ", err)
+		fmt.Printf("Failed to initialize notification sqs subscription topic: %+v\n", err)
 		os.Exit(1)
 	}
 	defer notificationSubscriber.Shutdown(ctx)
@@ -131,7 +141,7 @@ func main() {
 
 	notificationPublisher, err := pubsub.OpenTopic(ctx, config.NotificationTopic.GetSqsUri())
 	if err != nil {
-		fmt.Println("Failed to initialize notification sqs publisher topic: ", err)
+		fmt.Printf("Failed to initialize notification sqs publisher topic: %+v\n", err)
 		os.Exit(1)
 	}
 	defer notificationPublisher.Shutdown(ctx)
@@ -139,7 +149,7 @@ func main() {
 
 	taxicallSubscriber, err := pubsub.OpenSubscription(ctx, config.TaxicallTopic.GetSqsUri())
 	if err != nil {
-		fmt.Println("Failed to initialize taxicall sqs subscription topic: ", err)
+		fmt.Printf("Failed to initialize taxicall sqs subscription topic: %+v\n", err)
 		os.Exit(1)
 	}
 	defer taxicallSubscriber.Shutdown(ctx)
@@ -147,7 +157,7 @@ func main() {
 
 	taxicallPublisher, err := pubsub.OpenTopic(ctx, config.TaxicallTopic.GetSqsUri())
 	if err != nil {
-		fmt.Println("Failed to initialize taxicall sqs publisher topic: ", err)
+		fmt.Printf("Failed to initialize taxicall sqs publisher topic: %+v\n", err)
 		os.Exit(1)
 	}
 	defer taxicallPublisher.Shutdown(ctx)
@@ -182,6 +192,7 @@ func main() {
 		taxicall.WithLocationService(locationService),
 		taxicall.WithEventPublisherService(taxicallPublisherService),
 		taxicall.WithEventSubscriberService(taxicallSubscriberService),
+		taxicall.WithWorkerPoolService(taxicallWorkerPool),
 	)
 	if err != nil {
 		fmt.Printf("Failed to start taxi call app: %v\n", err)
@@ -198,12 +209,12 @@ func main() {
 		outbox.WithMaxMessages(config.NotificationOutbox.MaxMessages),
 	)
 	if err != nil {
-		fmt.Println("Failed to initialize notification outbox app: ", err)
+		fmt.Printf("Failed to initialize notification outbox app: %+v\n", err)
 		os.Exit(1)
 	}
 
 	if err := notificationOutboxApp.Start(ctx); err != nil {
-		fmt.Println("Failed to start notification outbox app: ", err)
+		fmt.Printf("Failed to start notification outbox app: %+v\n", err)
 		os.Exit(1)
 	}
 	defer notificationOutboxApp.Shuwdown()
@@ -217,12 +228,12 @@ func main() {
 		outbox.WithMaxMessages(config.TaxicallOutbox.MaxMessages),
 	)
 	if err != nil {
-		fmt.Println("Failed to initialize taxicall outbox app: ", err)
+		fmt.Printf("Failed to initialize taxicall outbox app: %+v\n", err)
 		os.Exit(1)
 	}
 
 	if err := taxicallOutboxApp.Start(ctx); err != nil {
-		fmt.Println("Failed to start taxicall outbox app: ", err)
+		fmt.Printf("Failed to start taxicall outbox app: %+v\n", err)
 		os.Exit(1)
 	}
 	defer taxicallOutboxApp.Shuwdown()

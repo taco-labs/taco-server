@@ -200,14 +200,14 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			return fmt.Errorf("app.taxxiCall.AcceptTaxiCallRequest: error while create event: %w", err)
 		}
 
-		processMessage := command.TaxiCallProcessMessage{
-			TaxiCallRequestId:   taxiCallRequest.Id,
-			TaxiCallState:       string(taxiCallRequest.CurrentState),
-			EventTime:           taxiCallRequest.UpdateTime,
-			DesiredScheduleTime: taxiCallRequest.UpdateTime,
-		}
+		processMessage := command.NewTaxiCallProgressCommand(
+			taxiCallRequest.Id,
+			taxiCallRequest.CurrentState,
+			taxiCallRequest.UpdateTime,
+			taxiCallRequest.UpdateTime,
+		)
 
-		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage.ToEvent()}); err != nil {
+		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
 
@@ -318,14 +318,14 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 			return fmt.Errorf("app.taxxiCall.DoneTaxiCallRequest: error while create taxi call settlement: %w", err)
 		}
 
-		processMessage := command.TaxiCallProcessMessage{
-			TaxiCallRequestId:   taxiCallRequest.Id,
-			TaxiCallState:       string(taxiCallRequest.CurrentState),
-			EventTime:           taxiCallRequest.UpdateTime,
-			DesiredScheduleTime: taxiCallRequest.UpdateTime,
-		}
+		processMessage := command.NewTaxiCallProgressCommand(
+			taxiCallRequest.Id,
+			taxiCallRequest.CurrentState,
+			taxiCallRequest.UpdateTime,
+			taxiCallRequest.UpdateTime,
+		)
 
-		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage.ToEvent()}); err != nil {
+		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
 			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
 

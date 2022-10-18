@@ -58,6 +58,12 @@ func WithEventSubscriberService(svc service.EventSubscriptionService) taxicallAp
 	}
 }
 
+func WithWorkerPoolService(svc service.WorkerPoolService) taxicallAppOption {
+	return func(ta *taxicallApp) {
+		ta.service.workerPool = svc
+	}
+}
+
 func (t taxicallApp) validateApp() error {
 	if t.Transactor == nil {
 		return errors.New("taxi call app needs transactor ")
@@ -89,6 +95,10 @@ func (t taxicallApp) validateApp() error {
 
 	if t.service.eventSub == nil {
 		return errors.New("taxi call app needs event sub service")
+	}
+
+	if t.service.workerPool == nil {
+		return errors.New("taxi call app need worker pool service")
 	}
 
 	return nil

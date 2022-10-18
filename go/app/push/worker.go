@@ -46,13 +46,6 @@ func (t taxiCallPushApp) consume(ctx context.Context) error {
 		return nil
 	}
 
-	// if event.RetryCount > 2 {
-	// 	// TODO (taekyeom) attempt count be paramterized
-	// 	fmt.Println("[TaxiCallPushApp.Worker] ignore event attempt count limit reached")
-	// 	event.Ack()
-	// 	return nil
-	// }
-
 	defer event.Ack()
 
 	switch event.EventUri {
@@ -88,6 +81,10 @@ func (t taxiCallPushApp) handleUserNotification(ctx context.Context, event entit
 		return nil
 	})
 
+	if err != nil {
+		return err
+	}
+
 	var notification value.Notification
 	switch enum.FromTaxiCallStateString(userNotificationCommand.TaxiCallState) {
 	case enum.TaxiCallState_Requested:
@@ -98,6 +95,8 @@ func (t taxiCallPushApp) handleUserNotification(ctx context.Context, event entit
 		notification, err = t.handleUserTaxiCallRequestFailed(ctx, fcmToken, event.CreateTime, userNotificationCommand)
 	case enum.TaxiCallState_DONE:
 		notification, err = t.handleUserTaxiCallRequestDone(ctx, fcmToken, event.CreateTime, userNotificationCommand)
+	case enum.TaxiCallState_USER_CANCELLED: // TODO(taekyeom) 현재는 user cancel에 대한 별도의 핸들링이 필요치 않아서 nil로 처리
+		return nil
 	default:
 		return fmt.Errorf("app.taxiCallPushApp.handleUserNotification: unsupported event: %s: %w", userNotificationCommand.TaxiCallState, value.ErrInvalidOperation)
 	}
@@ -119,6 +118,9 @@ func (t taxiCallPushApp) handleDriverNotification(ctx context.Context, event ent
 	if err != nil {
 		return fmt.Errorf("app.taxiCallPushApp.handleDriverNotification: erorr while unmarshal driver notificaiton event: %w, %v", value.ErrInternal, err)
 	}
+	if err != nil {
+		return err
+	}
 
 	var fcmToken string
 	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
@@ -129,6 +131,9 @@ func (t taxiCallPushApp) handleDriverNotification(ctx context.Context, event ent
 		fcmToken = token.FcmToken
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	var notification value.Notification
 	switch enum.FromTaxiCallStateString(driverNotificationCommand.TaxiCallState) {

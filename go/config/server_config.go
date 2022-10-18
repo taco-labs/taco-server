@@ -19,6 +19,12 @@ type ServerConfig struct {
 	TaxicallTopic      TopicConfig       `env:",prefix=TACO_TAXICALL_"`
 	NotificationOutbox EventOutboxConfig `env:",prefix=TACO_NOTIFICATION_OUTBOX_"`
 	TaxicallOutbox     EventOutboxConfig `env:",prefix=TACO_TAXICALL_OUTBOX_"`
+
+	TaxicallApp TaxicallAppConfig `env:",prefix=TACO_TAXICALL_APP_"`
+}
+
+type TaxicallAppConfig struct {
+	WorkerPoolConfig `env:",prefix=WORKER_"`
 }
 
 func NewServerConfig(ctx context.Context) (ServerConfig, error) {

@@ -25,7 +25,7 @@ func (t taxicallApp) loop(ctx context.Context) {
 			err := t.consume(ctx)
 			if err != nil {
 				//TODO (taekyeom) logging
-				fmt.Printf("[TaxiCallApp.Worker] error while consume event: %+v", err)
+				fmt.Printf("[TaxicallApp.Worker] error while consume event: %+v\n", err)
 			}
 		}
 	}
@@ -36,15 +36,17 @@ func (t taxicallApp) consume(ctx context.Context) error {
 	if err != nil {
 		return nil
 	}
-	defer event.Ack()
+	return t.service.workerPool.Submit(func() {
+		defer event.Ack()
 
-	err = t.handleEvent(ctx, event)
-	if err != nil && event.RetryCount < 3 {
-		newEvent := event.NewEventWithRetry()
-		newEvent.DelaySeconds = 0
-		t.service.eventPub.SendMessage(ctx, newEvent)
-		return err
-	}
-
-	return nil
+		err := t.handleEvent(ctx, event)
+		if err != nil {
+			fmt.Printf("[TaxicallApp.Worker.Consume] error while handle consumed message: %+v\n", err)
+		}
+		if err != nil && event.RetryCount < 3 {
+			newEvent := event.NewEventWithRetry()
+			newEvent.DelaySeconds = 0
+			t.service.eventPub.SendMessage(ctx, newEvent)
+		}
+	})
 }
