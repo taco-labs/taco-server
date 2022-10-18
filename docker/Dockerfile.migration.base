@@ -1,9 +1,13 @@
-FROM ubuntu:20.04 
+FROM ubuntu:20.04
 
-RUN apt update && apt install -y postgresql-client curl
+RUN apt-get update && \
+  apt-get install -y postgresql-client curl
 
-RUN curl -LO https://release.ariga.io/atlas/atlas-linux-amd64-latest
-RUN install -o root -g root -m 0755 ./atlas-linux-amd64-latest /usr/local/bin/atlas
+RUN curl -LO https://release.ariga.io/atlas/atlas-linux-amd64-v0.7.0
+RUN install -o root -g root -m 0755 ./atlas-linux-amd64-v0.7.0 /usr/local/bin/atlas
+
+RUN apt-get remove --auto-remove -y curl && \
+  apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY ./docker/entrypoint.migration.sh /entrypoint.sh
 
@@ -11,4 +15,4 @@ WORKDIR /schemas
 
 COPY ./schemas/* ./
 
-ENTRYPOINT [ "/entrypoint.sh" ]
+ENTRYPOINT [ "sh", "/entrypoint.sh" ]
