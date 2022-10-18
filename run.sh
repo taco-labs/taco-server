@@ -23,4 +23,7 @@ TACO_ENABLE_QUERY_DEBUG_LOG=true \
   TACO_NOTIFICATION_SUBSCRIBER_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs" \
   TACO_NOTIFICATION_SUBSCRIBER_POLL_INTERVAL="100ms" \
   TACO_NOTIFICATION_PUBLISHER_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs" \
+  TACO_TAXICALL_SUBSCRIBER_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs-taxicall" \
+  TACO_TAXICALL_SUBSCRIBER_POLL_INTERVAL="100ms" \
+  TACO_TAXICALL_PUBLISHER_TOPIC_URI="sqs.ap-northeast-2.amazonaws.com/069049357473/test-sqs-taxicall" \
   go run go/cmd/server/main.go

@@ -9,11 +9,11 @@ import (
 	"os/signal"
 
 	firebase "firebase.google.com/go"
-	"github.com/taco-labs/taco/go/actor/taxicall"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/driver"
 	"github.com/taco-labs/taco/go/app/driversession"
 	"github.com/taco-labs/taco/go/app/push"
+	"github.com/taco-labs/taco/go/app/taxicall"
 	"github.com/taco-labs/taco/go/app/user"
 	"github.com/taco-labs/taco/go/app/usersession"
 	"github.com/taco-labs/taco/go/config"
@@ -120,7 +120,7 @@ func main() {
 	}
 	notificationService := service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
 
-	notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationSubscribe.Topic.GetSqsUri())
+	notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationSubscriber.Topic.GetSqsUri())
 	if err != nil {
 		fmt.Println("Failed to initialize notification sqs subscription topic: ", err)
 		os.Exit(1)
@@ -128,13 +128,29 @@ func main() {
 	defer notificationSubscriber.Shutdown(ctx)
 	notificationSubscriberService := service.NewSqsSubService(notificationSubscriber)
 
-	notificationPublisher, err := pubsub.OpenTopic(ctx, config.NotificationPublish.GetSqsUri())
+	notificationPublisher, err := pubsub.OpenTopic(ctx, config.NotificationPublisher.GetSqsUri())
 	if err != nil {
 		fmt.Println("Failed to initialize notification sqs publisher topic: ", err)
 		os.Exit(1)
 	}
 	defer notificationPublisher.Shutdown(ctx)
 	notificationPublisherService := service.NewSqsPubService(notificationPublisher)
+
+	taxicallSubscriber, err := pubsub.OpenSubscription(ctx, config.TaxicallSubscriber.Topic.GetSqsUri())
+	if err != nil {
+		fmt.Println("Failed to initialize taxicall sqs subscription topic: ", err)
+		os.Exit(1)
+	}
+	defer taxicallSubscriber.Shutdown(ctx)
+	taxicallSubscriberService := service.NewSqsSubService(taxicallSubscriber)
+
+	taxicallPublisher, err := pubsub.OpenTopic(ctx, config.TaxicallPublisher.GetSqsUri())
+	if err != nil {
+		fmt.Println("Failed to initialize taxicall sqs publisher topic: ", err)
+		os.Exit(1)
+	}
+	defer taxicallPublisher.Shutdown(ctx)
+	taxicallPublisherService := service.NewSqsPubService(taxicallPublisher)
 
 	// Init apps
 	pushApp, err := push.NewPushApp(
@@ -151,26 +167,29 @@ func main() {
 	}
 
 	if err := pushApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start push app event loop:  %v\n", err)
+		fmt.Printf("Failed to start push app event loop: %v\n", err)
 		os.Exit(1)
 	}
 	defer pushApp.Stop(ctx)
 
-	taxiCallRequestActorService, err := taxicall.NewTaxiCallActorService(
+	taxicallApp, err := taxicall.NewTaxicallApp(
 		taxicall.WithTransactor(transactor),
-		taxicall.WithUserRepository(userRepository),
-		taxicall.WithDriverRepository(driverRepository),
+		taxicall.WithDriverLocationRepository(driverLocationRepository),
 		taxicall.WithTaxiCallRequestRepository(taxiCallRequestRepository),
 		taxicall.WithEventRepository(eventRepository),
+		taxicall.WithRouteServie(mapRouteService),
+		taxicall.WithLocationService(locationService),
+		taxicall.WithEventPublisherService(taxicallPublisherService),
+		taxicall.WithEventSubscriberService(taxicallSubscriberService),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup taxi call request actor service: %v\n", err)
+		fmt.Printf("Failed to start taxi call app: %v\n", err)
 		os.Exit(1)
 	}
+	defer taxicallApp.Shutdown(ctx)
 
-	// TODO (taekyeom) remove
-	if err := taxiCallRequestActorService.Init(ctx); err != nil {
-		fmt.Printf("Failed to init actor system: %v\n", err)
+	if err := taxicallApp.Start(ctx); err != nil {
+		fmt.Printf("Failed to start taxi call app event loop: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -200,11 +219,10 @@ func main() {
 		user.WithUserPaymentRepository(userPaymentRepository),
 		user.WithCardPaymentService(tossPaymentService),
 		user.WithSmsSenderService(smsSenderService),
-		user.WithTaxiCallRequestRepository(taxiCallRequestRepository),
 		user.WithMapRouteService(mapRouteService),
 		user.WithLocationService(locationService),
-		user.WithTaxiCallRequestActorService(taxiCallRequestActorService),
 		user.WithPushService(pushApp),
+		user.WithTaxiCallService(taxicallApp),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup user app: %v\n", err)
@@ -214,15 +232,14 @@ func main() {
 	driverApp, err := driver.NewDriverApp(
 		driver.WithTransactor(transactor),
 		driver.WithDriverRepository(driverRepository),
-		driver.WithDriverLocationRepository(driverLocationRepository),
 		driver.WithSettlementAccountRepository(driverSettlementAccountRepository),
 		driver.WithSessionService(driverSessionApp),
 		driver.WithSmsSenderService(smsSenderService),
 		driver.WithSmsVerificationRepository(smsVerificationRepository),
 		driver.WithFileUploadService(fileUploadService),
-		driver.WithTaxiCallRequestRepository(taxiCallRequestRepository),
 		driver.WithEventRepository(eventRepository),
 		driver.WithPushService(pushApp),
+		driver.WithTaxiCallService(taxicallApp),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver app: %v\n", err)

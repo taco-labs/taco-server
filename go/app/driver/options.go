@@ -22,12 +22,6 @@ func WithDriverRepository(repo repository.DriverRepository) driverAppOption {
 	}
 }
 
-func WithDriverLocationRepository(repo repository.DriverLocationRepository) driverAppOption {
-	return func(da *driverApp) {
-		da.repository.driverLocation = repo
-	}
-}
-
 func WithSmsVerificationRepository(repo repository.SmsVerificationRepository) driverAppOption {
 	return func(da *driverApp) {
 		da.repository.smsVerification = repo
@@ -37,12 +31,6 @@ func WithSmsVerificationRepository(repo repository.SmsVerificationRepository) dr
 func WithSettlementAccountRepository(repo repository.DriverSettlementAccountRepository) driverAppOption {
 	return func(da *driverApp) {
 		da.repository.settlementAccount = repo
-	}
-}
-
-func WithTaxiCallRequestRepository(repo repository.TaxiCallRepository) driverAppOption {
-	return func(da *driverApp) {
-		da.repository.taxiCallRequest = repo
 	}
 }
 
@@ -76,6 +64,12 @@ func WithPushService(svc pushServiceInterface) driverAppOption {
 	}
 }
 
+func WithTaxiCallService(svc driverTaxiCallInterface) driverAppOption {
+	return func(da *driverApp) {
+		da.service.taxiCall = svc
+	}
+}
+
 func (d driverApp) validateApp() error {
 	if d.Transactor == nil {
 		return errors.New("driver app need transactor")
@@ -85,20 +79,12 @@ func (d driverApp) validateApp() error {
 		return errors.New("driver app need driver repository")
 	}
 
-	if d.repository.driverLocation == nil {
-		return errors.New("driver app need driver location repostiroy")
-	}
-
 	if d.repository.smsVerification == nil {
 		return errors.New("driver app need sms verification repository")
 	}
 
 	if d.repository.settlementAccount == nil {
 		return errors.New("driver app need settlement account repository")
-	}
-
-	if d.repository.taxiCallRequest == nil {
-		return errors.New("driver app need taxi call request repository")
 	}
 
 	if d.repository.event == nil {
@@ -119,6 +105,10 @@ func (d driverApp) validateApp() error {
 
 	if d.service.push == nil {
 		return errors.New("driver app need push service")
+	}
+
+	if d.service.taxiCall == nil {
+		return errors.New("driver app need taxi call service")
 	}
 
 	return nil

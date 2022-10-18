@@ -3,7 +3,6 @@ package user
 import (
 	"errors"
 
-	"github.com/taco-labs/taco/go/actor/taxicall"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
@@ -33,12 +32,6 @@ func WithUserPaymentRepository(repo repository.UserPaymentRepository) userAppOpt
 func WithSmsVerificationRepository(repo repository.SmsVerificationRepository) userAppOption {
 	return func(ua *userApp) {
 		ua.repository.smsVerification = repo
-	}
-}
-
-func WithTaxiCallRequestRepository(repo repository.TaxiCallRepository) userAppOption {
-	return func(ua *userApp) {
-		ua.repository.taxiCallRequest = repo
 	}
 }
 
@@ -72,15 +65,15 @@ func WithLocationService(svc service.LocationService) userAppOption {
 	}
 }
 
-func WithTaxiCallRequestActorService(svc *taxicall.TaxiCallActorService) userAppOption {
-	return func(ua *userApp) {
-		ua.actor.taxiCallRequest = svc
-	}
-}
-
 func WithPushService(svc pushServiceInterface) userAppOption {
 	return func(ua *userApp) {
 		ua.service.push = svc
+	}
+}
+
+func WithTaxiCallService(svc taxiCallInterface) userAppOption {
+	return func(ua *userApp) {
+		ua.service.taxiCall = svc
 	}
 }
 
@@ -99,10 +92,6 @@ func (u userApp) validateApp() error {
 
 	if u.repository.smsVerification == nil {
 		return errors.New("user app need sms verification repository")
-	}
-
-	if u.repository.taxiCallRequest == nil {
-		return errors.New("user app need taxi call request repository")
 	}
 
 	if u.service.session == nil {
@@ -125,12 +114,12 @@ func (u userApp) validateApp() error {
 		return errors.New("user app need location service")
 	}
 
-	if u.actor.taxiCallRequest == nil {
-		return errors.New("user app need taxi call request actor service")
-	}
-
 	if u.service.push == nil {
 		return errors.New("user app need push service")
+	}
+
+	if u.service.taxiCall == nil {
+		return errors.New("user app need taxi call service")
 	}
 
 	return nil

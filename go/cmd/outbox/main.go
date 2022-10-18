@@ -80,6 +80,33 @@ func main() {
 	}
 	defer notificationOutboxApp.Shuwdown()
 
+	taxicallPublishTopic, err := pubsub.OpenTopic(ctx, config.TaxicallEventTopic.Topic.GetSqsUri())
+	if err != nil {
+		fmt.Println("Failed to initialize taxicall sqs publish topic: ", err)
+		os.Exit(1)
+	}
+	defer taxicallPublishTopic.Shutdown(ctx)
+	taxicallPublishService := service.NewSqsPubService(taxicallPublishTopic)
+
+	taxicallOutboxApp, err := outbox.NewOutboxApp(
+		outbox.WithTransactor(transactor),
+		outbox.WithEventRepository(eventRepository),
+		outbox.WithEventPublishService(taxicallPublishService),
+		outbox.WithTargetEventUirs(config.TaxicallEventTopic.EventUris),
+		outbox.WithPollInterval(config.TaxicallEventTopic.PollInterval),
+		outbox.WithMaxMessages(config.TaxicallEventTopic.MaxMessages),
+	)
+	if err != nil {
+		fmt.Println("Failed to initialize taxicall outbox app: ", err)
+		os.Exit(1)
+	}
+
+	if err := taxicallOutboxApp.Start(ctx); err != nil {
+		fmt.Println("Failed to start taxicall outbox app: ", err)
+		os.Exit(1)
+	}
+	defer taxicallOutboxApp.Shuwdown()
+
 	// Use a buffered channel to avoid missing signals as recommended for signal.Notify
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)

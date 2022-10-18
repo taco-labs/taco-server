@@ -10,6 +10,7 @@ type OutboxConfig struct {
 	Log                    LogConfig
 	Database               DatabaseConfig
 	NotificationEventTopic EventTopicPublisherConfig `env:",prefix=TACO_NOTIFICATION_OUTBOX_"`
+	TaxicallEventTopic     EventTopicPublisherConfig `env:",prefix=TACO_TAXICALL_OUTBOX_"`
 }
 
 func NewOutboxConfig(ctx context.Context) (OutboxConfig, error) {

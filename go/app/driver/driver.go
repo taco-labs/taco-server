@@ -33,14 +33,25 @@ type pushServiceInterface interface {
 	DeletePushToken(context.Context, string) error
 }
 
+type driverTaxiCallInterface interface {
+	ActivateDriverContext(ctx context.Context, driverId string) error
+	DeactivateDriverContext(ctx context.Context, driverId string) error
+	UpdateDriverLocation(ctx context.Context, req request.DriverLocationUpdateRequest) error
+	ListDriverTaxiCallRequest(ctx context.Context, req request.ListDriverTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
+	LatestDriverTaxiCallRequest(ctx context.Context, driverId string) (entity.TaxiCallRequest, error)
+	ForceAcceptTaxiCallRequest(ctx context.Context, driverId, callRequestId string) error
+	AcceptTaxiCallRequest(ctx context.Context, driverId string, ticketId string) error
+	RejectTaxiCallRequest(ctx context.Context, driverId string, ticketId string) error
+	DriverToArrival(ctx context.Context, driverId string, callRequestId string) error
+	DoneTaxiCallRequest(ctx context.Context, driverId string, req request.DoneTaxiCallRequest) error
+}
+
 type driverApp struct {
 	app.Transactor
 	repository struct {
 		driver            repository.DriverRepository
-		driverLocation    repository.DriverLocationRepository
 		settlementAccount repository.DriverSettlementAccountRepository
 		smsVerification   repository.SmsVerificationRepository
-		taxiCallRequest   repository.TaxiCallRepository
 		event             repository.EventRepository
 	}
 
@@ -49,6 +60,7 @@ type driverApp struct {
 		session    sessionServiceInterface
 		fileUpload service.FileUploadService
 		push       pushServiceInterface
+		taxiCall   driverTaxiCallInterface
 	}
 
 	actor struct {
@@ -300,32 +312,15 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 		driver.OnDuty = req.OnDuty
 		driver.UpdateTime = requestTime
 
-		if !driver.OnDuty {
-			lastTaxiCallRequest, err := d.repository.taxiCallRequest.GetLatestByDriverId(ctx, i, driver.Id)
-			if err != nil && !errors.Is(err, value.ErrNotFound) {
-				return fmt.Errorf("app.Driver.UpdateOnDuty: error while get last call request: %w", err)
-			}
-			if lastTaxiCallRequest.CurrentState.Active() {
-				return fmt.Errorf("app.Driver.UpdateOnDuty: active taxi call request exists: %w", value.ErrActiveTaxiCallRequestExists)
-			}
-		}
-
-		taxiCallContext, err := d.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driver.Id)
-		if err != nil && !errors.Is(err, value.ErrNotFound) {
-			return fmt.Errorf("app.Driver.UpdateOnDuty: error while get last call request: %w", err)
-		}
-		if errors.Is(err, value.ErrNotFound) {
-			taxiCallContext = entity.NewEmptyDriverTaxiCallContext(driver.Id, driver.OnDuty, requestTime)
-		}
-		if err := d.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, taxiCallContext); err != nil {
-			return fmt.Errorf("app.Driver.UpdateOnDuty: error while upsert driver taxi call context: %w", err)
-		}
-
 		if err := d.repository.driver.Update(ctx, i, driver); err != nil {
 			return fmt.Errorf("app.Driver.UpdateOnDuty: error while update driver:%w", err)
 		}
 
-		return nil
+		if req.OnDuty {
+			return d.service.taxiCall.ActivateDriverContext(ctx, req.DriverId)
+		} else {
+			return d.service.taxiCall.DeactivateDriverContext(ctx, req.DriverId)
+		}
 	})
 }
 
@@ -340,19 +335,7 @@ func (d driverApp) UpdateDriverLocation(ctx context.Context, req request.DriverL
 			return fmt.Errorf("app.Driver.UpdateDriverLocation: driver is not on duty: %w", value.ErrInvalidOperation)
 		}
 
-		driverLocationDto := entity.DriverLocation{
-			DriverId: req.DriverId,
-			Location: value.Point{
-				Latitude:  req.Latitude,
-				Longitude: req.Longitude,
-			},
-		}
-
-		if err = d.repository.driverLocation.Upsert(ctx, i, driverLocationDto); err != nil {
-			return fmt.Errorf("app.Driver.UpdateDriverLocation: error while update driver location:\n%w", err)
-		}
-
-		return nil
+		return d.service.taxiCall.UpdateDriverLocation(ctx, req)
 	})
 }
 

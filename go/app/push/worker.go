@@ -46,12 +46,12 @@ func (t taxiCallPushApp) consume(ctx context.Context) error {
 		return nil
 	}
 
-	if event.RetryCount > 2 {
-		// TODO (taekyeom) attempt count be paramterized
-		fmt.Println("[TaxiCallPushApp.Worker] ignore event attempt count limit reached")
-		event.Ack()
-		return nil
-	}
+	// if event.RetryCount > 2 {
+	// 	// TODO (taekyeom) attempt count be paramterized
+	// 	fmt.Println("[TaxiCallPushApp.Worker] ignore event attempt count limit reached")
+	// 	event.Ack()
+	// 	return nil
+	// }
 
 	defer event.Ack()
 
@@ -63,7 +63,7 @@ func (t taxiCallPushApp) consume(ctx context.Context) error {
 	}
 
 	// If error occurred, resend event with increased retry event count
-	if err != nil {
+	if err != nil && event.RetryCount < 3 {
 		newEvent := event.NewEventWithRetry()
 		t.service.eventPub.SendMessage(ctx, newEvent)
 		return err

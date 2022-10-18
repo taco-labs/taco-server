@@ -117,14 +117,6 @@ table "taxi_call_request" {
       column.create_time,
     ]
   }
-
-  index "active_taxi_call_idx" {
-    type = HASH
-    columns = [
-      column.id
-    ]
-    where = "taxi_call_state IN ('TAXI_CALL_REQUESTED', 'DRIVER_TO_DEPARTURE', 'DRIVER_TO_ARRIVAL')"
-  }
 }
 
 table "taxi_call_ticket" {

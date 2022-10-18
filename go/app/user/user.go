@@ -7,7 +7,6 @@ import (
 
 	"context"
 
-	"github.com/taco-labs/taco/go/actor/taxicall"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
@@ -30,13 +29,19 @@ type pushServiceInterface interface {
 	DeletePushToken(context.Context, string) error
 }
 
+type taxiCallInterface interface {
+	ListUserTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
+	LatestUserTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
+	CreateTaxiCallRequest(context.Context, string, entity.UserPayment, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
+	CancelTaxiCallRequest(context.Context, string, string) error
+}
+
 type userApp struct {
 	app.Transactor
 	repository struct {
 		user            repository.UserRepository
 		payment         repository.UserPaymentRepository
 		smsVerification repository.SmsVerificationRepository // TODO(taekyeom) SMS 관련 로직은 별도 app으로 나중에 빼야 할듯?
-		taxiCallRequest repository.TaxiCallRepository
 	}
 
 	service struct {
@@ -46,10 +51,7 @@ type userApp struct {
 		route     service.MapRouteService
 		location  service.LocationService
 		push      pushServiceInterface
-	}
-
-	actor struct {
-		taxiCallRequest *taxicall.TaxiCallActorService
+		taxiCall  taxiCallInterface
 	}
 }
 
