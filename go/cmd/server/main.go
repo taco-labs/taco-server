@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"time"
 
 	firebase "firebase.google.com/go"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/panjf2000/ants/v2"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/driver"
@@ -28,8 +31,7 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/extra/bundebug"
-	"gocloud.dev/pubsub"
-	_ "gocloud.dev/pubsub/awssnssqs"
+	"gocloud.dev/pubsub/awssnssqs"
 )
 
 func main() {
@@ -131,7 +133,18 @@ func main() {
 	}
 	notificationService := service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
 
-	notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationTopic.GetSqsUri())
+	// Initialize aws sdk v2 session
+	awsconf, err := awsconfig.LoadDefaultConfig(ctx)
+	if err != nil {
+		fmt.Printf("Failed to load default aws config: %+v\n", err)
+	}
+	sqsClient := sqs.NewFromConfig(awsconf)
+
+	// notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationTopic.GetSqsUri())
+	notificationSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.NotificationTopic.Uri, &awssnssqs.SubscriptionOptions{
+		Raw:      true,
+		WaitTime: time.Second * 5,
+	})
 	if err != nil {
 		fmt.Printf("Failed to initialize notification sqs subscription topic: %+v\n", err)
 		os.Exit(1)
@@ -139,7 +152,9 @@ func main() {
 	defer notificationSubscriber.Shutdown(ctx)
 	notificationSubscriberService := service.NewSqsSubService(notificationSubscriber)
 
-	notificationPublisher, err := pubsub.OpenTopic(ctx, config.NotificationTopic.GetSqsUri())
+	notificationPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, config.NotificationTopic.Uri, &awssnssqs.TopicOptions{
+		BodyBase64Encoding: awssnssqs.Never,
+	})
 	if err != nil {
 		fmt.Printf("Failed to initialize notification sqs publisher topic: %+v\n", err)
 		os.Exit(1)
@@ -147,7 +162,10 @@ func main() {
 	defer notificationPublisher.Shutdown(ctx)
 	notificationPublisherService := service.NewSqsPubService(notificationPublisher)
 
-	taxicallSubscriber, err := pubsub.OpenSubscription(ctx, config.TaxicallTopic.GetSqsUri())
+	taxicallSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.TaxicallTopic.Uri, &awssnssqs.SubscriptionOptions{
+		Raw:      true,
+		WaitTime: time.Second * 5,
+	})
 	if err != nil {
 		fmt.Printf("Failed to initialize taxicall sqs subscription topic: %+v\n", err)
 		os.Exit(1)
@@ -155,7 +173,9 @@ func main() {
 	defer taxicallSubscriber.Shutdown(ctx)
 	taxicallSubscriberService := service.NewSqsSubService(taxicallSubscriber)
 
-	taxicallPublisher, err := pubsub.OpenTopic(ctx, config.TaxicallTopic.GetSqsUri())
+	taxicallPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, config.TaxicallTopic.Uri, &awssnssqs.TopicOptions{
+		BodyBase64Encoding: awssnssqs.Never,
+	})
 	if err != nil {
 		fmt.Printf("Failed to initialize taxicall sqs publisher topic: %+v\n", err)
 		os.Exit(1)

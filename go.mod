@@ -10,6 +10,7 @@ require (
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/uuid v1.3.0
 	github.com/labstack/echo/v4 v4.8.0
+	github.com/panjf2000/ants/v2 v2.5.0
 	github.com/sethvargo/go-envconfig v0.8.2
 	github.com/twpayne/go-geom v1.4.3
 	github.com/uptrace/bun v1.1.7
@@ -54,7 +55,6 @@ require (
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
-	github.com/panjf2000/ants/v2 v2.5.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.1 // indirect

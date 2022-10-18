@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -62,8 +61,4 @@ type TopicConfig struct {
 type WorkerPoolConfig struct {
 	PoolSize int  `env:"POOL_SIZE,required"`
 	PreAlloc bool `env:"PRE_ALLOC,default=false"`
-}
-
-func (e TopicConfig) GetSqsUri() string {
-	return fmt.Sprintf("awssqs://%s?awssdk=v2", e.Uri)
 }
