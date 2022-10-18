@@ -121,7 +121,7 @@ func main() {
 	}
 	notificationService := service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
 
-	notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationSubscriber.Topic.GetSqsUri())
+	notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationTopic.GetSqsUri())
 	if err != nil {
 		fmt.Println("Failed to initialize notification sqs subscription topic: ", err)
 		os.Exit(1)
@@ -129,7 +129,7 @@ func main() {
 	defer notificationSubscriber.Shutdown(ctx)
 	notificationSubscriberService := service.NewSqsSubService(notificationSubscriber)
 
-	notificationPublisher, err := pubsub.OpenTopic(ctx, config.NotificationPublisher.GetSqsUri())
+	notificationPublisher, err := pubsub.OpenTopic(ctx, config.NotificationTopic.GetSqsUri())
 	if err != nil {
 		fmt.Println("Failed to initialize notification sqs publisher topic: ", err)
 		os.Exit(1)
@@ -137,7 +137,7 @@ func main() {
 	defer notificationPublisher.Shutdown(ctx)
 	notificationPublisherService := service.NewSqsPubService(notificationPublisher)
 
-	taxicallSubscriber, err := pubsub.OpenSubscription(ctx, config.TaxicallSubscriber.Topic.GetSqsUri())
+	taxicallSubscriber, err := pubsub.OpenSubscription(ctx, config.TaxicallTopic.GetSqsUri())
 	if err != nil {
 		fmt.Println("Failed to initialize taxicall sqs subscription topic: ", err)
 		os.Exit(1)
@@ -145,7 +145,7 @@ func main() {
 	defer taxicallSubscriber.Shutdown(ctx)
 	taxicallSubscriberService := service.NewSqsSubService(taxicallSubscriber)
 
-	taxicallPublisher, err := pubsub.OpenTopic(ctx, config.TaxicallPublisher.GetSqsUri())
+	taxicallPublisher, err := pubsub.OpenTopic(ctx, config.TaxicallTopic.GetSqsUri())
 	if err != nil {
 		fmt.Println("Failed to initialize taxicall sqs publisher topic: ", err)
 		os.Exit(1)

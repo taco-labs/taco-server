@@ -50,15 +50,9 @@ type FirebaseConfig struct {
 }
 
 type EventOutboxConfig struct {
-	Topic        TopicConfig   `env:",prefix="`
 	EventUris    []string      `env:"EVENT_URIS,required"`
 	PollInterval time.Duration `env:"POLL_INTERVAL,required"`
 	MaxMessages  int           `env:"MAX_MESSAGES,required"`
-}
-
-type EventTopicSubscriberConfig struct {
-	Topic        TopicConfig   `env:",prefix="`
-	PollInterval time.Duration `env:"POLL_INTERVAL,required"`
 }
 
 type TopicConfig struct {

@@ -7,20 +7,18 @@ import (
 )
 
 type ServerConfig struct {
-	Log                    LogConfig
-	Database               DatabaseConfig
-	SmsSender              SmsSenderConfig
-	PaymentService         PaymentServiceConfig
-	RouteService           RouteServiceConfig
-	LocationService        LocationServiceConfig
-	Backoffice             BackofficeConfig
-	Firebase               FirebaseConfig
-	NotificationSubscriber EventTopicSubscriberConfig `env:",prefix=TACO_NOTIFICATION_SUBSCRIBER_"`
-	NotificationPublisher  TopicConfig                `env:",prefix=TACO_NOTIFICATION_PUBLISHER_"`
-	TaxicallSubscriber     EventTopicSubscriberConfig `env:",prefix=TACO_TAXICALL_SUBSCRIBER_"`
-	TaxicallPublisher      TopicConfig                `env:",prefix=TACO_TAXICALL_PUBLISHER_"`
-	NotificationOutbox     EventOutboxConfig          `env:",prefix=TACO_NOTIFICATION_OUTBOX_"`
-	TaxicallOutbox         EventOutboxConfig          `env:",prefix=TACO_TAXICALL_OUTBOX_"`
+	Log                LogConfig
+	Database           DatabaseConfig
+	SmsSender          SmsSenderConfig
+	PaymentService     PaymentServiceConfig
+	RouteService       RouteServiceConfig
+	LocationService    LocationServiceConfig
+	Backoffice         BackofficeConfig
+	Firebase           FirebaseConfig
+	NotificationTopic  TopicConfig       `env:",prefix=TACO_NOTIFICATION_"`
+	TaxicallTopic      TopicConfig       `env:",prefix=TACO_TAXICALL_"`
+	NotificationOutbox EventOutboxConfig `env:",prefix=TACO_NOTIFICATION_OUTBOX_"`
+	TaxicallOutbox     EventOutboxConfig `env:",prefix=TACO_TAXICALL_OUTBOX_"`
 }
 
 func NewServerConfig(ctx context.Context) (ServerConfig, error) {
