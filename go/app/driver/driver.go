@@ -188,7 +188,6 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			Phone:                 req.Phone,
 			AppOs:                 enum.OsTypeFromString(req.AppOs),
 			AppVersion:            req.AppVersion,
-			AppFcmToken:           req.AppFcmToken,
 			UserUniqueKey:         req.Phone,
 			DriverLicenseId:       req.DriverLicenseId,
 			DriverLicenseImageUrl: imageUrl,
@@ -268,7 +267,6 @@ func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateReq
 
 		driver.AppOs = enum.OsTypeFromString(req.AppOs)
 		driver.AppVersion = req.AppVersion
-		driver.AppFcmToken = req.AppFcmToken
 		driver.UpdateTime = requestTime
 
 		if err := d.repository.driver.Update(ctx, i, driver); err != nil {

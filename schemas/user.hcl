@@ -41,11 +41,6 @@ table "user" {
     null = false
   }
 
-  column "app_fcm_token" {
-    type = text
-    null = false
-  }
-
   column "user_unique_key" {
     type = text
     comment = "User unique key from authentication service (eg. IamPort)"

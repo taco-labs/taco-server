@@ -20,7 +20,6 @@ type Driver struct {
 	Gender                string          `bun:"gender"`
 	AppOs                 enum.OsType     `bun:"app_os"`
 	AppVersion            string          `bun:"app_version"`
-	AppFcmToken           string          `bun:"app_fcm_token"`
 	UserUniqueKey         string          `bun:"user_unique_key"`
 	DriverLicenseId       string          `bun:"driver_license_id"`
 	DriverLicenseImageUrl string          `bun:"driver_license_image_url"`

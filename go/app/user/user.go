@@ -174,7 +174,6 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			Gender:        req.Gender,
 			AppOs:         enum.OsTypeFromString(req.AppOs),
 			AppVersion:    req.AppVersion,
-			AppFcmToken:   req.AppFcmToken,
 			UserUniqueKey: req.Phone,
 			CreateTime:    requestTime,
 			UpdateTime:    requestTime,
@@ -229,7 +228,6 @@ func (u userApp) UpdateUser(ctx context.Context, req request.UserUpdateRequest) 
 		}
 		user.AppOs = enum.OsTypeFromString(req.AppOs)
 		user.AppVersion = req.AppVersion
-		user.AppFcmToken = req.AppFcmToken
 		user.UpdateTime = requestTime
 
 		if err = u.repository.user.UpdateUser(ctx, i, user); err != nil {

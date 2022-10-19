@@ -54,11 +54,6 @@ table "driver" {
     null = false
   }
 
-  column "app_fcm_token" {
-    type = text
-    null = false
-  }
-
   column "active" {
     type = boolean
     null = false

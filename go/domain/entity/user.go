@@ -18,7 +18,6 @@ type User struct {
 	Gender        string      `bun:"gender"`
 	AppOs         enum.OsType `bun:"app_os"`
 	AppVersion    string      `bun:"app_version"`
-	AppFcmToken   string      `bun:"app_fcm_token"`
 	UserUniqueKey string      `bun:"user_unique_key"`
 	CreateTime    time.Time   `bun:"create_time"`
 	UpdateTime    time.Time   `bun:"update_time"`
