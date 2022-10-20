@@ -44,8 +44,7 @@ func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.Ta
 		// Guard.. commands'state and request's current state must be same
 		if string(taxiCallRequest.CurrentState) != cmd.TaxiCallState {
 			// TODO (taekyeom) logging late message & add metric for anomaly
-			return fmt.Errorf("app.taxicall.process [%s]: taxi call state mismatch %v (actual: %v)",
-				cmd.TaxiCallRequestId, cmd.TaxiCallState, taxiCallRequest.CurrentState)
+			return nil
 		}
 
 		if taxiCallRequest.CurrentState.Complete() && !cmd.EventTime.Before(taxiCallRequest.UpdateTime) {
@@ -74,16 +73,15 @@ func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.Ta
 		}
 		if err != nil && errors.Is(err, value.ErrNotFound) {
 			taxiCallTicket = entity.TaxiCallTicket{
-				Id:                utils.MustNewUUID(),
 				TaxiCallRequestId: taxiCallRequest.Id,
 				Attempt:           0,
 				AdditionalPrice:   0,
+				TicketId:          utils.MustNewUUID(),
 				CreateTime:        cmd.DesiredScheduleTime,
-				UpdateTime:        cmd.DesiredScheduleTime,
 			}
 		}
 
-		if cmd.EventTime.UTC().Before(taxiCallTicket.UpdateTime.UTC()) {
+		if cmd.EventTime.UTC().Before(taxiCallTicket.CreateTime.UTC()) {
 			// TODO (taekyeom) logging late message
 			return nil
 		}
@@ -108,21 +106,32 @@ func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.Ta
 			return nil
 		}
 
+		// If ticket exists, return nil (late or duplicated message)
+		exists, err := t.repository.taxiCallRequest.TicketExists(ctx, i, taxiCallTicket)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.process: [%s] error while check taxi call ticket existance: %w", cmd.TaxiCallRequestId, err)
+		}
+		if exists {
+			// TODO (taekyeom) duplication & late event logging
+			return nil
+		}
+
 		// Update new ticket
-		if err := t.repository.taxiCallRequest.UpsertTicket(ctx, i, taxiCallTicket); err != nil {
-			return fmt.Errorf("app.taxicall.process: [%s] error while update new ticket: %w", cmd.TaxiCallRequestId, err)
+		if err := t.repository.taxiCallRequest.CreateTicket(ctx, i, taxiCallTicket); err != nil {
+			return fmt.Errorf("app.taxicall.process: [%s] error while create new ticket: %w", cmd.TaxiCallRequestId, err)
 		}
 
 		// Get drivers
 		driverTaxiCallContexts, err := t.repository.taxiCallRequest.
-			GetDriverTaxiCallContextWithinRadius(ctx, i, taxiCallRequest.Departure.Point, taxiCallTicket.GetRadius(), taxiCallTicket.Id, cmd.DesiredScheduleTime)
+			GetDriverTaxiCallContextWithinRadius(ctx, i, taxiCallRequest.Departure.Point, taxiCallTicket.GetRadius(),
+				taxiCallTicket.TaxiCallRequestId, cmd.DesiredScheduleTime)
 		if err != nil {
 			return fmt.Errorf("app.taxicall.process: [%s] error while get driver contexts within radius: %w", cmd.TaxiCallRequestId, err)
 		}
 
 		if len(driverTaxiCallContexts) > 0 {
 			driverTaxiCallContexts = slices.Map(driverTaxiCallContexts, func(dctx entity.DriverTaxiCallContext) entity.DriverTaxiCallContext {
-				dctx.LastReceivedRequestTicket = taxiCallTicket.Id
+				dctx.LastReceivedRequestTicket = taxiCallTicket.TaxiCallRequestId
 				dctx.LastReceiveTime = cmd.DesiredScheduleTime
 				dctx.RejectedLastRequestTicket = false
 				return dctx

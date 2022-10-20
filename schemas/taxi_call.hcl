@@ -122,11 +122,6 @@ table "taxi_call_request" {
 table "taxi_call_ticket" {
   schema = schema.taco
 
-  column "id" {
-    type = uuid
-    null = false
-  }
-
   column "taxi_call_request_id" {
     type = uuid
     null = false
@@ -142,27 +137,28 @@ table "taxi_call_ticket" {
     null = false
   }
 
-  column "create_time" {
-    type = timestamp
+  column "ticket_id" {
+    type = uuid
     null = false
   }
 
-  column "update_time" {
+  column "create_time" {
     type = timestamp
     null = false
   }
 
   primary_key {
     columns = [
-      column.id,
+      column.taxi_call_request_id,
+      column.attempt,
+      column.additional_price,
     ]
   }
 
-  index "taxi_call_ticket_taxl_call_request_id_idx" {
-    unique = false
+  index "taxi_call_ticket_id_uidx" {
     type = HASH
     columns = [
-      column.taxi_call_request_id,
+      column.ticket_id,
     ]
   }
 

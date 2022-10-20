@@ -54,22 +54,20 @@ func (t *TaxiCallRequest) UpdateState(transitionTime time.Time, nextState enum.T
 type TaxiCallTicket struct {
 	bun.BaseModel `bun:"table:taxi_call_ticket"`
 
-	Id                string    `bun:"id,pk"`
-	TaxiCallRequestId string    `bun:"taxi_call_request_id"`
-	Attempt           int       `bun:"attempt"`
-	AdditionalPrice   int       `bun:"additional_price"`
+	TaxiCallRequestId string    `bun:"taxi_call_request_id,pk"`
+	AdditionalPrice   int       `bun:"additional_price,pk"`
+	Attempt           int       `bun:"attempt,pk"`
+	TicketId          string    `bun:"ticket_id"`
 	CreateTime        time.Time `bun:"create_time"`
-	UpdateTime        time.Time `bun:"update_time"`
 }
 
 func (t TaxiCallTicket) Copy() TaxiCallTicket {
 	return TaxiCallTicket{
-		Id:                t.Id,
+		TicketId:          t.TicketId,
 		TaxiCallRequestId: t.TaxiCallRequestId,
 		Attempt:           t.Attempt,
 		AdditionalPrice:   t.AdditionalPrice,
 		CreateTime:        t.CreateTime,
-		UpdateTime:        t.UpdateTime,
 	}
 }
 
@@ -83,16 +81,15 @@ func (t TaxiCallTicket) ValidAdditionalPrice(maxAdditionlPrice int) bool {
 
 func (t *TaxiCallTicket) IncreaseAttempt(updateTime time.Time) bool {
 	t.Attempt += 1
-	t.UpdateTime = updateTime
+	t.CreateTime = updateTime
 	return t.ValidAttempt()
 }
 
 func (t *TaxiCallTicket) IncreasePrice(maxPrice int, updateTime time.Time) bool {
-	t.Id = utils.MustNewUUID()
+	t.TicketId = utils.MustNewUUID()
 	t.Attempt = 1
 	t.AdditionalPrice += PriceStep
 	t.CreateTime = updateTime
-	t.UpdateTime = updateTime
 
 	return t.ValidAdditionalPrice(maxPrice)
 }

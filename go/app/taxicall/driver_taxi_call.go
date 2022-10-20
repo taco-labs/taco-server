@@ -137,12 +137,12 @@ func (t taxicallApp) ForceAcceptTaxiCallRequest(ctx context.Context, driverId, c
 		}
 
 		driverTaxiCallContext.CanReceive = false
-		driverTaxiCallContext.LastReceivedRequestTicket = ticket.Id
+		driverTaxiCallContext.LastReceivedRequestTicket = ticket.TicketId
 		if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
 			return fmt.Errorf("app.taxiCall.ForceAcceptTaxiCallRequest: error while upsert taxi call context: %w", value.ErrInvalidOperation)
 		}
 
-		return t.AcceptTaxiCallRequest(ctx, driverId, ticket.Id)
+		return t.AcceptTaxiCallRequest(ctx, driverId, ticket.TicketId)
 	})
 }
 

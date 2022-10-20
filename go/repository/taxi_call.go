@@ -26,7 +26,8 @@ type TaxiCallRepository interface {
 	GetActiveRequestIds(context.Context, bun.IDB) ([]string, error)
 
 	GetLatestTicketByRequestId(context.Context, bun.IDB, string) (entity.TaxiCallTicket, error)
-	UpsertTicket(context.Context, bun.IDB, entity.TaxiCallTicket) error
+	CreateTicket(context.Context, bun.IDB, entity.TaxiCallTicket) error
+	TicketExists(context.Context, bun.IDB, entity.TaxiCallTicket) (bool, error)
 	DeleteTicketByRequestId(context.Context, bun.IDB, string) error
 
 	GetDriverTaxiCallContext(context.Context, bun.IDB, string) (entity.DriverTaxiCallContext, error)
@@ -115,22 +116,32 @@ func (t taxiCallRepository) GetLatestTicketByRequestId(ctx context.Context, db b
 	return resp, nil
 }
 
-func (t taxiCallRepository) UpsertTicket(ctx context.Context, db bun.IDB, ticket entity.TaxiCallTicket) error {
-	_, err := db.NewInsert().
-		Model(&ticket).
-		On("CONFLICT (id) DO UPDATE").
-		Set("taxi_call_request_id = EXCLUDED.taxi_call_request_id").
-		Set("attempt = EXCLUDED.attempt").
-		Set("additional_price = EXCLUDED.additional_price").
-		Set("create_time = EXCLUDED.create_time").
-		Set("update_time = EXCLUDED.update_time").
-		Exec(ctx)
+func (t taxiCallRepository) CreateTicket(ctx context.Context, db bun.IDB, ticket entity.TaxiCallTicket) error {
+	res, err := db.NewInsert().Model(&ticket).Exec(ctx)
 
+	if err != nil {
+		return fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
 
 	return nil
+}
+
+func (t taxiCallRepository) TicketExists(ctx context.Context, db bun.IDB, ticket entity.TaxiCallTicket) (bool, error) {
+	exists, err := db.NewSelect().Model(&ticket).WherePK().Exists(ctx)
+
+	if err != nil {
+		return false, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return exists, nil
 }
 
 func (t taxiCallRepository) DeleteTicketByRequestId(ctx context.Context, db bun.IDB, requestId string) error {

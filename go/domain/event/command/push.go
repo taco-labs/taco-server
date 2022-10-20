@@ -74,7 +74,7 @@ func NewDriverTaxiCallNotificationCommand(taxiCallRequest entity.TaxiCallRequest
 		DriverId:          driverTaxiCallContext.DriverId,
 		UserId:            taxiCallRequest.UserId,
 		TaxiCallRequestId: taxiCallRequest.Id,
-		TaxiCallTicketId:  taxiCallTicket.Id,
+		TaxiCallTicketId:  taxiCallTicket.TicketId,
 		TaxiCallState:     string(taxiCallRequest.CurrentState),
 		DriverLocation:    driverTaxiCallContext.Location,
 		RequestBasePrice:  taxiCallRequest.RequestBasePrice,
