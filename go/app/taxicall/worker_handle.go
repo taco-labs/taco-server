@@ -22,10 +22,11 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 	if err != nil {
 		return fmt.Errorf("app.taxicall.handleEvent: error while unmarshal json: %v", err)
 	}
+
 	if until := time.Until(taxiProgressCmd.DesiredScheduleTime); until > 0 {
 		select {
 		case <-ctx.Done():
-			return nil
+			return ctx.Err()
 		case <-time.After(until):
 		}
 	}
@@ -33,12 +34,29 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 }
 
 func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.TaxiCallProcessMessage) error {
+	receiveTime := time.Now()
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		//TODO (taekyeom) make taxi call request failed when retry count exceeded
 
 		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, cmd.TaxiCallRequestId)
 		if err != nil {
 			return fmt.Errorf("app.taxicall.process [%s]: error while get call request: %w", cmd.TaxiCallRequestId, err)
+		}
+
+		if retryCount > 3 {
+			// TODO (taekyeom) logging
+			if err := taxiCallRequest.UpdateState(receiveTime, enum.TaxiCallState_FAILED); err != nil {
+				return fmt.Errorf("app.taxicall.process [%s]: failed to forece mark failed state: %w", cmd.TaxiCallRequestId, err)
+			}
+			if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
+				return fmt.Errorf("app.taxicall.process: [%s] failed to forece update failed state: %w", cmd.TaxiCallRequestId, err)
+			}
+
+			taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState, receiveTime, receiveTime)
+			if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{taxiCallCmd}); err != nil {
+				return fmt.Errorf("app.taxicall.process [%s]: failed to create taxi call force failure event: %w", cmd.TaxiCallRequestId, err)
+			}
+			return nil
 		}
 
 		// Guard.. commands'state and request's current state must be same
@@ -77,29 +95,30 @@ func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.Ta
 				Attempt:           0,
 				AdditionalPrice:   0,
 				TicketId:          utils.MustNewUUID(),
-				CreateTime:        cmd.DesiredScheduleTime,
+				CreateTime:        cmd.EventTime,
 			}
 		}
 
-		if cmd.EventTime.UTC().Before(taxiCallTicket.CreateTime.UTC()) {
+		if cmd.EventTime.Before(taxiCallTicket.CreateTime) {
+			fmt.Println("???")
 			// TODO (taekyeom) logging late message
 			return nil
 		}
 
 		validTicketOperation := true
-		if !taxiCallTicket.IncreaseAttempt(cmd.DesiredScheduleTime) {
-			validTicketOperation = taxiCallTicket.IncreasePrice(taxiCallRequest.RequestMaxAdditionalPrice, cmd.DesiredScheduleTime)
+		if !taxiCallTicket.IncreaseAttempt(receiveTime) {
+			validTicketOperation = taxiCallTicket.IncreasePrice(taxiCallRequest.RequestMaxAdditionalPrice, receiveTime)
 		}
 
 		if !validTicketOperation {
-			if err := taxiCallRequest.UpdateState(cmd.DesiredScheduleTime, enum.TaxiCallState_FAILED); err != nil {
+			if err := taxiCallRequest.UpdateState(receiveTime, enum.TaxiCallState_FAILED); err != nil {
 				return fmt.Errorf("app.taxicall.process [%s]: failed to update state: %w", cmd.TaxiCallRequestId, err)
 			}
 			if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 				return fmt.Errorf("app.taxicall.process: [%s] failed to update call request to failed state: %w", cmd.TaxiCallRequestId, err)
 			}
 
-			taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState, cmd.DesiredScheduleTime, cmd.DesiredScheduleTime)
+			taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState, receiveTime, receiveTime)
 			if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{taxiCallCmd}); err != nil {
 				return fmt.Errorf("app.taxicall.process [%s]: failed to create taxi call failure event: %w", cmd.TaxiCallRequestId, err)
 			}
@@ -124,7 +143,7 @@ func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.Ta
 		// Get drivers
 		driverTaxiCallContexts, err := t.repository.taxiCallRequest.
 			GetDriverTaxiCallContextWithinRadius(ctx, i, taxiCallRequest.Departure.Point, taxiCallTicket.GetRadius(),
-				taxiCallTicket.TaxiCallRequestId, cmd.DesiredScheduleTime)
+				taxiCallTicket.TaxiCallRequestId, receiveTime)
 		if err != nil {
 			return fmt.Errorf("app.taxicall.process: [%s] error while get driver contexts within radius: %w", cmd.TaxiCallRequestId, err)
 		}
@@ -132,7 +151,7 @@ func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.Ta
 		if len(driverTaxiCallContexts) > 0 {
 			driverTaxiCallContexts = slices.Map(driverTaxiCallContexts, func(dctx entity.DriverTaxiCallContext) entity.DriverTaxiCallContext {
 				dctx.LastReceivedRequestTicket = taxiCallTicket.TaxiCallRequestId
-				dctx.LastReceiveTime = cmd.DesiredScheduleTime
+				dctx.LastReceiveTime = receiveTime
 				dctx.RejectedLastRequestTicket = false
 				return dctx
 			})
@@ -144,7 +163,7 @@ func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.Ta
 		}
 
 		taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState,
-			cmd.DesiredScheduleTime, cmd.DesiredScheduleTime.Add(time.Second*10))
+			receiveTime, receiveTime.Add(time.Second*10))
 		userCmd := command.NewUserTaxiCallNotificationCommand(taxiCallRequest, taxiCallTicket, entity.DriverTaxiCallContext{})
 		driverCmds := slices.Map(driverTaxiCallContexts, func(i entity.DriverTaxiCallContext) entity.Event {
 			return command.NewDriverTaxiCallNotificationCommand(taxiCallRequest, taxiCallTicket, i)

@@ -22,7 +22,7 @@ type Event struct {
 
 	MessageId    string          `bun:"message_id,pk"`
 	EventUri     string          `bun:"event_uri"`
-	DelaySeconds int64           `bun:"delay_seconds"`
+	DelaySeconds int32           `bun:"delay_seconds"`
 	Payload      json.RawMessage `bun:"payload,type:jsonb"`
 	CreateTime   time.Time       `bun:"create_time"`
 	RetryCount   int             `bun:"-"`

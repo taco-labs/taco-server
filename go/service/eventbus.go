@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
-	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
 	"gocloud.dev/pubsub"
@@ -62,9 +61,9 @@ func ToMessage(event entity.Event) *pubsub.Message {
 		},
 		Body: event.Payload,
 		BeforeSend: func(asFunc func(interface{}) bool) error {
-			req := sqs.SendMessageBatchRequestEntry{}
+			req := &types.SendMessageBatchRequestEntry{}
 			if asFunc(&req) {
-				req.DelaySeconds = &event.DelaySeconds
+				req.DelaySeconds = event.DelaySeconds
 			}
 			return nil
 		},

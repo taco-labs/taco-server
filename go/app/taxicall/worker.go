@@ -2,6 +2,7 @@ package taxicall
 
 import (
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -37,16 +38,18 @@ func (t taxicallApp) consume(ctx context.Context) error {
 		return nil
 	}
 	return t.service.workerPool.Submit(func() {
-		defer event.Ack()
-
 		err := t.handleEvent(ctx, event)
 		if err != nil {
 			fmt.Printf("[TaxicallApp.Worker.Consume] error while handle consumed message: %+v\n", err)
+			if errors.Is(err, context.Canceled) {
+				return
+			}
+			if event.RetryCount < 3 {
+				newEvent := event.NewEventWithRetry()
+				newEvent.DelaySeconds = 0
+				t.service.eventPub.SendMessage(ctx, newEvent)
+			}
 		}
-		if err != nil && event.RetryCount < 3 {
-			newEvent := event.NewEventWithRetry()
-			newEvent.DelaySeconds = 0
-			t.service.eventPub.SendMessage(ctx, newEvent)
-		}
+		event.Ack()
 	})
 }

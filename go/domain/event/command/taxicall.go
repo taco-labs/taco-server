@@ -2,7 +2,6 @@ package command
 
 import (
 	"encoding/json"
-	"math"
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -23,20 +22,23 @@ type TaxiCallProcessMessage struct {
 
 func (t TaxiCallProcessMessage) ToEvent() entity.Event {
 	payload, _ := json.Marshal(t)
-	var delaySeconds float64
+	var delaySeconds int32
 	if t.DesiredScheduleTime == t.EventTime {
 		delaySeconds = 0
 	} else {
-		delayMin := math.Min(
-			float64(t.DesiredScheduleTime.Sub(t.EventTime)),
-			float64(time.Until(t.DesiredScheduleTime)),
+		delayDuration := minTimeDuration(
+			t.DesiredScheduleTime.Sub(t.EventTime),
+			time.Until(t.DesiredScheduleTime),
 		)
-		delaySeconds = math.Min(delayMin, 0)
+		if delayDuration < 0 {
+			delayDuration = 0
+		}
+		delaySeconds = int32(delayDuration.Seconds())
 	}
 	return entity.Event{
 		MessageId:    utils.MustNewUUID(),
 		EventUri:     EventUri_TaxiCallProcess,
-		DelaySeconds: int64(delaySeconds),
+		DelaySeconds: delaySeconds,
 		Payload:      payload,
 		CreateTime:   t.EventTime,
 	}
@@ -52,4 +54,11 @@ func NewTaxiCallProgressCommand(taxiCallRequestId string, taxiCallState enum.Tax
 	}
 
 	return command.ToEvent()
+}
+
+func minTimeDuration(t1 time.Duration, t2 time.Duration) time.Duration {
+	if t1 < t2 {
+		return t1
+	}
+	return t2
 }
