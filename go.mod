@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	firebase.google.com/go v3.13.0+incompatible
-	github.com/aws/aws-sdk-go v1.44.68
+	github.com/aws/aws-sdk-go-v2/config v1.15.15
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.19.10
 	github.com/coolsms/coolsms-go v0.0.0-20211005081430-ed879c9fbfd3
 	github.com/go-resty/resty/v2 v2.7.0
@@ -29,8 +29,8 @@ require (
 	cloud.google.com/go/firestore v1.6.1 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
 	cloud.google.com/go/storage v1.26.0 // indirect
+	github.com/aws/aws-sdk-go v1.44.68 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.16 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.15.15 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.10 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.23 // indirect
@@ -76,3 +76,5 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 	mellium.im/sasl v0.2.1 // indirect
 )
+
+replace gocloud.dev => ./go-cloud/

@@ -1,0 +1,4 @@
+[submodule "go-cloud"]
+	path = go-cloud
+	url = https://github.com/taco-labs/go-cloud
+  ignore = dirty
