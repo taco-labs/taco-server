@@ -22,6 +22,7 @@ import (
 	"github.com/taco-labs/taco/go/app/user"
 	"github.com/taco-labs/taco/go/app/usersession"
 	"github.com/taco-labs/taco/go/config"
+	firebasepubsub "github.com/taco-labs/taco/go/external/pubsub/firebase"
 	"github.com/taco-labs/taco/go/repository"
 	backofficeserver "github.com/taco-labs/taco/go/server/backoffice"
 	driverserver "github.com/taco-labs/taco/go/server/driver"
@@ -125,13 +126,16 @@ func main() {
 		fmt.Printf("Failed to instantiate firebase: %+v\n", err)
 		os.Exit(1)
 	}
-
 	messagingClient, err := firebaseApp.Messaging(ctx)
 	if err != nil {
 		fmt.Printf("Failed to instantiate firebase cloud messaging client: %+v\n", err)
 		os.Exit(1)
 	}
-	notificationService := service.NewFirebaseNotificationService(messagingClient, config.Firebase.DryRun)
+	firebasepub := firebasepubsub.OpenFCMTopic(ctx, messagingClient, &firebasepubsub.TopicOptions{
+		DryRun: config.Firebase.DryRun,
+	})
+	defer firebasepub.Shutdown(ctx)
+	notificationService := service.NewFirebaseNotificationService(firebasepub)
 
 	// Initialize aws sdk v2 session
 	awsconf, err := awsconfig.LoadDefaultConfig(ctx)
