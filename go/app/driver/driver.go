@@ -52,6 +52,7 @@ type driverTaxiCallInterface interface {
 	RejectTaxiCallRequest(ctx context.Context, driverId string, ticketId string) error
 	DriverToArrival(ctx context.Context, driverId string, callRequestId string) error
 	DoneTaxiCallRequest(ctx context.Context, driverId string, req request.DoneTaxiCallRequest) error
+	DriverCancelTaxiCallRequest(context.Context, string, string) error
 }
 
 type driverApp struct {

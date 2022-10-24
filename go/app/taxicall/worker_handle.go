@@ -44,21 +44,21 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 		}
 
 		//TODO (taekyeom) make taxi call request failed when retry count exceeded
-		if retryCount > 3 {
-			// TODO (taekyeom) logging
-			if err := taxiCallRequest.UpdateState(receiveTime, enum.TaxiCallState_FAILED); err != nil {
-				return fmt.Errorf("app.taxicall.process [%s]: failed to forece mark failed state: %w", cmd.TaxiCallRequestId, err)
-			}
-			if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
-				return fmt.Errorf("app.taxicall.process: [%s] failed to forece update failed state: %w", cmd.TaxiCallRequestId, err)
-			}
+		// if retryCount > 3 {
+		// 	// TODO (taekyeom) logging
+		// 	if err := taxiCallRequest.UpdateState(receiveTime, enum.TaxiCallState_FAILED); err != nil {
+		// 		return fmt.Errorf("app.taxicall.process [%s]: failed to forece mark failed state: %w", cmd.TaxiCallRequestId, err)
+		// 	}
+		// 	if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
+		// 		return fmt.Errorf("app.taxicall.process: [%s] failed to forece update failed state: %w", cmd.TaxiCallRequestId, err)
+		// 	}
 
-			taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState, receiveTime, receiveTime)
-			if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{taxiCallCmd}); err != nil {
-				return fmt.Errorf("app.taxicall.process [%s]: failed to create taxi call force failure event: %w", cmd.TaxiCallRequestId, err)
-			}
-			return nil
-		}
+		// 	taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState, receiveTime, receiveTime)
+		// 	if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{taxiCallCmd}); err != nil {
+		// 		return fmt.Errorf("app.taxicall.process [%s]: failed to create taxi call force failure event: %w", cmd.TaxiCallRequestId, err)
+		// 	}
+		// 	return nil
+		// }
 
 		// Guard.. commands'state and request's current state must be same
 		if string(taxiCallRequest.CurrentState) != cmd.TaxiCallState {
@@ -66,29 +66,44 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 			return nil
 		}
 
-		if taxiCallRequest.CurrentState.Complete() && !cmd.EventTime.Before(taxiCallRequest.UpdateTime) {
-			if err := t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
-				return fmt.Errorf("app.taxicall.process [%s]: failed to delete ticket: %w", cmd.TaxiCallRequestId, err)
-			}
-			termiationNotification := command.NewUserTaxiCallNotificationCommand(
-				taxiCallRequest,
-				entity.TaxiCallTicket{},
-				entity.DriverTaxiCallContext{},
-			)
-			if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{termiationNotification}); err != nil {
-				return fmt.Errorf("app.taxicall.process [%s]: failed to create taxi call termination notification: %w", cmd.TaxiCallRequestId, err)
-			}
-			return nil
+		var events []entity.Event
+		switch taxiCallRequest.CurrentState {
+		case enum.TaxiCallState_Requested:
+			events, err = t.handleTaxiCallRequested(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
+		case enum.TaxiCallState_DRIVER_TO_DEPARTURE:
+			events, err = t.handleDriverToDeparture(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
+		case enum.TaxiCallState_DRIVER_TO_ARRIVAL:
+			events, err = t.handleDriverToArrival(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
+		case enum.TaxiCallState_DONE:
+			events, err = t.handleDone(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
+		case enum.TaxiCallState_USER_CANCELLED:
+			events, err = t.handleUserCancelld(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
+		case enum.TaxiCallState_DRIVER_CANCELLED:
+			events, err = t.handleDriverCancelld(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
+		case enum.TaxiCallState_FAILED:
+			events, err = t.handleFailed(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
 		}
 
-		if taxiCallRequest.CurrentState.InDriving() {
-			// TODO(taekyeom) Send location push message to user
-			return nil
+		if err != nil {
+			return fmt.Errorf("app.taxicall.process [%s]: failed to handle taxi call progress command: %w", cmd.TaxiCallRequestId, err)
 		}
 
+		if len(events) > 0 {
+			if err := t.repository.event.BatchCreate(ctx, i, events); err != nil {
+				return fmt.Errorf("app.taxicall.process [%s]: failed to insert event: %w", cmd.TaxiCallRequestId, err)
+			}
+		}
+
+		return nil
+	})
+}
+
+func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+	events := []entity.Event{}
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		taxiCallTicket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
-			return fmt.Errorf("app.taxicall.process [%s]: error while get call request ticket: %w", cmd.TaxiCallRequestId, err)
+			return fmt.Errorf("app.taxicall.handleTaxiCallRequested [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
 		}
 		if err != nil && errors.Is(err, value.ErrNotFound) {
 			taxiCallTicket = entity.TaxiCallTicket{
@@ -96,12 +111,11 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 				Attempt:           0,
 				AdditionalPrice:   0,
 				TicketId:          utils.MustNewUUID(),
-				CreateTime:        cmd.EventTime,
+				CreateTime:        eventTime,
 			}
 		}
 
-		if cmd.EventTime.Before(taxiCallTicket.CreateTime) {
-			fmt.Println("???")
+		if eventTime.Before(taxiCallTicket.CreateTime) {
 			// TODO (taekyeom) logging late message
 			return nil
 		}
@@ -110,23 +124,21 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 
 		if !validTicketOperation {
 			if err := taxiCallRequest.UpdateState(receiveTime, enum.TaxiCallState_FAILED); err != nil {
-				return fmt.Errorf("app.taxicall.process [%s]: failed to update state: %w", cmd.TaxiCallRequestId, err)
+				return fmt.Errorf("app.taxicall.handleTaxiCallRequested [%s]: failed to update state: %w", taxiCallRequest.Id, err)
 			}
 			if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
-				return fmt.Errorf("app.taxicall.process: [%s] failed to update call request to failed state: %w", cmd.TaxiCallRequestId, err)
+				return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] failed to update call request to failed state: %w", taxiCallRequest.Id, err)
 			}
 
-			taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState, receiveTime, receiveTime)
-			if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{taxiCallCmd}); err != nil {
-				return fmt.Errorf("app.taxicall.process [%s]: failed to create taxi call failure event: %w", cmd.TaxiCallRequestId, err)
-			}
+			events = append(events,
+				command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState, receiveTime, receiveTime))
 			return nil
 		}
 
 		// If ticket exists, return nil (late or duplicated message)
 		exists, err := t.repository.taxiCallRequest.TicketExists(ctx, i, taxiCallTicket)
 		if err != nil {
-			return fmt.Errorf("app.taxicall.process: [%s] error while check taxi call ticket existance: %w", cmd.TaxiCallRequestId, err)
+			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while check taxi call ticket existance: %w", taxiCallRequest.Id, err)
 		}
 		if exists {
 			// TODO (taekyeom) duplication & late event logging
@@ -135,7 +147,7 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 
 		// Update new ticket
 		if err := t.repository.taxiCallRequest.CreateTicket(ctx, i, taxiCallTicket); err != nil {
-			return fmt.Errorf("app.taxicall.process: [%s] error while create new ticket: %w", cmd.TaxiCallRequestId, err)
+			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while create new ticket: %w", taxiCallRequest.Id, err)
 		}
 
 		// Get drivers
@@ -143,7 +155,7 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 			GetDriverTaxiCallContextWithinRadius(ctx, i, taxiCallRequest.Departure.Point, taxiCallTicket.GetRadius(),
 				taxiCallTicket.TaxiCallRequestId, receiveTime)
 		if err != nil {
-			return fmt.Errorf("app.taxicall.process: [%s] error while get driver contexts within radius: %w", cmd.TaxiCallRequestId, err)
+			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while get driver contexts within radius: %w", taxiCallRequest.Id, err)
 		}
 
 		if len(driverTaxiCallContexts) > 0 {
@@ -156,7 +168,7 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 
 			// TODO (taekyeom) pick tit-for-tat drivers
 			if err := t.repository.taxiCallRequest.BulkUpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContexts); err != nil {
-				return fmt.Errorf("app.taxicall.process: [%s] error while upsert driver contexts within radius: %w", cmd.TaxiCallRequestId, err)
+				return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while upsert driver contexts within radius: %w", taxiCallRequest.Id, err)
 			}
 		}
 
@@ -166,12 +178,168 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 		driverCmds := slices.Map(driverTaxiCallContexts, func(i entity.DriverTaxiCallContext) entity.Event {
 			return command.NewDriverTaxiCallNotificationCommand(taxiCallRequest, taxiCallTicket, i)
 		})
-		cmds := append(driverCmds, userCmd, taxiCallCmd)
 
-		if err := t.repository.event.BatchCreate(ctx, i, cmds); err != nil {
-			return fmt.Errorf("app.taxicall.process: [%s] error while insert notification command events: %w", cmd.TaxiCallRequestId, err)
+		events = append(events, taxiCallCmd)
+		events = append(events, userCmd)
+		events = append(events, driverCmds...)
+
+		return nil
+	})
+
+	if err != nil {
+		return []entity.Event{}, err
+	}
+
+	return events, nil
+}
+
+func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+	events := []entity.Event{}
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		// TODO(taekyeom) Send location push message to user
+		if eventTime.Before(taxiCallRequest.UpdateTime) {
+			return nil
+		}
+
+		// TODO(taekyeom) 티켓 수신한 다른 기사분들을 다시 수신 가능한 상태로 만들어야 함
+
+		taxiCallTicket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, taxiCallRequest.DriverId.String)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		events = append(events, command.NewUserTaxiCallNotificationCommand(
+			taxiCallRequest,
+			taxiCallTicket,
+			driverTaxiCallContext,
+		))
+
+		return nil
+	})
+
+	if err != nil {
+		return []entity.Event{}, err
+	}
+
+	return events, nil
+}
+
+func (t taxicallApp) handleDriverToArrival(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+	// TODO(taekyeom) Send location push message to user
+	return []entity.Event{}, nil
+}
+
+func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+	// TODO(taekyeom) logging
+	if eventTime.Before(taxiCallRequest.UpdateTime) {
+		return []entity.Event{}, nil
+	}
+
+	events := []entity.Event{}
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
+			return fmt.Errorf("app.taxicall.handleDone [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
+		}
+		events = append(events, command.NewUserTaxiCallNotificationCommand(
+			taxiCallRequest,
+			entity.TaxiCallTicket{},
+			entity.DriverTaxiCallContext{},
+		))
+		return nil
+	})
+
+	if err != nil {
+		return []entity.Event{}, err
+	}
+
+	return events, nil
+}
+
+func (t taxicallApp) handleUserCancelld(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+	// TODO(taekyeom) logging
+	if eventTime.Before(taxiCallRequest.UpdateTime) {
+		return []entity.Event{}, nil
+	}
+
+	events := []entity.Event{}
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
+			return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		if taxiCallRequest.DriverId.Valid {
+			events = append(events, command.NewDriverTaxiCallNotificationCommand(
+				taxiCallRequest,
+				entity.TaxiCallTicket{},
+				entity.DriverTaxiCallContext{},
+			))
 		}
 
 		return nil
 	})
+
+	if err != nil {
+		return []entity.Event{}, err
+	}
+
+	return events, nil
+}
+
+func (t taxicallApp) handleDriverCancelld(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+	// TODO(taekyeom) logging
+	if eventTime.Before(taxiCallRequest.UpdateTime) {
+		return []entity.Event{}, nil
+	}
+
+	events := []entity.Event{}
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
+			return fmt.Errorf("app.taxicall.handleDriverCancelled [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		events = append(events, command.NewUserTaxiCallNotificationCommand(
+			taxiCallRequest,
+			entity.TaxiCallTicket{},
+			entity.DriverTaxiCallContext{},
+		))
+
+		return nil
+	})
+
+	if err != nil {
+		return []entity.Event{}, err
+	}
+
+	return events, nil
+}
+
+func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+	// TODO(taekyeom) logging
+	if eventTime.Before(taxiCallRequest.UpdateTime) {
+		return []entity.Event{}, nil
+	}
+
+	events := []entity.Event{}
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
+			return fmt.Errorf("app.taxicall.handleFailed [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
+		}
+		events = append(events, command.NewUserTaxiCallNotificationCommand(
+			taxiCallRequest,
+			entity.TaxiCallTicket{},
+			entity.DriverTaxiCallContext{},
+		))
+		return nil
+	})
+
+	if err != nil {
+		return []entity.Event{}, err
+	}
+
+	return events, nil
 }

@@ -195,7 +195,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 	return taxiCallRequest, nil
 }
 
-func (t taxicallApp) CancelTaxiCallRequest(ctx context.Context, userId string, taxiCallId string) error {
+func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId string, taxiCallId string) error {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {

@@ -91,7 +91,10 @@ func (b backofficeServer) ForceAcceptTaxiCallRequest(e echo.Context) error {
 func (b backofficeServer) DriverToArrival(e echo.Context) error {
 	ctx := e.Request().Context()
 
+	driverId := e.Param("driverId")
 	taxiCallRequestId := e.Param("taxiCallRequestId")
+
+	ctx = utils.SetDriverId(ctx, driverId)
 
 	err := b.app.driver.DriverToArrival(ctx, taxiCallRequestId)
 	if err != nil {

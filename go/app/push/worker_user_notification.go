@@ -95,3 +95,22 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmT
 		Data:      data,
 	}, nil
 }
+
+func (t taxiCallPushApp) handleDriverTaxiCallRequestCanceled(ctx context.Context, fcmToken string,
+	eventTime time.Time, cmd command.UserTaxiCallNotificationCommand) (value.Notification, error) {
+	message := value.NotificationMessage{
+		Title: "운행 취소",
+		Body:  "기사님이 택시 운행을 취소하였습니다.",
+	}
+
+	data := map[string]string{
+		"taxiCallRequestId": cmd.TaxiCallRequestId,
+		"taxiCallState":     cmd.TaxiCallState,
+	}
+
+	return value.Notification{
+		Principal: fcmToken,
+		Message:   message,
+		Data:      data,
+	}, nil
+}

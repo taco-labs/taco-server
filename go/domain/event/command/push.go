@@ -71,7 +71,7 @@ func NewDriverTaxiCallNotificationCommand(taxiCallRequest entity.TaxiCallRequest
 	taxiCallTicket entity.TaxiCallTicket,
 	driverTaxiCallContext entity.DriverTaxiCallContext) entity.Event {
 	cmd := DriverTaxiCallNotificationCommand{
-		DriverId:          driverTaxiCallContext.DriverId,
+		DriverId:          taxiCallRequest.DriverId.String,
 		UserId:            taxiCallRequest.UserId,
 		TaxiCallRequestId: taxiCallRequest.Id,
 		TaxiCallTicketId:  taxiCallTicket.TicketId,

@@ -33,7 +33,7 @@ type taxiCallInterface interface {
 	ListUserTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	LatestUserTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, string, entity.UserPayment, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
-	CancelTaxiCallRequest(context.Context, string, string) error
+	UserCancelTaxiCallRequest(context.Context, string, string) error
 }
 
 type userApp struct {

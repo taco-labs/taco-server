@@ -95,8 +95,8 @@ func (t taxiCallPushApp) handleUserNotification(ctx context.Context, event entit
 		notification, err = t.handleUserTaxiCallRequestFailed(ctx, fcmToken, event.CreateTime, userNotificationCommand)
 	case enum.TaxiCallState_DONE:
 		notification, err = t.handleUserTaxiCallRequestDone(ctx, fcmToken, event.CreateTime, userNotificationCommand)
-	case enum.TaxiCallState_USER_CANCELLED: // TODO(taekyeom) 현재는 user cancel에 대한 별도의 핸들링이 필요치 않아서 nil로 처리
-		return nil
+	case enum.TaxiCallState_DRIVER_CANCELLED:
+		notification, err = t.handleDriverTaxiCallRequestCanceled(ctx, fcmToken, event.CreateTime, userNotificationCommand)
 	default:
 		return fmt.Errorf("app.taxiCallPushApp.handleUserNotification: unsupported event: %s: %w", userNotificationCommand.TaxiCallState, value.ErrInvalidOperation)
 	}
@@ -139,6 +139,8 @@ func (t taxiCallPushApp) handleDriverNotification(ctx context.Context, event ent
 	switch enum.FromTaxiCallStateString(driverNotificationCommand.TaxiCallState) {
 	case enum.TaxiCallState_Requested:
 		notification, err = t.handleDriverTaxiCallRequestTicketDistribution(ctx, fcmToken, event.CreateTime, driverNotificationCommand)
+	case enum.TaxiCallState_USER_CANCELLED:
+		notification, err = t.handleUserTaxiCallRequestCanceled(ctx, fcmToken, event.CreateTime, driverNotificationCommand)
 	default:
 		return fmt.Errorf("app.taxiCallPushApp.handleDriverNotification: unsupported event: %s: %w", driverNotificationCommand.TaxiCallState, value.ErrInvalidOperation)
 	}

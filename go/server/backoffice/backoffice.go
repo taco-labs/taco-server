@@ -57,7 +57,7 @@ func (b *backofficeServer) initController() error {
 	driverGroup.PUT("/:driverId/activate", b.ActivateDriver)
 	driverGroup.PUT("/:driverId/force_accept/:taxiCallRequestId", b.ForceAcceptTaxiCallRequest)
 	driverGroup.PUT("/:driverId/to_arrival/:taxiCallRequestId", b.DriverToArrival)
-	driverGroup.POST("/:driverId/done/:taxiCallRequestId", b.DoneTaxiCallRequest)
+	driverGroup.PUT("/:driverId/done/:taxiCallRequestId", b.DoneTaxiCallRequest)
 
 	userGroup := b.echo.Group("/user")
 	userGroup.GET("/:userId", b.GetUser)

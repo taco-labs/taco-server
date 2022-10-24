@@ -28,7 +28,6 @@ func (d driverApp) DriverToArrival(ctx context.Context, callRequestId string) er
 
 func (d driverApp) AcceptTaxiCallRequest(ctx context.Context, ticketId string) error {
 	driverId := utils.GetDriverId(ctx)
-
 	return d.service.taxiCall.AcceptTaxiCallRequest(ctx, driverId, ticketId)
 }
 
@@ -42,4 +41,9 @@ func (d driverApp) DoneTaxiCallRequest(ctx context.Context, req request.DoneTaxi
 	driverId := utils.GetDriverId(ctx)
 
 	return d.service.taxiCall.DoneTaxiCallRequest(ctx, driverId, req)
+}
+
+func (d driverApp) CancelTaxiCallRequest(ctx context.Context, taxiCallRequestId string) error {
+	driverId := utils.GetDriverId(ctx)
+	return d.service.taxiCall.DriverCancelTaxiCallRequest(ctx, driverId, taxiCallRequestId)
 }

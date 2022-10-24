@@ -25,6 +25,7 @@ type TaxiCallRepository interface {
 
 	GetActiveRequestIds(context.Context, bun.IDB) ([]string, error)
 
+	GetTicketById(context.Context, bun.IDB, string) (entity.TaxiCallTicket, error)
 	GetLatestTicketByRequestId(context.Context, bun.IDB, string) (entity.TaxiCallTicket, error)
 	CreateTicket(context.Context, bun.IDB, entity.TaxiCallTicket) error
 	TicketExists(context.Context, bun.IDB, entity.TaxiCallTicket) (bool, error)
@@ -95,6 +96,23 @@ func (t taxiCallRepository) BulkUpsertDriverTaxiCallContext(ctx context.Context,
 	}
 
 	return nil
+}
+
+func (t taxiCallRepository) GetTicketById(ctx context.Context, db bun.IDB, ticketId string) (entity.TaxiCallTicket, error) {
+	resp := entity.TaxiCallTicket{}
+
+	err := db.NewSelect().Model(&resp).
+		Where("ticket_id = ?", ticketId).
+		Scan(ctx)
+
+	if errors.Is(sql.ErrNoRows, err) {
+		return entity.TaxiCallTicket{}, value.ErrNotFound
+	}
+	if err != nil {
+		return entity.TaxiCallTicket{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
 }
 
 func (t taxiCallRepository) GetLatestTicketByRequestId(ctx context.Context, db bun.IDB, requestId string) (entity.TaxiCallTicket, error) {
