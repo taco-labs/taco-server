@@ -15,10 +15,11 @@ type ServerConfig struct {
 	LocationService    LocationServiceConfig
 	Backoffice         BackofficeConfig
 	Firebase           FirebaseConfig
-	NotificationTopic  TopicConfig       `env:",prefix=TACO_NOTIFICATION_"`
-	TaxicallTopic      TopicConfig       `env:",prefix=TACO_TAXICALL_"`
-	NotificationOutbox EventOutboxConfig `env:",prefix=TACO_NOTIFICATION_OUTBOX_"`
-	TaxicallOutbox     EventOutboxConfig `env:",prefix=TACO_TAXICALL_OUTBOX_"`
+	NotificationTopic  TopicConfig          `env:",prefix=TACO_NOTIFICATION_"`
+	TaxicallTopic      TopicConfig          `env:",prefix=TACO_TAXICALL_"`
+	NotificationOutbox EventOutboxConfig    `env:",prefix=TACO_NOTIFICATION_OUTBOX_"`
+	TaxicallOutbox     EventOutboxConfig    `env:",prefix=TACO_TAXICALL_OUTBOX_"`
+	ImageUrlService    S3PresignedUrlConfig `env:",prefix=TACO_IMAGE_URL_SERVICE_"`
 
 	TaxicallApp TaxicallAppConfig `env:",prefix=TACO_TAXICALL_APP_"`
 }

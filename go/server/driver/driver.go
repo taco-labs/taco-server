@@ -40,6 +40,7 @@ func (d *driverServer) initController() error {
 	driverGroup.POST("/signup", d.Signup)
 	driverGroup.GET("/:driverId", d.GetDriver)
 	driverGroup.PUT("/:driverId", d.UpdateDriver)
+	driverGroup.GET("/:driverId/image_urls", d.GetDriverImageUrls)
 	driverGroup.PUT("/:driverId/on_duty", d.UpdateOnDuty)
 	driverGroup.PUT("/:driverId/location", d.UpdateDriverLocation)
 	driverGroup.POST("/:driverId/settlement_account", d.RegisterDriverSettlementAccount)

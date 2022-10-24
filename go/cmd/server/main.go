@@ -11,6 +11,7 @@ import (
 
 	firebase "firebase.google.com/go"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/panjf2000/ants/v2"
 	"github.com/taco-labs/taco/go/app"
@@ -43,6 +44,12 @@ func main() {
 	if err != nil {
 		fmt.Printf("Failed to initialize taco config: %+v\n", err)
 		os.Exit(1)
+	}
+
+	// Initialize aws sdk v2 session
+	awsconf, err := awsconfig.LoadDefaultConfig(ctx)
+	if err != nil {
+		fmt.Printf("Failed to load default aws config: %+v\n", err)
 	}
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&search_path=%s",
@@ -104,8 +111,6 @@ func main() {
 		config.LocationService.ApiSecret,
 	)
 
-	fileUploadService := service.NewMockFileUploadService()
-
 	// TODO(taekyeom) Replace mock to real one
 	tossPaymentService := service.NewTossPaymentService(
 		config.PaymentService.Endpoint,
@@ -136,12 +141,6 @@ func main() {
 	})
 	defer firebasepub.Shutdown(ctx)
 	notificationService := service.NewFirebaseNotificationService(firebasepub)
-
-	// Initialize aws sdk v2 session
-	awsconf, err := awsconfig.LoadDefaultConfig(ctx)
-	if err != nil {
-		fmt.Printf("Failed to load default aws config: %+v\n", err)
-	}
 	sqsClient := sqs.NewFromConfig(awsconf)
 
 	// notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationTopic.GetSqsUri())
@@ -186,6 +185,15 @@ func main() {
 	}
 	defer taxicallPublisher.Shutdown(ctx)
 	taxicallPublisherService := service.NewSqsPubService(taxicallPublisher)
+
+	s3Client := s3.NewFromConfig(awsconf)
+	presignedClient := s3.NewPresignClient(s3Client)
+	s3ImagePresignedUrlService := service.NewS3ImagePresignedUrlService(
+		presignedClient,
+		config.ImageUrlService.Timeout,
+		config.ImageUrlService.Bucket,
+		config.ImageUrlService.BasePath,
+	)
 
 	// Init apps
 	pushApp, err := push.NewPushApp(
@@ -310,10 +318,10 @@ func main() {
 		driver.WithSessionService(driverSessionApp),
 		driver.WithSmsSenderService(smsSenderService),
 		driver.WithSmsVerificationRepository(smsVerificationRepository),
-		driver.WithFileUploadService(fileUploadService),
 		driver.WithEventRepository(eventRepository),
 		driver.WithPushService(pushApp),
 		driver.WithTaxiCallService(taxicallApp),
+		driver.WithImageUrlService(s3ImagePresignedUrlService),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver app: %v\n", err)

@@ -8,6 +8,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/response"
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/server"
 	"github.com/taco-labs/taco/go/utils/slices"
 )
@@ -17,6 +18,7 @@ type driverApp interface {
 	SmsSignin(context.Context, request.SmsSigninRequest) (entity.Driver, string, error)
 	Signup(context.Context, request.DriverSignupRequest) (entity.Driver, string, error)
 	GetDriver(context.Context, string) (entity.Driver, error)
+	GetDriverImageUrls(context.Context, string) (value.DriverImageUrls, value.DriverImageUrls, error)
 	UpdateDriver(context.Context, request.DriverUpdateRequest) (entity.Driver, error)
 	UpdateOnDuty(context.Context, request.DriverOnDutyUpdateRequest) error
 	UpdateDriverLocation(context.Context, request.DriverLocationUpdateRequest) error
@@ -132,6 +134,24 @@ func (d driverServer) UpdateDriver(e echo.Context) error {
 	}
 
 	resp := response.DriverToResponse(driver)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) GetDriverImageUrls(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+
+	downloadUrls, uploadUrls, err := d.app.driver.GetDriverImageUrls(ctx, driverId)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	resp := response.DriverImageUrlResponse{
+		DownloadUrls: downloadUrls,
+		UploadUrls:   uploadUrls,
+	}
 
 	return e.JSON(http.StatusOK, resp)
 }

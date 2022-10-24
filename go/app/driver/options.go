@@ -52,12 +52,6 @@ func WithSmsSenderService(svc service.SmsSenderService) driverAppOption {
 	}
 }
 
-func WithFileUploadService(svc service.FileUploadService) driverAppOption {
-	return func(da *driverApp) {
-		da.service.fileUpload = svc
-	}
-}
-
 func WithPushService(svc pushServiceInterface) driverAppOption {
 	return func(da *driverApp) {
 		da.service.push = svc
@@ -67,6 +61,12 @@ func WithPushService(svc pushServiceInterface) driverAppOption {
 func WithTaxiCallService(svc driverTaxiCallInterface) driverAppOption {
 	return func(da *driverApp) {
 		da.service.taxiCall = svc
+	}
+}
+
+func WithImageUrlService(svc service.ImageUrlService) driverAppOption {
+	return func(da *driverApp) {
+		da.service.imageUrl = svc
 	}
 }
 
@@ -99,16 +99,16 @@ func (d driverApp) validateApp() error {
 		return errors.New("driver app need sms sender service")
 	}
 
-	if d.service.fileUpload == nil {
-		return errors.New("driver app need file upload service")
-	}
-
 	if d.service.push == nil {
 		return errors.New("driver app need push service")
 	}
 
 	if d.service.taxiCall == nil {
 		return errors.New("driver app need taxi call service")
+	}
+
+	if d.service.imageUrl == nil {
+		return errors.New("driver app need image url service")
 	}
 
 	return nil

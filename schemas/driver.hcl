@@ -71,10 +71,23 @@ table "driver" {
     null = false
   }
 
-  column "driver_license_image_url" {
+  column "company_registration_number" {
     type = text
+    null = true
+  }
+
+  column "driver_license_image_uploaded" {
+    type = boolean
     null = false
-    comment = "S3 URL for driver license card"
+    default = false
+    comment = "Flag that driver license image uploaded"
+  }
+
+  column "driver_profile_image_uploaded" {
+    type = boolean
+    null = false
+    default = false
+    comment = "Flag that driver profile image uploaded"
   }
 
   column "user_unique_key" {

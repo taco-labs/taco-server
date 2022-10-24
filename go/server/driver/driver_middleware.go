@@ -20,6 +20,11 @@ var skipSet = map[string]struct{}{
 	"/healthz":                   {},
 }
 
+var allowNonActivatedPaths = map[string]struct{}{
+	"/driver/:driverId":            {},
+	"/driver/:driverId/image_urls": {},
+}
+
 type driverSessionApp interface {
 	GetById(context.Context, string) (entity.DriverSession, error)
 }
@@ -48,6 +53,11 @@ func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, er
 	}
 	if err != nil {
 		return false, err
+	}
+
+	_, ok := allowNonActivatedPaths[key]
+	if ok {
+		return true, nil
 	}
 
 	if !session.Activated {

@@ -62,3 +62,9 @@ type WorkerPoolConfig struct {
 	PoolSize int  `env:"POOL_SIZE,required"`
 	PreAlloc bool `env:"PRE_ALLOC,default=false"`
 }
+
+type S3PresignedUrlConfig struct {
+	Timeout  time.Duration `env:"TIMEOUT,required"`
+	Bucket   string        `env:"BUCKET,required"`
+	BasePath string        `env:"BASE_PATH,required"`
+}

@@ -16,10 +16,12 @@ type DriverSignupRequest struct {
 }
 
 type DriverUpdateRequest struct {
-	Id          string `param:"driverId"`
-	AppOs       string `json:"appOs"`
-	AppVersion  string `json:"appVersion"`
-	AppFcmToken string `json:"appFcmToken"`
+	Id                   string `param:"driverId"`
+	AppOs                string `json:"appOs"`
+	AppVersion           string `json:"appVersion"`
+	AppFcmToken          string `json:"appFcmToken"`
+	LicenseImageUploaded bool   `json:"licenseImageUploaded"`
+	ProfileImageUploaded bool   `json:"profileImageUploaded"`
 }
 
 type DriverOnDutyUpdateRequest struct {

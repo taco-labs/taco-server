@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/value"
 )
 
 type DriverResponse struct {
@@ -57,4 +58,9 @@ func DriverSettlemtnAccountToResponse(account entity.DriverSettlementAccount) Dr
 		CreateTime:    account.CreateTime,
 		UpdateTime:    account.UpdateTime,
 	}
+}
+
+type DriverImageUrlResponse struct {
+	UploadUrls   value.DriverImageUrls `json:"uploadUrls"`
+	DownloadUrls value.DriverImageUrls `json:"downloadUrls"`
 }
