@@ -23,26 +23,27 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 		return fmt.Errorf("app.taxicall.handleEvent: error while unmarshal json: %v", err)
 	}
 
+	recieveTime := time.Now()
 	if until := time.Until(taxiProgressCmd.DesiredScheduleTime); until > 0 {
+		recieveTime = taxiProgressCmd.DesiredScheduleTime
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(until):
 		}
 	}
-	return t.process(ctx, event.RetryCount, taxiProgressCmd)
+
+	return t.process(ctx, recieveTime, event.RetryCount, taxiProgressCmd)
 }
 
-func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.TaxiCallProcessMessage) error {
-	receiveTime := time.Now()
+func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCount int, cmd command.TaxiCallProcessMessage) error {
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		//TODO (taekyeom) make taxi call request failed when retry count exceeded
-
 		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, cmd.TaxiCallRequestId)
 		if err != nil {
 			return fmt.Errorf("app.taxicall.process [%s]: error while get call request: %w", cmd.TaxiCallRequestId, err)
 		}
 
+		//TODO (taekyeom) make taxi call request failed when retry count exceeded
 		if retryCount > 3 {
 			// TODO (taekyeom) logging
 			if err := taxiCallRequest.UpdateState(receiveTime, enum.TaxiCallState_FAILED); err != nil {
@@ -105,10 +106,7 @@ func (t taxicallApp) process(ctx context.Context, retryCount int, cmd command.Ta
 			return nil
 		}
 
-		validTicketOperation := true
-		if !taxiCallTicket.IncreaseAttempt(receiveTime) {
-			validTicketOperation = taxiCallTicket.IncreasePrice(taxiCallRequest.RequestMaxAdditionalPrice, receiveTime)
-		}
+		taxiCallTicket, validTicketOperation := taxiCallTicket.Step(taxiCallRequest.RequestMaxAdditionalPrice, receiveTime)
 
 		if !validTicketOperation {
 			if err := taxiCallRequest.UpdateState(receiveTime, enum.TaxiCallState_FAILED); err != nil {

@@ -61,37 +61,32 @@ type TaxiCallTicket struct {
 	CreateTime        time.Time `bun:"create_time"`
 }
 
-func (t TaxiCallTicket) Copy() TaxiCallTicket {
-	return TaxiCallTicket{
-		TicketId:          t.TicketId,
-		TaxiCallRequestId: t.TaxiCallRequestId,
-		Attempt:           t.Attempt,
-		AdditionalPrice:   t.AdditionalPrice,
-		CreateTime:        t.CreateTime,
+func (t TaxiCallTicket) Step(maxPrice int, updateTime time.Time) (TaxiCallTicket, bool) {
+	if t.Attempt < AttemptLimit {
+		return TaxiCallTicket{
+			TicketId:          t.TicketId,
+			TaxiCallRequestId: t.TaxiCallRequestId,
+			Attempt:           t.Attempt + 1,
+			AdditionalPrice:   t.AdditionalPrice,
+			CreateTime:        updateTime,
+		}, true
 	}
-}
 
-func (t TaxiCallTicket) ValidAttempt() bool {
-	return t.Attempt <= AttemptLimit
-}
+	if t.AdditionalPrice < maxPrice {
+		additionalPrice := t.AdditionalPrice + PriceStep
+		if additionalPrice > maxPrice {
+			additionalPrice = maxPrice
+		}
+		return TaxiCallTicket{
+			TicketId:          utils.MustNewUUID(),
+			TaxiCallRequestId: t.TaxiCallRequestId,
+			Attempt:           1,
+			AdditionalPrice:   additionalPrice,
+			CreateTime:        updateTime,
+		}, true
+	}
 
-func (t TaxiCallTicket) ValidAdditionalPrice(maxAdditionlPrice int) bool {
-	return t.AdditionalPrice <= maxAdditionlPrice
-}
-
-func (t *TaxiCallTicket) IncreaseAttempt(updateTime time.Time) bool {
-	t.Attempt += 1
-	t.CreateTime = updateTime
-	return t.ValidAttempt()
-}
-
-func (t *TaxiCallTicket) IncreasePrice(maxPrice int, updateTime time.Time) bool {
-	t.TicketId = utils.MustNewUUID()
-	t.Attempt = 1
-	t.AdditionalPrice += PriceStep
-	t.CreateTime = updateTime
-
-	return t.ValidAdditionalPrice(maxPrice)
+	return TaxiCallTicket{}, false
 }
 
 func (t TaxiCallTicket) GetRadius() int {
