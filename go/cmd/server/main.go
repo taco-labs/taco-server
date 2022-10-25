@@ -23,7 +23,6 @@ import (
 	"github.com/taco-labs/taco/go/app/user"
 	"github.com/taco-labs/taco/go/app/usersession"
 	"github.com/taco-labs/taco/go/config"
-	firebasepubsub "github.com/taco-labs/taco/go/external/pubsub/firebase"
 	"github.com/taco-labs/taco/go/repository"
 	backofficeserver "github.com/taco-labs/taco/go/server/backoffice"
 	driverserver "github.com/taco-labs/taco/go/server/driver"
@@ -34,6 +33,7 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/extra/bundebug"
 	"gocloud.dev/pubsub/awssnssqs"
+	firebasepubsub "gocloud.dev/pubsub/firebase"
 )
 
 func main() {

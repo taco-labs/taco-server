@@ -83,4 +83,4 @@ require (
 	mellium.im/sasl v0.2.1 // indirect
 )
 
-replace gocloud.dev v0.27.0 => github.com/taco-labs/go-cloud v0.27.0-taco-server-1
+replace gocloud.dev v0.27.0 => ./go-cloud
