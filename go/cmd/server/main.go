@@ -13,6 +13,9 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/dgraph-io/ristretto"
+	"github.com/eko/gocache/v3/cache"
+	"github.com/eko/gocache/v3/store"
 	"github.com/panjf2000/ants/v2"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/driver"
@@ -194,6 +197,21 @@ func main() {
 		config.ImageUrlService.Bucket,
 		config.ImageUrlService.BasePath,
 	)
+	// TODO(taekyeom) max cache size to be configured
+	imageUrlRistrettoCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: int64(10 * config.ImageUrlService.MaxCacheSizeEntires),
+		MaxCost:     int64(config.ImageUrlService.MaxCacheSizeBytes),
+		BufferItems: 64,
+	})
+	if err != nil {
+		fmt.Printf("Failed to setup ristreeto cache: %v\n", err)
+		os.Exit(1)
+	}
+	imageUrlCache := store.NewRistretto(imageUrlRistrettoCache,
+		store.WithExpiration(config.ImageUrlService.Timeout),
+	)
+	imageUrlCacheManager := cache.New[string](imageUrlCache)
+	cachedS3ImagePresignedUrlService := service.NewCachedUrlService(imageUrlCacheManager, s3ImagePresignedUrlService)
 
 	// Init apps
 	pushApp, err := push.NewPushApp(
@@ -321,7 +339,7 @@ func main() {
 		driver.WithEventRepository(eventRepository),
 		driver.WithPushService(pushApp),
 		driver.WithTaxiCallService(taxicallApp),
-		driver.WithImageUrlService(s3ImagePresignedUrlService),
+		driver.WithImageUrlService(cachedS3ImagePresignedUrlService),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver app: %v\n", err)

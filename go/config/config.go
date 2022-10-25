@@ -64,7 +64,9 @@ type WorkerPoolConfig struct {
 }
 
 type S3PresignedUrlConfig struct {
-	Timeout  time.Duration `env:"TIMEOUT,required"`
-	Bucket   string        `env:"BUCKET,required"`
-	BasePath string        `env:"BASE_PATH,required"`
+	Timeout             time.Duration `env:"TIMEOUT,required"`
+	Bucket              string        `env:"BUCKET,required"`
+	BasePath            string        `env:"BASE_PATH,required"`
+	MaxCacheSizeBytes   int           `env:"MAX_CACHE_SIZE_BYTES,required"`
+	MaxCacheSizeEntires int           `env:"MAX_CACHE_SIZE_ENTRIES,required"`
 }

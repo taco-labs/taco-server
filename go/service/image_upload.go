@@ -3,32 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/eko/gocache/v3/cache"
 	"github.com/taco-labs/taco/go/domain/value"
 )
-
-type ImageUploaderService interface {
-	Upload(context.Context, os.File) (string, error)
-	Delete(context.Context, string) error
-}
-
-type mockFileUploadService struct{}
-
-func (m mockFileUploadService) Upload(_ context.Context, _ os.File) (string, error) {
-	return "/testurl", nil
-}
-
-func (m mockFileUploadService) Delete(_ context.Context, _ string) error {
-	return nil
-}
-
-func NewMockFileUploadService() mockFileUploadService {
-	return mockFileUploadService{}
-}
 
 type ImageUrlService interface {
 	GetDownloadUrl(context.Context, string) (string, error)
@@ -91,4 +72,45 @@ func NewS3ImagePresignedUrlService(client *s3.PresignClient, timeout time.Durati
 
 func getS3Key(basePath string, path string) string {
 	return fmt.Sprintf("%s/%s", basePath, path)
+}
+
+type cachedUrlService struct {
+	svc              ImageUrlService
+	downloadUrlCache cache.CacheInterface[string]
+	uploadUrlCache   cache.CacheInterface[string]
+}
+
+func (c cachedUrlService) GetDownloadUrl(ctx context.Context, key string) (string, error) {
+	return c.downloadUrlCache.Get(ctx, key)
+}
+
+func (c cachedUrlService) GetUploadUrl(ctx context.Context, key string) (string, error) {
+	return c.uploadUrlCache.Get(ctx, key)
+}
+
+func NewCachedUrlService(cacheInterface cache.CacheInterface[string], svc ImageUrlService) cachedUrlService {
+	loadDownloadUrlFn := func(ctx context.Context, key any) (string, error) {
+		keyStr, ok := key.(string)
+		if !ok {
+			return "", fmt.Errorf("%w: Can not convert key (%v) to string", value.ErrInternal, key)
+		}
+		return svc.GetDownloadUrl(ctx, keyStr)
+	}
+
+	loadUploadUrlFn := func(ctx context.Context, key any) (string, error) {
+		keyStr, ok := key.(string)
+		if !ok {
+			return "", fmt.Errorf("%w: Can not convert key (%v) to string", value.ErrInternal, key)
+		}
+		return svc.GetUploadUrl(ctx, keyStr)
+	}
+
+	downloadCache := cache.NewLoadable(loadDownloadUrlFn, cacheInterface)
+	uploadCache := cache.NewLoadable(loadUploadUrlFn, cacheInterface)
+
+	return cachedUrlService{
+		svc:              svc,
+		downloadUrlCache: downloadCache,
+		uploadUrlCache:   uploadCache,
+	}
 }
