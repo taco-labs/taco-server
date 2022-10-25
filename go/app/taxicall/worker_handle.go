@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -159,6 +160,13 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 		}
 
 		if len(driverTaxiCallContexts) > 0 {
+			// TODO (taekyeom) Tit-for-tat paramter 도 나중엔 configurable 하게 바꿔야 함
+			// - Total entites: query로 부터 최대 몇 개의 entity를 가져 올 것인지
+			// - Result entites: Total entites 중 몇 개의 entity에게 call ticket을 뿌릴 것인가
+			// - Tit entites: top n 개의 entity를 몇 개 결정 할 것인지
+			// - Tat entites (= Result entites - Tit entites) 몇 개의 entity를 total result 중 tit entity를 제외하고 랜덤하게 고를 것인지
+			driverTaxiCallContexts = selectTaxiCallContextsToDistribute(driverTaxiCallContexts)
+
 			driverTaxiCallContexts = slices.Map(driverTaxiCallContexts, func(dctx entity.DriverTaxiCallContext) entity.DriverTaxiCallContext {
 				dctx.LastReceivedRequestTicket = taxiCallTicket.TaxiCallRequestId
 				dctx.LastReceiveTime = receiveTime
@@ -166,7 +174,6 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 				return dctx
 			})
 
-			// TODO (taekyeom) pick tit-for-tat drivers
 			if err := t.repository.taxiCallRequest.BulkUpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContexts); err != nil {
 				return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while upsert driver contexts within radius: %w", taxiCallRequest.Id, err)
 			}
@@ -191,6 +198,17 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 	}
 
 	return events, nil
+}
+
+func selectTaxiCallContextsToDistribute(taxiCallContexts []entity.DriverTaxiCallContext) []entity.DriverTaxiCallContext {
+	if len(taxiCallContexts) <= 5 {
+		return taxiCallContexts
+	} else {
+		rand.Shuffle(len(taxiCallContexts)-2, func(i, j int) {
+			taxiCallContexts[3+i], taxiCallContexts[3+j] = taxiCallContexts[3+j], taxiCallContexts[3+i]
+		})
+		return taxiCallContexts[:5]
+	}
 }
 
 func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {

@@ -1,11 +1,12 @@
 FROM golang:1.19.2-bullseye as builder
 
 WORKDIR /go/src/github.com/ktk1012/taco
-COPY ./go-cloud ./go-cloud
 COPY ./go.mod ./go.sum ./
+COPY ./go-cloud/go.mod ./go-cloud/go.sum ./go-cloud/
 
 RUN go mod download
 
 COPY ./go ./go
+COPY ./go-cloud ./go-cloud
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-w -s' -o main ./go/cmd/server/main.go
