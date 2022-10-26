@@ -144,7 +144,7 @@ table "driver_settlement_account" {
     comment = "Bank enum value"
   }
 
-  column "accountNumber" {
+  column "account_number" {
     type = text
     null = false
     comment = "계좌번호"
