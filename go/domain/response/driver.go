@@ -8,19 +8,22 @@ import (
 )
 
 type DriverResponse struct {
-	Id           string                `json:"id"`
-	DriverType   string                `json:"driverType"`
-	FirstName    string                `json:"firstName"`
-	LastName     string                `json:"lastName"`
-	BirthDay     string                `json:"birthday"`
-	Phone        string                `json:"phone"`
-	Gender       string                `json:"gender"`
-	AppOs        string                `json:"appOs"`
-	AppVersion   string                `json:"osVersion"`
-	Active       bool                  `json:"active"`
-	OnDuty       bool                  `json:"onDuty"`
-	UploadUrls   value.DriverImageUrls `json:"uploadUrls"`
-	DownloadUrls value.DriverImageUrls `json:"downloadUrls"`
+	Id                        string                `json:"id"`
+	DriverType                string                `json:"driverType"`
+	FirstName                 string                `json:"firstName"`
+	LastName                  string                `json:"lastName"`
+	BirthDay                  string                `json:"birthday"`
+	Phone                     string                `json:"phone"`
+	Gender                    string                `json:"gender"`
+	AppOs                     string                `json:"appOs"`
+	AppVersion                string                `json:"osVersion"`
+	Active                    bool                  `json:"active"`
+	OnDuty                    bool                  `json:"onDuty"`
+	DriverLicenseId           string                `json:"driverLicenseId"`
+	CompanyRegistrationNumber string                `json:"companyRegistrationNumber"`
+	CarNumber                 string                `json:"carNumber"`
+	UploadUrls                value.DriverImageUrls `json:"uploadUrls"`
+	DownloadUrls              value.DriverImageUrls `json:"downloadUrls"`
 }
 
 type DriverSignupResponse struct {
@@ -30,19 +33,22 @@ type DriverSignupResponse struct {
 
 func DriverToResponse(driver entity.Driver) DriverResponse {
 	return DriverResponse{
-		Id:           driver.Id,
-		DriverType:   string(driver.DriverType),
-		FirstName:    driver.FirstName,
-		LastName:     driver.LastName,
-		BirthDay:     driver.BirthDay,
-		Phone:        driver.Phone,
-		Gender:       driver.Gender,
-		AppOs:        string(driver.AppOs),
-		AppVersion:   driver.AppVersion,
-		Active:       driver.Active,
-		OnDuty:       driver.OnDuty,
-		UploadUrls:   driver.UploadUrls,
-		DownloadUrls: driver.DownloadUrls,
+		Id:                        driver.Id,
+		DriverType:                string(driver.DriverType),
+		FirstName:                 driver.FirstName,
+		LastName:                  driver.LastName,
+		BirthDay:                  driver.BirthDay,
+		Phone:                     driver.Phone,
+		Gender:                    driver.Gender,
+		DriverLicenseId:           driver.DriverLicenseId,
+		CarNumber:                 driver.CarNumber,
+		CompanyRegistrationNumber: driver.CompanyRegistrationNumber,
+		AppOs:                     string(driver.AppOs),
+		AppVersion:                driver.AppVersion,
+		Active:                    driver.Active,
+		OnDuty:                    driver.OnDuty,
+		UploadUrls:                driver.UploadUrls,
+		DownloadUrls:              driver.DownloadUrls,
 	}
 }
 

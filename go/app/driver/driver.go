@@ -205,6 +205,8 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			AppVersion:                 req.AppVersion,
 			UserUniqueKey:              req.Phone,
 			DriverLicenseId:            req.DriverLicenseId,
+			CompanyRegistrationNumber:  req.CompanyRegistrationNumber,
+			CarNumber:                  req.CarNumber,
 			DriverLicenseImageUploaded: false,
 			DriverProfileImageUploaded: false,
 			OnDuty:                     false,
@@ -307,6 +309,7 @@ func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateReq
 		driverDto.AppVersion = req.AppVersion
 		driverDto.DriverLicenseImageUploaded = req.LicenseImageUploaded
 		driverDto.DriverProfileImageUploaded = req.ProfileImageUploaded
+		driverDto.CarNumber = req.CarNumber
 		driverDto.UpdateTime = requestTime
 
 		if err := d.repository.driver.Update(ctx, i, driverDto); err != nil {

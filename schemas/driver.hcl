@@ -54,6 +54,11 @@ table "driver" {
     null = false
   }
 
+  column "car_number" {
+    type = text
+    null = false
+  }
+
   column "active" {
     type = boolean
     null = false
@@ -73,7 +78,7 @@ table "driver" {
 
   column "company_registration_number" {
     type = text
-    null = true
+    null = false
   }
 
   column "driver_license_image_uploaded" {

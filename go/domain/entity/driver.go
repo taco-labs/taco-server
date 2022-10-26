@@ -28,6 +28,8 @@ type DriverDto struct {
 	AppVersion                 string          `bun:"app_version"`
 	UserUniqueKey              string          `bun:"user_unique_key"`
 	DriverLicenseId            string          `bun:"driver_license_id"`
+	CompanyRegistrationNumber  string          `bun:"company_registration_number"`
+	CarNumber                  string          `bun:"car_number"`
 	DriverLicenseImageUploaded bool            `bun:"driver_license_image_uploaded"`
 	DriverProfileImageUploaded bool            `bun:"driver_profile_image_uploaded"`
 	Active                     bool            `bun:"active"`
