@@ -46,6 +46,18 @@ func WithEventSubscribeService(svc service.EventSubscriptionService) pushAppOpti
 	}
 }
 
+func WithUserGetterService(svc userGetterInterface) pushAppOption {
+	return func(tcpa *taxiCallPushApp) {
+		tcpa.service.userGetter = svc
+	}
+}
+
+func WithDriverGetterService(svc driverGetterInterface) pushAppOption {
+	return func(tcpa *taxiCallPushApp) {
+		tcpa.service.driverGetter = svc
+	}
+}
+
 func (t taxiCallPushApp) validate() error {
 	if t.Transactor == nil {
 		return errors.New("taxi call push app need transactor")
@@ -69,6 +81,14 @@ func (t taxiCallPushApp) validate() error {
 
 	if t.service.eventSub == nil {
 		return errors.New("taxi call push app need event subscriber")
+	}
+
+	if t.service.userGetter == nil {
+		return errors.New("taxi call push app need user getter")
+	}
+
+	if t.service.driverGetter == nil {
+		return errors.New("taxi call push app need driver getter")
 	}
 
 	return nil

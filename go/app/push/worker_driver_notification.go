@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/uptrace/bun"
 )
 
 func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx context.Context, fcmToken string,
@@ -16,6 +18,19 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 	if err != nil {
 		return value.Notification{},
 			fmt.Errorf("service.TaxiCallPush.handleDriverTaxiCallRequestTicketDistribution: error while get route between driver location and departure: %w", err)
+	}
+
+	var user entity.User
+	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		u, err := t.service.userGetter.GetUser(ctx, cmd.UserId)
+		if err != nil {
+			return fmt.Errorf("service.TaxiCallPush.handleDriverTaxiCallRequestTicketDistribution: error while get user: %w", err)
+		}
+		user = u
+		return nil
+	})
+	if err != nil {
+		return value.Notification{}, err
 	}
 
 	message := value.NotificationMessage{
@@ -31,16 +46,22 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"additionalPrice":             fmt.Sprint(cmd.AdditionalPrice),
 		"toDepartureDistance":         fmt.Sprint(routeBetweenDeparture.Distance),
 		"toDepartureETA":              fmt.Sprint(routeBetweenDeparture.ETA),
+		"departureLatitude":           fmt.Sprint(cmd.Departure.Point.Latitude),
+		"departureLongitude":          fmt.Sprint(cmd.Departure.Point.Longitude),
 		"departureAdressRegionDepth1": cmd.Departure.Address.RegionDepth1,
 		"departureAdressRegionDepth2": cmd.Departure.Address.RegionDepth2,
 		"departureAdressRegionDepth3": cmd.Departure.Address.RegionDepth3,
 		"departureMainAddressNo":      cmd.Departure.Address.MainAddressNo,
 		"departureSubAddressNo":       cmd.Departure.Address.SubAddressNo,
+		"arrivalLatitude":             fmt.Sprint(cmd.Arrival.Point.Latitude),
+		"arrivalLongitude":            fmt.Sprint(cmd.Arrival.Point.Longitude),
 		"arrivalAdressRegionDepth1":   cmd.Arrival.Address.RegionDepth1,
 		"arrivalAdressRegionDepth2":   cmd.Arrival.Address.RegionDepth2,
 		"arrivalAdressRegionDepth3":   cmd.Arrival.Address.RegionDepth3,
 		"arrivalMainAddressNo":        cmd.Arrival.Address.MainAddressNo,
 		"arrivalSubAddressNo":         cmd.Arrival.Address.SubAddressNo,
+		"userId":                      cmd.UserId,
+		"userPhone":                   user.Phone,
 	}
 
 	return value.Notification{

@@ -68,6 +68,6 @@ func (d defaultTransactor) RunWithNonRollbackError(ctx context.Context, nonRollb
 	return err
 }
 
-func NewDefaultTranscator(db *bun.DB) defaultTransactor {
-	return defaultTransactor{db}
+func NewDefaultTranscator(db *bun.DB) *defaultTransactor {
+	return &defaultTransactor{db}
 }

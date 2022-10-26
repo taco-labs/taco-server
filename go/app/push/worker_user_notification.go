@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/uptrace/bun"
 )
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestProgress(ctx context.Context, fcmToken string,
@@ -26,6 +28,20 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestProgress(ctx context.Context, 
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.UserTaxiCallNotificationCommand) (value.Notification, error) {
+	// Get Driver
+	var driver entity.Driver
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		dr, err := t.service.driverGetter.GetDriver(ctx, cmd.DriverId)
+		if err != nil {
+			return fmt.Errorf("app.push.handleUserTaxiCallRequestAccepted: error while get driver: %w", err)
+		}
+		driver = dr
+		return nil
+	})
+	if err != nil {
+		return value.Notification{}, err
+	}
+
 	routeBetweenDeparture, err := t.service.route.GetRoute(ctx, cmd.DriverLocation, cmd.Departure.Point)
 	if err != nil {
 		return value.Notification{},
@@ -40,7 +56,8 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 	data := map[string]string{
 		"taxiCallRequestId":     cmd.TaxiCallRequestId,
 		"taxiCallState":         cmd.TaxiCallState,
-		"driverId":              cmd.DriverId, // TODO (driver informations)
+		"driverId":              cmd.DriverId,
+		"driverPhone":           driver.Phone,
 		"requestBasePrice":      fmt.Sprint(cmd.RequestBasePrice),
 		"additionalPrice":       fmt.Sprint(cmd.AdditionalPrice),
 		"toDepartureDistance":   fmt.Sprint(routeBetweenDeparture.Distance),

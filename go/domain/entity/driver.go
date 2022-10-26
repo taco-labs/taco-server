@@ -9,6 +9,12 @@ import (
 )
 
 type Driver struct {
+	DriverDto
+	DownloadUrls value.DriverImageUrls
+	UploadUrls   value.DriverImageUrls
+}
+
+type DriverDto struct {
 	bun.BaseModel `bun:"table:driver"`
 
 	Id                         string          `bun:"id,pk"`

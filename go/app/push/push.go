@@ -15,6 +15,14 @@ import (
 	"github.com/uptrace/bun"
 )
 
+type userGetterInterface interface {
+	GetUser(context.Context, string) (entity.User, error)
+}
+
+type driverGetterInterface interface {
+	GetDriver(context.Context, string) (entity.Driver, error)
+}
+
 type taxiCallPushApp struct {
 	app.Transactor
 	repository struct {
@@ -25,6 +33,8 @@ type taxiCallPushApp struct {
 		notification service.NotificationService
 		eventPub     service.EventPublishService
 		eventSub     service.EventSubscriptionService
+		userGetter   userGetterInterface
+		driverGetter driverGetterInterface
 	}
 	waitCh chan struct{}
 }

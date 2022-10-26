@@ -214,6 +214,9 @@ func main() {
 	cachedS3ImagePresignedUrlService := service.NewCachedUrlService(imageUrlCacheManager, s3ImagePresignedUrlService)
 
 	// Init apps
+	userGetterDelegator := push.NewUserGetterDelegator()
+	driverGetterDelegator := push.NewDriverGetterDelegator()
+
 	pushApp, err := push.NewPushApp(
 		push.WithTransactor(transactor),
 		push.WithRouteService(mapRouteService),
@@ -221,17 +224,13 @@ func main() {
 		push.WithPushTokenRepository(pushTokenRepository),
 		push.WithEventSubscribeService(notificationSubscriberService),
 		push.WithEventPublisherService(notificationPublisherService),
+		push.WithUserGetterService(userGetterDelegator),
+		push.WithDriverGetterService(driverGetterDelegator),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup push app: %v\n", err)
 		os.Exit(1)
 	}
-
-	if err := pushApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start push app event loop: %v\n", err)
-		os.Exit(1)
-	}
-	defer pushApp.Stop(ctx)
 
 	taxicallApp, err := taxicall.NewTaxicallApp(
 		taxicall.WithTransactor(transactor),
@@ -248,7 +247,6 @@ func main() {
 		fmt.Printf("Failed to start taxi call app: %v\n", err)
 		os.Exit(1)
 	}
-	defer taxicallApp.Shutdown(ctx)
 
 	notificationOutboxApp, err := outbox.NewOutboxApp(
 		outbox.WithTransactor(transactor),
@@ -263,12 +261,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := notificationOutboxApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start notification outbox app: %+v\n", err)
-		os.Exit(1)
-	}
-	defer notificationOutboxApp.Shuwdown()
-
 	taxicallOutboxApp, err := outbox.NewOutboxApp(
 		outbox.WithTransactor(transactor),
 		outbox.WithEventRepository(eventRepository),
@@ -279,17 +271,6 @@ func main() {
 	)
 	if err != nil {
 		fmt.Printf("Failed to initialize taxicall outbox app: %+v\n", err)
-		os.Exit(1)
-	}
-
-	if err := taxicallOutboxApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start taxicall outbox app: %+v\n", err)
-		os.Exit(1)
-	}
-	defer taxicallOutboxApp.Shuwdown()
-
-	if err := taxicallApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start taxi call app event loop: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -345,6 +326,33 @@ func main() {
 		fmt.Printf("Failed to setup driver app: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Run apps
+	userGetterDelegator.Set(userApp)
+	driverGetterDelegator.Set(driverApp)
+	if err := pushApp.Start(ctx); err != nil {
+		fmt.Printf("Failed to start push app event loop: %v\n", err)
+		os.Exit(1)
+	}
+	defer pushApp.Stop(ctx)
+
+	if err := taxicallApp.Start(ctx); err != nil {
+		fmt.Printf("Failed to start taxi call app event loop: %v\n", err)
+		os.Exit(1)
+	}
+	defer taxicallApp.Shutdown(ctx)
+
+	if err := notificationOutboxApp.Start(ctx); err != nil {
+		fmt.Printf("Failed to start notification outbox app: %+v\n", err)
+		os.Exit(1)
+	}
+	defer notificationOutboxApp.Shuwdown()
+
+	if err := taxicallOutboxApp.Start(ctx); err != nil {
+		fmt.Printf("Failed to start taxicall outbox app: %+v\n", err)
+		os.Exit(1)
+	}
+	defer taxicallOutboxApp.Shuwdown()
 
 	// Init middlewares
 	userSessionMiddleware := userserver.NewSessionMiddleware(userSessionApp)

@@ -16,7 +16,6 @@ import (
 	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/taco-labs/taco/go/repository"
 )
@@ -101,7 +100,7 @@ func (d driverApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) 
 
 	var smsVerification entity.SmsVerification
 	var err error
-	var driver entity.Driver
+	var driverDto entity.DriverDto
 	var driverSession entity.DriverSession
 
 	err = d.RunWithNonRollbackError(ctx, value.ErrDriverNotFound, func(ctx context.Context, i bun.IDB) error {
@@ -113,7 +112,7 @@ func (d driverApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) 
 		if smsVerification.VerificationCode != req.VerificationCode {
 			return fmt.Errorf("app.Driver.SmsSignin: invalid verification code:\n%w", value.ErrInvalidOperation)
 		}
-		driver, err = d.repository.driver.FindByUserUniqueKey(ctx, i, smsVerification.Phone)
+		driver, err := d.repository.driver.FindByUserUniqueKey(ctx, i, smsVerification.Phone)
 		if errors.Is(value.ErrDriverNotFound, err) {
 			smsVerification.Verified = true
 			if err := d.repository.smsVerification.Update(ctx, i, smsVerification); err != nil {
@@ -146,11 +145,24 @@ func (d driverApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) 
 			return fmt.Errorf("app.Driver.SmsSignin: error while create new session:\n %w", err)
 		}
 
+		driverDto = driver
+
 		return nil
 	})
 
 	if err != nil {
 		return entity.Driver{}, "", err
+	}
+
+	downloadUrls, uploadUrls, err := d.driverImageUrls(ctx, driverDto.Id)
+	if err != nil {
+		return entity.Driver{}, "", err
+	}
+
+	driver := entity.Driver{
+		DriverDto:    driverDto,
+		DownloadUrls: downloadUrls,
+		UploadUrls:   uploadUrls,
 	}
 
 	return driver, driverSession.Id, nil
@@ -159,7 +171,7 @@ func (d driverApp) SmsSignin(ctx context.Context, req request.SmsSigninRequest) 
 func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) (entity.Driver, string, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
-	var newDriver entity.Driver
+	var newDriverDto entity.DriverDto
 	var driverSession entity.DriverSession
 
 	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
@@ -181,7 +193,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrUnAuthorized)
 		}
 
-		newDriver = entity.Driver{
+		newDriverDto = entity.DriverDto{
 			Id:                         utils.MustNewUUID(),
 			DriverType:                 enum.DriverTypeFromString(req.DriverType),
 			FirstName:                  req.FirstName,
@@ -202,13 +214,13 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			DeleteTime:                 time.Time{},
 		}
 
-		if err := d.repository.driver.Create(ctx, i, newDriver); err != nil {
+		if err := d.repository.driver.Create(ctx, i, newDriverDto); err != nil {
 			return fmt.Errorf("app.Driver.Signup: error while create driver:%w", err)
 		}
 
 		// Create push token
 		if _, err := d.service.push.CreatePushToken(ctx, request.CreatePushTokenRequest{
-			PrincipalId: newDriver.Id,
+			PrincipalId: newDriverDto.Id,
 			FcmToken:    req.AppFcmToken,
 		}); err != nil {
 			return fmt.Errorf("app.Driver.Signup: error while create push token: %w", err)
@@ -216,9 +228,9 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 
 		driverSession = entity.DriverSession{
 			Id:         utils.MustNewUUID(),
-			DriverId:   newDriver.Id,
+			DriverId:   newDriverDto.Id,
 			ExpireTime: requestTime.AddDate(0, 1, 0),
-			Activated:  newDriver.Active,
+			Activated:  newDriverDto.Active,
 		}
 		if err := d.service.session.Create(ctx, driverSession); err != nil {
 			return fmt.Errorf("app.Driver.Signup: error while create new session:%w", err)
@@ -235,14 +247,25 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 		return entity.Driver{}, "", err
 	}
 
+	downloadUrls, uploadUrls, err := d.driverImageUrls(ctx, newDriverDto.Id)
+	if err != nil {
+		return entity.Driver{}, "", err
+	}
+
+	newDriver := entity.Driver{
+		DriverDto:    newDriverDto,
+		DownloadUrls: downloadUrls,
+		UploadUrls:   uploadUrls,
+	}
+
 	return newDriver, driverSession.Id, nil
 }
 
 func (d driverApp) GetDriver(ctx context.Context, driverId string) (entity.Driver, error) {
-	var driver entity.Driver
+	var driverDto entity.DriverDto
 	var err error
 	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		driver, err = d.repository.driver.FindById(ctx, i, driverId)
+		driverDto, err = d.repository.driver.FindById(ctx, i, driverId)
 		if err != nil {
 			return fmt.Errorf("app.Driver.GetDriver: error while find driver by id:\n%w", err)
 		}
@@ -254,34 +277,45 @@ func (d driverApp) GetDriver(ctx context.Context, driverId string) (entity.Drive
 		return entity.Driver{}, err
 	}
 
+	downloadUrls, uploadUrls, err := d.driverImageUrls(ctx, driverDto.Id)
+	if err != nil {
+		return entity.Driver{}, err
+	}
+
+	driver := entity.Driver{
+		DriverDto:    driverDto,
+		DownloadUrls: downloadUrls,
+		UploadUrls:   uploadUrls,
+	}
+
 	return driver, nil
 }
 
 func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateRequest) (entity.Driver, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
-	var driver entity.Driver
+	var driverDto entity.DriverDto
 	var err error
 
 	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		driver, err = d.repository.driver.FindById(ctx, i, req.Id)
+		driverDto, err = d.repository.driver.FindById(ctx, i, req.Id)
 		if err != nil {
 			return fmt.Errorf("app.driver.UpdateDriver: error while find driver by id:\n %w", err)
 		}
 
-		driver.AppOs = enum.OsTypeFromString(req.AppOs)
-		driver.AppVersion = req.AppVersion
-		driver.DriverLicenseImageUploaded = req.LicenseImageUploaded
-		driver.DriverProfileImageUploaded = req.ProfileImageUploaded
-		driver.UpdateTime = requestTime
+		driverDto.AppOs = enum.OsTypeFromString(req.AppOs)
+		driverDto.AppVersion = req.AppVersion
+		driverDto.DriverLicenseImageUploaded = req.LicenseImageUploaded
+		driverDto.DriverProfileImageUploaded = req.ProfileImageUploaded
+		driverDto.UpdateTime = requestTime
 
-		if err := d.repository.driver.Update(ctx, i, driver); err != nil {
+		if err := d.repository.driver.Update(ctx, i, driverDto); err != nil {
 			return fmt.Errorf("app.Driver.UpdateDriver: error while update driver: %w", err)
 		}
 
 		// Update push token
 		if err := d.service.push.UpdatePushToken(ctx, request.UpdatePushTokenRequest{
-			PrincipalId: driver.Id,
+			PrincipalId: driverDto.Id,
 			FcmToken:    req.AppFcmToken,
 		}); err != nil {
 			return fmt.Errorf("app.Driver.UpdateDriver: error while update push token: %w", err)
@@ -294,58 +328,22 @@ func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateReq
 		return entity.Driver{}, err
 	}
 
+	downloadUrls, uploadUrls, err := d.driverImageUrls(ctx, driverDto.Id)
+	if err != nil {
+		return entity.Driver{}, err
+	}
+
+	driver := entity.Driver{
+		DriverDto:    driverDto,
+		DownloadUrls: downloadUrls,
+		UploadUrls:   uploadUrls,
+	}
+
 	return driver, nil
 }
 
 func (d driverApp) GetDriverImageUrls(ctx context.Context, driverId string) (value.DriverImageUrls, value.DriverImageUrls, error) {
-	var driverProfileDownloadUrl, driverProfileUploadUrl, driverLicenseDownloadUrl, driverLicenseUploadUrl string
-	group, ctx := errgroup.WithContext(ctx)
-	group.Go(func() error {
-		url, err := d.service.imageUrl.GetDownloadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverProfile))
-		if err != nil {
-			return fmt.Errorf("app.driver.GetDriverImageUrls: error while get driver profile download url:%w", err)
-		}
-		driverProfileDownloadUrl = url
-		return nil
-	})
-	group.Go(func() error {
-		url, err := d.service.imageUrl.GetUploadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverProfile))
-		if err != nil {
-			return fmt.Errorf("app.driver.GetDriverImageUrls: error while get driver profile upload url:%w", err)
-		}
-		driverProfileUploadUrl = url
-		return nil
-	})
-	group.Go(func() error {
-		url, err := d.service.imageUrl.GetDownloadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverLicense))
-		if err != nil {
-			return fmt.Errorf("app.driver.GetDriverImageUrls: error while get licnese image download url:%w", err)
-		}
-		driverLicenseDownloadUrl = url
-		return nil
-	})
-	group.Go(func() error {
-		url, err := d.service.imageUrl.GetUploadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverLicense))
-		if err != nil {
-			return fmt.Errorf("app.driver.GetDriverImageUrls: error while get license image upload url:%w", err)
-		}
-		driverLicenseUploadUrl = url
-		return nil
-	})
-	if err := group.Wait(); err != nil {
-		return value.DriverImageUrls{}, value.DriverImageUrls{}, err
-	}
-
-	uploadUrls := value.DriverImageUrls{
-		ProfileImage: driverProfileDownloadUrl,
-		LicenseImage: driverLicenseDownloadUrl,
-	}
-	downloadUrls := value.DriverImageUrls{
-		ProfileImage: driverProfileUploadUrl,
-		LicenseImage: driverLicenseUploadUrl,
-	}
-
-	return uploadUrls, downloadUrls, nil
+	return d.driverImageUrls(ctx, driverId)
 }
 
 func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpdateRequest) error {
