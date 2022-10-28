@@ -48,14 +48,14 @@ func (d driverApp) driverImageUrls(ctx context.Context, driverId string) (value.
 		return value.DriverImageUrls{}, value.DriverImageUrls{}, err
 	}
 
-	uploadUrls := value.DriverImageUrls{
+	downloadUrls := value.DriverImageUrls{
 		ProfileImage: driverProfileDownloadUrl,
 		LicenseImage: driverLicenseDownloadUrl,
 	}
-	downloadUrls := value.DriverImageUrls{
+	uploadUrls := value.DriverImageUrls{
 		ProfileImage: driverProfileUploadUrl,
 		LicenseImage: driverLicenseUploadUrl,
 	}
 
-	return uploadUrls, downloadUrls, nil
+	return downloadUrls, uploadUrls, nil
 }
