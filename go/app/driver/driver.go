@@ -346,7 +346,11 @@ func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateReq
 }
 
 func (d driverApp) GetDriverImageUrls(ctx context.Context, driverId string) (value.DriverImageUrls, value.DriverImageUrls, error) {
-	return d.driverImageUrls(ctx, driverId)
+	downloadUrls, uploadUrls, err := d.driverImageUrls(ctx, driverId)
+	if err != nil {
+		return value.DriverImageUrls{}, value.DriverImageUrls{}, fmt.Errorf("app.driver.GetDriverImageUrls: error while get image urls: %w", err)
+	}
+	return downloadUrls, uploadUrls, nil
 }
 
 func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpdateRequest) error {
