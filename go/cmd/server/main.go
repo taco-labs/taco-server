@@ -197,21 +197,40 @@ func main() {
 		config.ImageUrlService.Bucket,
 		config.ImageUrlService.BasePath,
 	)
-	// TODO(taekyeom) max cache size to be configured
-	imageUrlRistrettoCache, err := ristretto.NewCache(&ristretto.Config{
+
+	// TODO(taekyeom) unify cache interface regardless of its method
+	downloadImageUrlRistrettoCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: int64(10 * config.ImageUrlService.MaxCacheSizeEntires),
 		MaxCost:     int64(config.ImageUrlService.MaxCacheSizeBytes),
 		BufferItems: 64,
 	})
 	if err != nil {
-		fmt.Printf("Failed to setup ristreeto cache: %v\n", err)
+		fmt.Printf("Failed to setup download url ristreeto cache: %v\n", err)
 		os.Exit(1)
 	}
-	imageUrlCache := store.NewRistretto(imageUrlRistrettoCache,
+	downloadImageUrlCache := store.NewRistretto(downloadImageUrlRistrettoCache,
 		store.WithExpiration(config.ImageUrlService.Timeout),
 	)
-	imageUrlCacheManager := cache.New[string](imageUrlCache)
-	cachedS3ImagePresignedUrlService := service.NewCachedUrlService(imageUrlCacheManager, s3ImagePresignedUrlService)
+	downloadImageUrlCacheManager := cache.New[string](downloadImageUrlCache)
+
+	uploadImageUrlRistrettoCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: int64(10 * config.ImageUrlService.MaxCacheSizeEntires),
+		MaxCost:     int64(config.ImageUrlService.MaxCacheSizeBytes),
+		BufferItems: 64,
+	})
+	if err != nil {
+		fmt.Printf("Failed to setup upload url ristreeto cache: %v\n", err)
+		os.Exit(1)
+	}
+	uploadImageUrlCache := store.NewRistretto(uploadImageUrlRistrettoCache,
+		store.WithExpiration(config.ImageUrlService.Timeout),
+	)
+	uploadImageUrlCacheManager := cache.New[string](uploadImageUrlCache)
+
+	cachedS3ImagePresignedUrlService := service.NewCachedUrlService(
+		downloadImageUrlCacheManager,
+		uploadImageUrlCacheManager,
+		s3ImagePresignedUrlService)
 
 	// Init apps
 	userGetterDelegator := push.NewUserGetterDelegator()

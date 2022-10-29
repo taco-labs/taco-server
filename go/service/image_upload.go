@@ -88,7 +88,11 @@ func (c cachedUrlService) GetUploadUrl(ctx context.Context, key string) (string,
 	return c.uploadUrlCache.Get(ctx, key)
 }
 
-func NewCachedUrlService(cacheInterface cache.CacheInterface[string], svc ImageUrlService) cachedUrlService {
+func NewCachedUrlService(
+	downloadCacheInterface cache.CacheInterface[string],
+	uploadCacheInterface cache.CacheInterface[string],
+	svc ImageUrlService) cachedUrlService {
+
 	loadDownloadUrlFn := func(ctx context.Context, key any) (string, error) {
 		keyStr, ok := key.(string)
 		if !ok {
@@ -105,8 +109,8 @@ func NewCachedUrlService(cacheInterface cache.CacheInterface[string], svc ImageU
 		return svc.GetUploadUrl(ctx, keyStr)
 	}
 
-	downloadCache := cache.NewLoadable(loadDownloadUrlFn, cacheInterface)
-	uploadCache := cache.NewLoadable(loadUploadUrlFn, cacheInterface)
+	downloadCache := cache.NewLoadable(loadDownloadUrlFn, downloadCacheInterface)
+	uploadCache := cache.NewLoadable(loadUploadUrlFn, uploadCacheInterface)
 
 	return cachedUrlService{
 		svc:              svc,
