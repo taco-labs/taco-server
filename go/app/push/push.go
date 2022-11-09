@@ -35,6 +35,7 @@ type taxiCallPushApp struct {
 		eventSub     service.EventSubscriptionService
 		userGetter   userGetterInterface
 		driverGetter driverGetterInterface
+		workerPool   service.WorkerPoolService
 	}
 	waitCh chan struct{}
 }

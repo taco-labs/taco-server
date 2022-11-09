@@ -22,9 +22,14 @@ type ServerConfig struct {
 	ImageUrlService    S3PresignedUrlConfig `env:",prefix=TACO_IMAGE_URL_SERVICE_"`
 
 	TaxicallApp TaxicallAppConfig `env:",prefix=TACO_TAXICALL_APP_"`
+	PushApp     PushAppConfig     `env:",prefix=TACO_PUSH_APP_"`
 }
 
 type TaxicallAppConfig struct {
+	WorkerPoolConfig `env:",prefix=WORKER_"`
+}
+
+type PushAppConfig struct {
 	WorkerPoolConfig `env:",prefix=WORKER_"`
 }
 

@@ -58,6 +58,12 @@ func WithDriverGetterService(svc driverGetterInterface) pushAppOption {
 	}
 }
 
+func WithWorkerPoolService(svc service.WorkerPoolService) pushAppOption {
+	return func(tcpa *taxiCallPushApp) {
+		tcpa.service.workerPool = svc
+	}
+}
+
 func (t taxiCallPushApp) validate() error {
 	if t.Transactor == nil {
 		return errors.New("taxi call push app need transactor")
@@ -89,6 +95,10 @@ func (t taxiCallPushApp) validate() error {
 
 	if t.service.driverGetter == nil {
 		return errors.New("taxi call push app need driver getter")
+	}
+
+	if t.service.workerPool == nil {
+		return errors.New("taxi call push app need worker pool")
 	}
 
 	return nil

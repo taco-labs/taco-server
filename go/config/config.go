@@ -59,7 +59,7 @@ type TopicConfig struct {
 }
 
 type WorkerPoolConfig struct {
-	PoolSize int  `env:"POOL_SIZE,required"`
+	PoolSize int  `env:"POOL_SIZE,default=1"`
 	PreAlloc bool `env:"PRE_ALLOC,default=false"`
 }
 

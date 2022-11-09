@@ -124,10 +124,19 @@ func main() {
 		ants.WithPreAlloc(config.TaxicallApp.PreAlloc),
 	)
 	if err != nil {
-		fmt.Printf("Failed to instantitate taxicall ant worker pool: %+v\n", err)
+		fmt.Printf("Failed to instantiate taxicall ant worker pool: %+v\n", err)
 		os.Exit(1)
 	}
 	taxicallWorkerPool := service.NewAntWorkerPoolService(taxicallAntWorkerPool)
+
+	pushAntWorkerPool, err := ants.NewPool(config.PushApp.PoolSize,
+		ants.WithPreAlloc(config.PushApp.PreAlloc),
+	)
+	if err != nil {
+		fmt.Printf("Failed to instantiate push app ant worker pool: %+v\n", err)
+		os.Exit(1)
+	}
+	pushWorkerPool := service.NewAntWorkerPoolService(pushAntWorkerPool)
 
 	firebaseApp, err := firebase.NewApp(ctx, nil)
 	if err != nil {
@@ -245,6 +254,7 @@ func main() {
 		push.WithEventPublisherService(notificationPublisherService),
 		push.WithUserGetterService(userGetterDelegator),
 		push.WithDriverGetterService(driverGetterDelegator),
+		push.WithWorkerPoolService(pushWorkerPool),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup push app: %v\n", err)

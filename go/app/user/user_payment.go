@@ -11,8 +11,6 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// TODO(taekyeom) Format error
-
 func (u userApp) ListCardPayment(ctx context.Context, userId string) ([]entity.UserPayment, entity.UserDefaultPayment, error) {
 	var userPayments []entity.UserPayment
 	var userDefaultPayment entity.UserDefaultPayment

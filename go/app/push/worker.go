@@ -3,6 +3,7 @@ package push
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -46,22 +47,28 @@ func (t taxiCallPushApp) consume(ctx context.Context) error {
 		return nil
 	}
 
-	defer event.Ack()
+	return t.service.workerPool.Submit(func() {
+		switch event.EventUri {
+		case command.EventUri_UserTaxiCallNotification:
+			err = t.handleUserNotification(ctx, event)
+		case command.EventUri_DriverTaxiCallNotification:
+			err = t.handleDriverNotification(ctx, event)
+		}
+		if err != nil {
+			fmt.Printf("[PushApp.Worker.Consume] error while handle consumed message: %+v\n", err)
+			if errors.Is(err, context.Canceled) {
+				return
+			}
+			// If error occurred, resend event with increased retry event count
+			if err != nil && event.RetryCount < 3 {
+				newEvent := event.NewEventWithRetry()
+				newEvent.DelaySeconds = 0
+				t.service.eventPub.SendMessage(ctx, newEvent)
+			}
+		}
+		event.Ack()
+	})
 
-	switch event.EventUri {
-	case command.EventUri_UserTaxiCallNotification:
-		err = t.handleUserNotification(ctx, event)
-	case command.EventUri_DriverTaxiCallNotification:
-		err = t.handleDriverNotification(ctx, event)
-	}
-
-	// If error occurred, resend event with increased retry event count
-	if err != nil && event.RetryCount < 3 {
-		newEvent := event.NewEventWithRetry()
-		t.service.eventPub.SendMessage(ctx, newEvent)
-		return err
-	}
-	return nil
 }
 
 func (t taxiCallPushApp) handleUserNotification(ctx context.Context, event entity.Event) error {
