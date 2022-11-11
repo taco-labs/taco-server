@@ -420,6 +420,6 @@ func (t taxiCallRepository) UpsertDriverTaxiCallContext(ctx context.Context, db 
 	return nil
 }
 
-func NewTaxiCallRepository() taxiCallRepository {
-	return taxiCallRepository{}
+func NewTaxiCallRepository() *taxiCallRepository {
+	return &taxiCallRepository{}
 }

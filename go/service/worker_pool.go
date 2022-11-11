@@ -14,8 +14,8 @@ func (a antWorkerPoolService) Submit(fn func()) error {
 	return a.pool.Submit(fn)
 }
 
-func NewAntWorkerPoolService(pool *ants.Pool) antWorkerPoolService {
-	return antWorkerPoolService{
+func NewAntWorkerPoolService(pool *ants.Pool) *antWorkerPoolService {
+	return &antWorkerPoolService{
 		pool: pool,
 	}
 }

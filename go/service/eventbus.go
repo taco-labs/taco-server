@@ -28,8 +28,8 @@ func (s sqsPubService) SendMessage(ctx context.Context, event entity.Event) erro
 	return s.pub.Send(ctx, ToMessage(event))
 }
 
-func NewSqsPubService(pub *pubsub.Topic) sqsPubService {
-	return sqsPubService{
+func NewSqsPubService(pub *pubsub.Topic) *sqsPubService {
+	return &sqsPubService{
 		pub: pub,
 	}
 }
@@ -47,8 +47,8 @@ func (s sqsSubService) GetMessage(ctx context.Context) (entity.Event, error) {
 	return ToEvent(message), nil
 }
 
-func NewSqsSubService(sub *pubsub.Subscription) sqsSubService {
-	return sqsSubService{
+func NewSqsSubService(sub *pubsub.Subscription) *sqsSubService {
+	return &sqsSubService{
 		sub: sub,
 	}
 }

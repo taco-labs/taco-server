@@ -11,13 +11,15 @@ import (
 )
 
 const (
-	tossPaymentCardReigstrationPath = "v1/billing/authorizations/card"
-	tossPaymentTransactionPath      = "v1/billing/%s"
+	tossPaymentCardReigstrationPath  = "v1/billing/authorizations/card"
+	tossPaymentTransactionPath       = "v1/billing/%s"
+	tossPaymentCancelTransactionPath = "v1/payments/%s/cancel"
 )
 
 type CardPaymentService interface {
 	RegisterCard(context.Context, string, request.UserPaymentRegisterRequest) (value.CardPaymentInfo, error)
-	Transaction(context.Context, entity.UserPayment, value.Payment) error // TODO(taekyeom) 결제 기록 별도 보관 필요
+	Transaction(context.Context, entity.UserPayment, value.Payment) (value.PaymentResult, error) // TODO(taekyeom) 결제 기록 별도 보관 필요
+	CancelTransaction(context.Context, value.PaymentCancel) error
 }
 
 type tossPaymentService struct {
@@ -56,7 +58,19 @@ type tossPaymentTransactionRequest struct {
 }
 
 type tossPaymentTransactionResponse struct {
-	// TODO (taekyeom) Fill...
+	Version     string `json:"version"`
+	PaymentKey  string `json:"paymentKey"`
+	Type        string `json:"type"`
+	OrderId     string `json:"orderId"`
+	OrderName   string `json:"orderName"`
+	TotalAmount int    `json:"totalAmount"`
+	Status      string `json:"status"`
+	// TODO (taekyeom) Fill more informations
+}
+
+type tossPaymentTransactionCancelRequest struct {
+	CancelReason string `json:"CancelReason"`
+	CancelAmount int    `json:"cancelAmount"`
 }
 
 func (t tossPaymentService) RegisterCard(ctx context.Context, customerKey string, req request.UserPaymentRegisterRequest) (value.CardPaymentInfo, error) {
@@ -88,34 +102,59 @@ func (t tossPaymentService) RegisterCard(ctx context.Context, customerKey string
 	}, nil
 }
 
-func (t tossPaymentService) Transaction(ctx context.Context, userPayment entity.UserPayment, payment value.Payment) error {
+func (t tossPaymentService) Transaction(ctx context.Context, userPayment entity.UserPayment, payment value.Payment) (value.PaymentResult, error) {
 	tossPaymentRequest := tossPaymentTransactionRequest{
 		Amount:      payment.Amount,
 		CustomerKey: userPayment.Id,
 		OrderId:     payment.OrderId,
 		OrderName:   payment.OrderName,
 	}
-	_, err := t.client.R().
+	resp, err := t.client.R().
 		SetBody(tossPaymentRequest).
 		SetResult(&tossPaymentTransactionResponse{}).
 		Post(fmt.Sprintf(tossPaymentTransactionPath, userPayment.BillingKey))
 	if err != nil {
 		// TODO(taekyeom) Error handling
-		return fmt.Errorf("%w: error from card transaction: %v", value.ErrExternal, err)
+		return value.PaymentResult{}, fmt.Errorf("%w: error from card transaction: %v", value.ErrExternal, err)
 	}
 
 	// TODO (taekyoem) handle response from transaction
+	transactionResp := resp.Result().(*tossPaymentTransactionResponse)
+
+	result := value.PaymentResult{
+		OrderId:    transactionResp.OrderId,
+		PaymentKey: transactionResp.PaymentKey,
+		Amount:     transactionResp.TotalAmount,
+		OrderName:  transactionResp.OrderName,
+	}
+
+	return result, nil
+}
+
+func (t tossPaymentService) CancelTransaction(ctx context.Context, cancel value.PaymentCancel) error {
+	tossPaymentRequest := tossPaymentTransactionCancelRequest{
+		CancelReason: cancel.Reason,
+		CancelAmount: cancel.CancelAmount,
+	}
+
+	_, err := t.client.R().
+		SetBody(tossPaymentRequest).
+		Post(fmt.Sprintf(tossPaymentCancelTransactionPath, cancel.PaymentKey))
+	if err != nil {
+		return fmt.Errorf("%w: error from transaction cancellation: %v", value.ErrExternal, err)
+	}
+
 	return nil
 }
 
-func NewTossPaymentService(endpoint string, apiKey string) tossPaymentService {
+func NewTossPaymentService(endpoint string, apiKey string) *tossPaymentService {
 	client := resty.New().
 		SetBaseURL(endpoint).
 		SetAuthScheme("Basic").
 		SetHeader("Content-Type", "application/json").
 		SetAuthToken(apiKey)
 
-	return tossPaymentService{
+	return &tossPaymentService{
 		client: client,
 	}
 }

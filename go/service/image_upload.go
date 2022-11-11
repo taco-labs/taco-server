@@ -61,8 +61,8 @@ func (s s3PresignedUrlService) GetUploadUrl(ctx context.Context, path string) (s
 	return presignResult.URL, nil
 }
 
-func NewS3ImagePresignedUrlService(client *s3.PresignClient, timeout time.Duration, bucket string, basePath string) s3PresignedUrlService {
-	return s3PresignedUrlService{
+func NewS3ImagePresignedUrlService(client *s3.PresignClient, timeout time.Duration, bucket string, basePath string) *s3PresignedUrlService {
+	return &s3PresignedUrlService{
 		client:   client,
 		timeout:  timeout,
 		bucket:   bucket,
@@ -91,7 +91,7 @@ func (c cachedUrlService) GetUploadUrl(ctx context.Context, key string) (string,
 func NewCachedUrlService(
 	downloadCacheInterface cache.CacheInterface[string],
 	uploadCacheInterface cache.CacheInterface[string],
-	svc ImageUrlService) cachedUrlService {
+	svc ImageUrlService) *cachedUrlService {
 
 	loadDownloadUrlFn := func(ctx context.Context, key any) (string, error) {
 		keyStr, ok := key.(string)
@@ -112,7 +112,7 @@ func NewCachedUrlService(
 	downloadCache := cache.NewLoadable(loadDownloadUrlFn, downloadCacheInterface)
 	uploadCache := cache.NewLoadable(loadUploadUrlFn, uploadCacheInterface)
 
-	return cachedUrlService{
+	return &cachedUrlService{
 		svc:              svc,
 		downloadUrlCache: downloadCache,
 		uploadUrlCache:   uploadCache,

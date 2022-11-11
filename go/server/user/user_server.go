@@ -16,17 +16,21 @@ import (
 type UserApp interface {
 	SmsVerificationRequest(context.Context, request.SmsVerificationRequest) (entity.SmsVerification, error)
 	SmsSignin(context.Context, request.SmsSigninRequest) (entity.User, string, error)
+
 	Signup(context.Context, request.UserSignupRequest) (entity.User, string, error)
 	GetUser(context.Context, string) (entity.User, error)
 	UpdateUser(context.Context, request.UserUpdateRequest) (entity.User, error)
+
 	ListCardPayment(context.Context, string) ([]entity.UserPayment, entity.UserDefaultPayment, error)
 	RegisterCardPayment(context.Context, request.UserPaymentRegisterRequest) (entity.UserPayment, error)
 	DeleteCardPayment(context.Context, string) error
 	UpdateDefaultPayment(context.Context, request.DefaultPaymentUpdateRequest) error
+
 	ListTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	CancelTaxiCallRequest(context.Context, string) error
+
 	SearchLocation(context.Context, request.SearchLocationRequest) ([]value.LocationSummary, error)
 	GetAddress(context.Context, request.GetAddressRequest) (value.Address, error)
 }

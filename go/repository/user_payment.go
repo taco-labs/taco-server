@@ -136,6 +136,6 @@ func (u userPaymentRepository) UpsertDefaultPayment(ctx context.Context, db bun.
 	return nil
 }
 
-func NewUserPaymentRepository() userPaymentRepository {
-	return userPaymentRepository{}
+func NewUserPaymentRepository() *userPaymentRepository {
+	return &userPaymentRepository{}
 }

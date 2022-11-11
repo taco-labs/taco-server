@@ -45,7 +45,7 @@ func (s coolSmsSenderService) SendSms(ctx context.Context, phone string, message
 	return nil
 }
 
-func NewCoolSmsSenderService(endpoint string, phoneFrom string, apiKey string, apiSecret string) coolSmsSenderService {
+func NewCoolSmsSenderService(endpoint string, phoneFrom string, apiKey string, apiSecret string) *coolSmsSenderService {
 	client := coolsms.NewClient()
 	client.Messages.Config = map[string]string{
 		"APIKey":    apiKey,
@@ -54,7 +54,7 @@ func NewCoolSmsSenderService(endpoint string, phoneFrom string, apiKey string, a
 		"Domain":    endpoint,
 	}
 
-	return coolSmsSenderService{
+	return &coolSmsSenderService{
 		client:    client,
 		phoneFrom: phoneFrom,
 	}

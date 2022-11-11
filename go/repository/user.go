@@ -113,6 +113,6 @@ func (u userRepository) DeleteUser(ctx context.Context, db bun.IDB, user entity.
 	return nil
 }
 
-func NewUserRepository() userRepository {
-	return userRepository{}
+func NewUserRepository() *userRepository {
+	return &userRepository{}
 }

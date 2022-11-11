@@ -73,6 +73,6 @@ func (u userSessionRepository) CreateSession(ctx context.Context, db bun.IDB, us
 	return nil
 }
 
-func NewUserSessionRepository() userSessionRepository {
-	return userSessionRepository{}
+func NewUserSessionRepository() *userSessionRepository {
+	return &userSessionRepository{}
 }

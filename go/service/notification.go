@@ -20,8 +20,8 @@ func (f firebaseNotificationService) SendNotification(ctx context.Context, notif
 	return f.pub.Send(ctx, notificationToMessage(notification))
 }
 
-func NewFirebaseNotificationService(topic *pubsub.Topic) firebaseNotificationService {
-	return firebaseNotificationService{
+func NewFirebaseNotificationService(topic *pubsub.Topic) *firebaseNotificationService {
+	return &firebaseNotificationService{
 		pub: topic,
 	}
 }

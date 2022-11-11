@@ -91,6 +91,6 @@ func (p pushTokenRepository) Delete(ctx context.Context, db bun.IDB, pushToken e
 	return nil
 }
 
-func NewPushTokenRepository() pushTokenRepository {
-	return pushTokenRepository{}
+func NewPushTokenRepository() *pushTokenRepository {
+	return &pushTokenRepository{}
 }

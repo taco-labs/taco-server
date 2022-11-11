@@ -81,13 +81,13 @@ func (m naverMapsRouteService) GetRoute(ctx context.Context, departure value.Poi
 	}, nil
 }
 
-func NewNaverMapsRouteService(endpoint string, clientKey string, clientSecret string) naverMapsRouteService {
+func NewNaverMapsRouteService(endpoint string, clientKey string, clientSecret string) *naverMapsRouteService {
 	client := resty.New().
 		SetBaseURL(endpoint).
 		SetHeader("X-NCP-APIGW-API-KEY-ID", clientKey).
 		SetHeader("X-NCP-APIGW-API-KEY", clientSecret)
 
-	return naverMapsRouteService{
+	return &naverMapsRouteService{
 		client: client,
 	}
 }

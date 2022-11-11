@@ -69,6 +69,6 @@ func (e eventRepository) BatchCreate(ctx context.Context, db bun.IDB, events []e
 	return nil
 }
 
-func NewEventRepository() eventRepository {
-	return eventRepository{}
+func NewEventRepository() *eventRepository {
+	return &eventRepository{}
 }

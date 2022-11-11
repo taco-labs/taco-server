@@ -99,13 +99,13 @@ func (k kakaoLocationService) GetAddress(ctx context.Context, point value.Point)
 	return value.Address(roadAddress), nil
 }
 
-func NewKakaoLocationService(endpoint string, apiKey string) kakaoLocationService {
+func NewKakaoLocationService(endpoint string, apiKey string) *kakaoLocationService {
 	client := resty.New().
 		SetBaseURL(endpoint).
 		SetAuthScheme("KakaoAK").
 		SetAuthToken(apiKey)
 
-	return kakaoLocationService{
+	return &kakaoLocationService{
 		client: client,
 	}
 }

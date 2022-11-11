@@ -60,8 +60,8 @@ func (d driverLocationRepository) Upsert(ctx context.Context, db bun.IDB, locati
 	return nil
 }
 
-func NewDriverLocationRepository() driverLocationRepository {
-	return driverLocationRepository{}
+func NewDriverLocationRepository() *driverLocationRepository {
+	return &driverLocationRepository{}
 }
 
 func DriverLocationToModel(dto entity.DriverLocation) (driverLocationModel, error) {

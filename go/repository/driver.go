@@ -111,6 +111,6 @@ func (u driverRepository) Delete(ctx context.Context, db bun.IDB, driver entity.
 	return nil
 }
 
-func NewDriverRepository() driverRepository {
-	return driverRepository{}
+func NewDriverRepository() *driverRepository {
+	return &driverRepository{}
 }

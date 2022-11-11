@@ -23,3 +23,14 @@ func MapErr[I any, O any](ins []I, f func(I) (O, error)) ([]O, error) {
 
 	return out, nil
 }
+
+func ToMap[I any, K comparable](ins []I, f func(I) K) map[K]I {
+	out := make(map[K]I, len(ins))
+
+	for _, in := range ins {
+		k := f(in)
+		out[k] = in
+	}
+
+	return out
+}

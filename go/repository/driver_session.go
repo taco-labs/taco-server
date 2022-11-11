@@ -99,6 +99,6 @@ func (d driverSessionRepository) DeleteByDriverId(ctx context.Context, db bun.ID
 	return nil
 }
 
-func NewDriverSessionRepository() driverSessionRepository {
-	return driverSessionRepository{}
+func NewDriverSessionRepository() *driverSessionRepository {
+	return &driverSessionRepository{}
 }

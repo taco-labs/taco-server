@@ -75,6 +75,6 @@ func (d driverSettlementAccountRepository) Update(ctx context.Context, db bun.ID
 	return nil
 }
 
-func NewDriverSettlementAccountRepository() driverSettlementAccountRepository {
-	return driverSettlementAccountRepository{}
+func NewDriverSettlementAccountRepository() *driverSettlementAccountRepository {
+	return &driverSettlementAccountRepository{}
 }

@@ -13,6 +13,12 @@ type PaymentResult struct {
 	OrderName  string
 }
 
+type PaymentCancel struct {
+	PaymentKey   string
+	CancelAmount int
+	Reason       string
+}
+
 type PaymentSummary struct {
 	PaymentId  string `json:"paymentId"`
 	Company    string `json:"company"`

@@ -94,6 +94,6 @@ func (s smsVerificationRepository) Delete(ctx context.Context, db bun.IDB, smsVe
 	return nil
 }
 
-func NewSmsVerificationRepository() smsVerificationRepository {
-	return smsVerificationRepository{}
+func NewSmsVerificationRepository() *smsVerificationRepository {
+	return &smsVerificationRepository{}
 }
