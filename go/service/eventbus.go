@@ -56,8 +56,7 @@ func NewSqsSubService(sub *pubsub.Subscription) *sqsSubService {
 func ToMessage(event entity.Event) *pubsub.Message {
 	message := pubsub.Message{
 		Metadata: map[string]string{
-			entity.MetaDataKey_EventUri:   event.EventUri,
-			entity.MetadataKey_RetryCount: fmt.Sprint(event.RetryCount),
+			entity.MetaDataKey_EventUri: event.EventUri,
 		},
 		Body: event.Payload,
 		BeforeSend: func(asFunc func(interface{}) bool) error {
@@ -80,21 +79,25 @@ func ToEvent(msg *pubsub.Message) entity.Event {
 	if ok {
 		event.EventUri = eventUri
 	}
-	retryCount, ok := msg.Metadata[entity.MetadataKey_RetryCount]
-	if ok {
-		retryCount, _ := strconv.Atoi(retryCount)
-		event.RetryCount = retryCount
-	}
 	rawMsg := types.Message{}
 	if msg.As(&rawMsg) {
-		sentTimestampStr := rawMsg.Attributes[string(types.MessageSystemAttributeNameSentTimestamp)]
-		sentTimestamp, _ := strconv.ParseInt(sentTimestampStr, 10, 64)
+		sentTimestampAttr := rawMsg.Attributes[string(types.MessageSystemAttributeNameSentTimestamp)]
+		sentTimestamp, _ := strconv.ParseInt(sentTimestampAttr, 10, 64)
 		sentTime := time.UnixMilli(sentTimestamp)
 		event.CreateTime = sentTime
+
+		retryCountAttr := rawMsg.Attributes[string(types.MessageSystemAttributeNameApproximateReceiveCount)]
+		retryCount, _ := strconv.Atoi(retryCountAttr)
+		event.RetryCount = retryCount
 	}
 
 	event.SetAck(func() error {
 		msg.Ack()
+		return nil
+	})
+
+	event.SetNack(func() error {
+		msg.Nack()
 		return nil
 	})
 

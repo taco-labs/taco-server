@@ -46,12 +46,6 @@ func WithLocationService(svc service.LocationService) taxicallAppOption {
 	}
 }
 
-func WithEventPublisherService(svc service.EventPublishService) taxicallAppOption {
-	return func(ta *taxicallApp) {
-		ta.service.eventPub = svc
-	}
-}
-
 func WithEventSubscriberService(svc service.EventSubscriptionService) taxicallAppOption {
 	return func(ta *taxicallApp) {
 		ta.service.eventSub = svc
@@ -87,10 +81,6 @@ func (t taxicallApp) validateApp() error {
 
 	if t.service.location == nil {
 		return errors.New("taxi call app needs location service")
-	}
-
-	if t.service.eventPub == nil {
-		return errors.New("taxi call app needs event pub service")
 	}
 
 	if t.service.eventSub == nil {

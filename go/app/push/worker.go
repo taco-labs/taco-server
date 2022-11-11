@@ -61,9 +61,7 @@ func (t taxiCallPushApp) consume(ctx context.Context) error {
 			}
 			// If error occurred, resend event with increased retry event count
 			if err != nil && event.RetryCount < 3 {
-				newEvent := event.NewEventWithRetry()
-				newEvent.DelaySeconds = 0
-				t.service.eventPub.SendMessage(ctx, newEvent)
+				event.Nack()
 			}
 		}
 		event.Ack()

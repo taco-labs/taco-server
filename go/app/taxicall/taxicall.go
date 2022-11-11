@@ -16,7 +16,6 @@ type taxicallApp struct {
 	service struct {
 		route      service.MapRouteService
 		location   service.LocationService
-		eventPub   service.EventPublishService
 		eventSub   service.EventSubscriptionService
 		workerPool service.WorkerPoolService
 	}

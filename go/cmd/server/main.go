@@ -251,7 +251,6 @@ func main() {
 		push.WithNotificationService(notificationService),
 		push.WithPushTokenRepository(pushTokenRepository),
 		push.WithEventSubscribeService(notificationSubscriberService),
-		push.WithEventPublisherService(notificationPublisherService),
 		push.WithUserGetterService(userGetterDelegator),
 		push.WithDriverGetterService(driverGetterDelegator),
 		push.WithWorkerPoolService(pushWorkerPool),
@@ -268,7 +267,6 @@ func main() {
 		taxicall.WithEventRepository(eventRepository),
 		taxicall.WithRouteServie(mapRouteService),
 		taxicall.WithLocationService(locationService),
-		taxicall.WithEventPublisherService(taxicallPublisherService),
 		taxicall.WithEventSubscriberService(taxicallSubscriberService),
 		taxicall.WithWorkerPoolService(taxicallWorkerPool),
 	)

@@ -31,7 +31,6 @@ type taxiCallPushApp struct {
 	service struct {
 		route        service.MapRouteService
 		notification service.NotificationService
-		eventPub     service.EventPublishService
 		eventSub     service.EventSubscriptionService
 		userGetter   userGetterInterface
 		driverGetter driverGetterInterface
