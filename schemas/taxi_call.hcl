@@ -228,6 +228,13 @@ table "driver_taxi_call_context" {
     ]
   }
 
+  index "last_received_request_ticket_idx" {
+    unique = false
+    columns = [
+      column.last_received_request_ticket,
+    ]
+  }
+
   foreign_key "driver_id_fk" {
     columns = [
       column.driver_id,

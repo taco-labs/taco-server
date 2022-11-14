@@ -38,6 +38,7 @@ type DriverTaxiCallNotificationCommand struct {
 	AdditionalPrice   int            `json:"additionalPrice,omitempty"`
 	Departure         value.Location `json:"departureAddress,omitempty"`
 	Arrival           value.Location `json:"arrivalAddress,omitempty"`
+	Attempt           int            `json:"attempt"`
 }
 
 func NewUserTaxiCallNotificationCommand(taxiCallRequest entity.TaxiCallRequest,
@@ -67,11 +68,14 @@ func NewUserTaxiCallNotificationCommand(taxiCallRequest entity.TaxiCallRequest,
 	}
 }
 
-func NewDriverTaxiCallNotificationCommand(taxiCallRequest entity.TaxiCallRequest,
+func NewDriverTaxiCallNotificationCommand(
+	driverId string,
+	taxiCallRequest entity.TaxiCallRequest,
 	taxiCallTicket entity.TaxiCallTicket,
 	driverTaxiCallContext entity.DriverTaxiCallContext) entity.Event {
 	cmd := DriverTaxiCallNotificationCommand{
-		DriverId:          taxiCallRequest.DriverId.String,
+		DriverId:          driverId,
+		Attempt:           taxiCallTicket.Attempt,
 		UserId:            taxiCallRequest.UserId,
 		TaxiCallRequestId: taxiCallRequest.Id,
 		TaxiCallTicketId:  taxiCallTicket.TicketId,

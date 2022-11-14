@@ -10,6 +10,18 @@ func Map[I any, O any](ins []I, f func(I) O) []O {
 	return out
 }
 
+func Filter[I any](ins []I, f func(I) bool) []I {
+	out := make([]I, 0, len(ins))
+
+	for _, in := range ins {
+		if f(in) {
+			out = append(out, in)
+		}
+	}
+
+	return out
+}
+
 func MapErr[I any, O any](ins []I, f func(I) (O, error)) ([]O, error) {
 	out := make([]O, 0, len(ins))
 

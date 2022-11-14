@@ -32,10 +32,10 @@ table "event" {
     ]
   }
 
-  index "event_create_time_event_uri_idx" {
+  index "event_uri_create_time_idx" {
     unique = false
-    type = BRIN
     columns = [
+      column.event_uri,
       column.create_time,
     ]
   }

@@ -34,7 +34,7 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 		}
 	}
 
-	return t.process(ctx, recieveTime, event.RetryCount, taxiProgressCmd)
+	return t.process(ctx, recieveTime, event.Attempt, taxiProgressCmd)
 }
 
 func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCount int, cmd command.TaxiCallProcessMessage) error {
@@ -154,7 +154,7 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 		// Get drivers
 		driverTaxiCallContexts, err := t.repository.taxiCallRequest.
 			GetDriverTaxiCallContextWithinRadius(ctx, i, taxiCallRequest.Departure.Point, taxiCallTicket.GetRadius(),
-				taxiCallTicket.TaxiCallRequestId, receiveTime)
+				taxiCallTicket.TicketId, receiveTime)
 		if err != nil {
 			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while get driver contexts within radius: %w", taxiCallRequest.Id, err)
 		}
@@ -168,7 +168,7 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 			driverTaxiCallContexts = selectTaxiCallContextsToDistribute(driverTaxiCallContexts)
 
 			driverTaxiCallContexts = slices.Map(driverTaxiCallContexts, func(dctx entity.DriverTaxiCallContext) entity.DriverTaxiCallContext {
-				dctx.LastReceivedRequestTicket = taxiCallTicket.TaxiCallRequestId
+				dctx.LastReceivedRequestTicket = taxiCallTicket.TicketId
 				dctx.LastReceiveTime = receiveTime
 				dctx.RejectedLastRequestTicket = false
 				return dctx
@@ -183,7 +183,7 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 			receiveTime, receiveTime.Add(time.Second*10))
 		userCmd := command.NewUserTaxiCallNotificationCommand(taxiCallRequest, taxiCallTicket, entity.DriverTaxiCallContext{})
 		driverCmds := slices.Map(driverTaxiCallContexts, func(i entity.DriverTaxiCallContext) entity.Event {
-			return command.NewDriverTaxiCallNotificationCommand(taxiCallRequest, taxiCallTicket, i)
+			return command.NewDriverTaxiCallNotificationCommand(i.DriverId, taxiCallRequest, taxiCallTicket, i)
 		})
 
 		events = append(events, taxiCallCmd)
@@ -219,8 +219,6 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 			return nil
 		}
 
-		// TODO(taekyeom) 티켓 수신한 다른 기사분들을 다시 수신 가능한 상태로 만들어야 함
-
 		taxiCallTicket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
@@ -229,6 +227,23 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, taxiCallRequest.DriverId.String)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		// TODO(taekyeom) 티켓 수신한 다른 기사분들을 다시 수신 가능한 상태로 만들어야 함
+		ticketReceivedDriverContexts, err := t.repository.taxiCallRequest.GetDriverTaxiCallContextByTicketId(ctx, i, taxiCallTicket.TicketId)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while get taxi call contexts by tiket id: %w", taxiCallRequest.Id, err)
+		}
+		ticketReceivedDriverContexts = slices.Filter(ticketReceivedDriverContexts, func(i entity.DriverTaxiCallContext) bool {
+			return i.DriverId != driverTaxiCallContext.DriverId
+		})
+		ticketReceivedDriverContexts = slices.Map(ticketReceivedDriverContexts, func(i entity.DriverTaxiCallContext) entity.DriverTaxiCallContext {
+			// 다시 수신 가능한 상태를 rejection으로 처리
+			i.RejectedLastRequestTicket = true
+			return i
+		})
+		if err := t.repository.taxiCallRequest.BulkUpsertDriverTaxiCallContext(ctx, i, ticketReceivedDriverContexts); err != nil {
+			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while bulk update driver contexts: %w", taxiCallRequest.Id, err)
 		}
 
 		events = append(events, command.NewUserTaxiCallNotificationCommand(
@@ -268,6 +283,13 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, reciev
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},
 		))
+		events = append(events, command.NewPaymentUserTransactionCommand(
+			taxiCallRequest.UserId,
+			taxiCallRequest.PaymentSummary.PaymentId,
+			taxiCallRequest.Id,
+			"택시 이용 요금", // TODO (taekyeom) order name generation?
+			taxiCallRequest.TotalPrice(),
+		))
 		return nil
 	})
 
@@ -292,6 +314,7 @@ func (t taxicallApp) handleUserCancelld(ctx context.Context, eventTime time.Time
 
 		if taxiCallRequest.DriverId.Valid {
 			events = append(events, command.NewDriverTaxiCallNotificationCommand(
+				taxiCallRequest.DriverId.String,
 				taxiCallRequest,
 				entity.TaxiCallTicket{},
 				entity.DriverTaxiCallContext{},
@@ -318,6 +341,16 @@ func (t taxicallApp) handleDriverCancelld(ctx context.Context, eventTime time.Ti
 	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		if err := t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
 			return fmt.Errorf("app.taxicall.handleDriverCancelled [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, taxiCallRequest.DriverId.String)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.handleDriverCancelled [%s]: error while get taxi call context: %w", taxiCallRequest.Id, err)
+		}
+		driverTaxiCallContext.CanReceive = true
+		driverTaxiCallContext.RejectedLastRequestTicket = true
+		if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
+			return fmt.Errorf("app.taxicall.handleDriverCancelled [%s]: error while upsert taxi call context: %w", taxiCallRequest.Id, err)
 		}
 
 		events = append(events, command.NewUserTaxiCallNotificationCommand(

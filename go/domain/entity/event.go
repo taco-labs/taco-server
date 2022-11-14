@@ -23,7 +23,7 @@ type Event struct {
 	DelaySeconds int32           `bun:"delay_seconds"`
 	Payload      json.RawMessage `bun:"payload,type:jsonb"`
 	CreateTime   time.Time       `bun:"create_time"`
-	RetryCount   int             `bun:"-"`
+	Attempt      int             `bun:"-"`
 	ackFn        func() error
 	nackFn       func() error
 }

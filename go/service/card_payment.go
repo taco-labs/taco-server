@@ -16,7 +16,7 @@ const (
 	tossPaymentCancelTransactionPath = "v1/payments/%s/cancel"
 )
 
-type CardPaymentService interface {
+type PaymentService interface {
 	RegisterCard(context.Context, string, request.UserPaymentRegisterRequest) (value.CardPaymentInfo, error)
 	Transaction(context.Context, entity.UserPayment, value.Payment) (value.PaymentResult, error) // TODO(taekyeom) 결제 기록 별도 보관 필요
 	CancelTransaction(context.Context, value.PaymentCancel) error
@@ -85,6 +85,7 @@ func (t tossPaymentService) RegisterCard(ctx context.Context, customerKey string
 		SetBody(tossPaymentRequest).
 		SetResult(&tossPaymentCardRegisterResponse{}).
 		Post(tossPaymentCardReigstrationPath)
+
 	if err != nil {
 		// TODO(taekyeom) Error handling
 		return value.CardPaymentInfo{}, fmt.Errorf("%w: error from card registration: %v", value.ErrExternal, err)
@@ -113,6 +114,8 @@ func (t tossPaymentService) Transaction(ctx context.Context, userPayment entity.
 		SetBody(tossPaymentRequest).
 		SetResult(&tossPaymentTransactionResponse{}).
 		Post(fmt.Sprintf(tossPaymentTransactionPath, userPayment.BillingKey))
+
+	fmt.Printf("Transaction::%++v\n", resp.Result())
 	if err != nil {
 		// TODO(taekyeom) Error handling
 		return value.PaymentResult{}, fmt.Errorf("%w: error from card transaction: %v", value.ErrExternal, err)

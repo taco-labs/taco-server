@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
 
 	firebase "firebase.google.com/go"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -21,6 +20,7 @@ import (
 	"github.com/taco-labs/taco/go/app/driver"
 	"github.com/taco-labs/taco/go/app/driversession"
 	"github.com/taco-labs/taco/go/app/outbox"
+	"github.com/taco-labs/taco/go/app/payment"
 	"github.com/taco-labs/taco/go/app/push"
 	"github.com/taco-labs/taco/go/app/taxicall"
 	"github.com/taco-labs/taco/go/app/user"
@@ -138,6 +138,15 @@ func main() {
 	}
 	pushWorkerPool := service.NewAntWorkerPoolService(pushAntWorkerPool)
 
+	paymentAntWorkerPool, err := ants.NewPool(config.PaymentApp.PoolSize,
+		ants.WithPreAlloc(config.PaymentApp.PreAlloc),
+	)
+	if err != nil {
+		fmt.Printf("Failed to instantiate payment app ant worker pool: %+v\n", err)
+		os.Exit(1)
+	}
+	paymentWorkerPool := service.NewAntWorkerPoolService(paymentAntWorkerPool)
+
 	firebaseApp, err := firebase.NewApp(ctx, nil)
 	if err != nil {
 		fmt.Printf("Failed to instantiate firebase: %+v\n", err)
@@ -153,50 +162,43 @@ func main() {
 	})
 	defer firebasepub.Shutdown(ctx)
 	notificationService := service.NewFirebaseNotificationService(firebasepub)
-	sqsClient := sqs.NewFromConfig(awsconf)
 
-	// notificationSubscriber, err := pubsub.OpenSubscription(ctx, config.NotificationTopic.GetSqsUri())
+	sqsClient := sqs.NewFromConfig(awsconf)
 	notificationSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.NotificationTopic.Uri, &awssnssqs.SubscriptionOptions{
-		Raw:      true,
-		WaitTime: time.Second * 5,
+		Raw: true,
 	})
-	if err != nil {
-		fmt.Printf("Failed to initialize notification sqs subscription topic: %+v\n", err)
-		os.Exit(1)
-	}
 	defer notificationSubscriber.Shutdown(ctx)
 	notificationSubscriberService := service.NewSqsSubService(notificationSubscriber)
 
 	notificationPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, config.NotificationTopic.Uri, &awssnssqs.TopicOptions{
 		BodyBase64Encoding: awssnssqs.Never,
 	})
-	if err != nil {
-		fmt.Printf("Failed to initialize notification sqs publisher topic: %+v\n", err)
-		os.Exit(1)
-	}
 	defer notificationPublisher.Shutdown(ctx)
 	notificationPublisherService := service.NewSqsPubService(notificationPublisher)
 
 	taxicallSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.TaxicallTopic.Uri, &awssnssqs.SubscriptionOptions{
-		Raw:      true,
-		WaitTime: time.Second * 5,
+		Raw: true,
 	})
-	if err != nil {
-		fmt.Printf("Failed to initialize taxicall sqs subscription topic: %+v\n", err)
-		os.Exit(1)
-	}
 	defer taxicallSubscriber.Shutdown(ctx)
 	taxicallSubscriberService := service.NewSqsSubService(taxicallSubscriber)
 
 	taxicallPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, config.TaxicallTopic.Uri, &awssnssqs.TopicOptions{
 		BodyBase64Encoding: awssnssqs.Never,
 	})
-	if err != nil {
-		fmt.Printf("Failed to initialize taxicall sqs publisher topic: %+v\n", err)
-		os.Exit(1)
-	}
 	defer taxicallPublisher.Shutdown(ctx)
 	taxicallPublisherService := service.NewSqsPubService(taxicallPublisher)
+
+	paymentSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.PaymentTopic.Uri, &awssnssqs.SubscriptionOptions{
+		Raw: true,
+	})
+	defer paymentSubscriber.Shutdown(ctx)
+	paymentSubscriberService := service.NewSqsSubService(paymentSubscriber)
+
+	paymentPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, config.PaymentTopic.Uri, &awssnssqs.TopicOptions{
+		BodyBase64Encoding: awssnssqs.Never,
+	})
+	defer paymentPublisher.Shutdown(ctx)
+	paymentPublisherService := service.NewSqsPubService(paymentPublisher)
 
 	s3Client := s3.NewFromConfig(awsconf)
 	presignedClient := s3.NewPresignClient(s3Client)
@@ -275,11 +277,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	paymentApp, err := payment.NewPaymentApp(
+		payment.WithTransactor(transactor),
+		payment.WithPaymentRepository(userPaymentRepository),
+		payment.WithPaymentService(tossPaymentService),
+		payment.WithEventSubService(paymentSubscriberService),
+		payment.WithWorkerPoolService(paymentWorkerPool),
+	)
+	if err != nil {
+		fmt.Printf("Failed to start user payment app: %v\n", err)
+		os.Exit(1)
+	}
+
 	notificationOutboxApp, err := outbox.NewOutboxApp(
 		outbox.WithTransactor(transactor),
 		outbox.WithEventRepository(eventRepository),
 		outbox.WithEventPublishService(notificationPublisherService),
-		outbox.WithTargetEventUirs(config.NotificationOutbox.EventUris),
+		outbox.WithTargetEventUriPrefix(config.NotificationOutbox.EventUriPrefix),
 		outbox.WithPollInterval(config.NotificationOutbox.PollInterval),
 		outbox.WithMaxMessages(config.NotificationOutbox.MaxMessages),
 	)
@@ -292,12 +306,25 @@ func main() {
 		outbox.WithTransactor(transactor),
 		outbox.WithEventRepository(eventRepository),
 		outbox.WithEventPublishService(taxicallPublisherService),
-		outbox.WithTargetEventUirs(config.TaxicallOutbox.EventUris),
+		outbox.WithTargetEventUriPrefix(config.TaxicallOutbox.EventUriPrefix),
 		outbox.WithPollInterval(config.TaxicallOutbox.PollInterval),
 		outbox.WithMaxMessages(config.TaxicallOutbox.MaxMessages),
 	)
 	if err != nil {
 		fmt.Printf("Failed to initialize taxicall outbox app: %+v\n", err)
+		os.Exit(1)
+	}
+
+	paymentOutboxApp, err := outbox.NewOutboxApp(
+		outbox.WithTransactor(transactor),
+		outbox.WithEventRepository(eventRepository),
+		outbox.WithEventPublishService(paymentPublisherService),
+		outbox.WithTargetEventUriPrefix(config.PaymentOutbox.EventUriPrefix),
+		outbox.WithPollInterval(config.PaymentOutbox.PollInterval),
+		outbox.WithMaxMessages(config.PaymentOutbox.MaxMessages),
+	)
+	if err != nil {
+		fmt.Printf("Failed to initialize payment outbox app: %+v\n", err)
 		os.Exit(1)
 	}
 
@@ -324,13 +351,12 @@ func main() {
 		user.WithUserRepository(userRepository),
 		user.WithSessionService(userSessionApp),
 		user.WithSmsVerificationRepository(smsVerificationRepository),
-		user.WithUserPaymentRepository(userPaymentRepository),
-		user.WithCardPaymentService(tossPaymentService),
 		user.WithSmsSenderService(smsSenderService),
 		user.WithMapRouteService(mapRouteService),
 		user.WithLocationService(locationService),
 		user.WithPushService(pushApp),
 		user.WithTaxiCallService(taxicallApp),
+		user.WithUserPaymentService(paymentApp),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup user app: %v\n", err)
@@ -361,13 +387,19 @@ func main() {
 		fmt.Printf("Failed to start push app event loop: %v\n", err)
 		os.Exit(1)
 	}
-	defer pushApp.Stop(ctx)
+	defer pushApp.Shutdown(ctx)
 
 	if err := taxicallApp.Start(ctx); err != nil {
 		fmt.Printf("Failed to start taxi call app event loop: %v\n", err)
 		os.Exit(1)
 	}
 	defer taxicallApp.Shutdown(ctx)
+
+	if err := paymentApp.Start(ctx); err != nil {
+		fmt.Printf("Failed to start user payment app event loop: %v\n", err)
+		os.Exit(1)
+	}
+	defer paymentApp.Shutdown(ctx)
 
 	if err := notificationOutboxApp.Start(ctx); err != nil {
 		fmt.Printf("Failed to start notification outbox app: %+v\n", err)
@@ -380,6 +412,12 @@ func main() {
 		os.Exit(1)
 	}
 	defer taxicallOutboxApp.Shuwdown()
+
+	if err := paymentOutboxApp.Start(ctx); err != nil {
+		fmt.Printf("Failed to start payment outbox app: %+v\n", err)
+		os.Exit(1)
+	}
+	defer paymentOutboxApp.Shuwdown()
 
 	// Init middlewares
 	userSessionMiddleware := userserver.NewSessionMiddleware(userSessionApp)

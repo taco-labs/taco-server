@@ -267,6 +267,7 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: error while get taxi call context:%w", err)
 		}
 		driverTaxiCallContext.CanReceive = true
+		driverTaxiCallContext.RejectedLastRequestTicket = true
 
 		if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
 			return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while upsert taxi call context: %w", err)
@@ -307,8 +308,6 @@ func (d taxicallApp) DriverToArrival(ctx context.Context, driverId string, callR
 		if err := d.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxiCall.DriverToArrival: error while update taxi call request: %w", err)
 		}
-
-		// TODO (taekyeom) send push?
 
 		return nil
 	})
@@ -374,8 +373,6 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
 			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
-
-		// TODO (taekyeom) Do payment command
 
 		return nil
 	})

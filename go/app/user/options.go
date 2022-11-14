@@ -23,12 +23,6 @@ func WithUserRepository(repo repository.UserRepository) userAppOption {
 	}
 }
 
-func WithUserPaymentRepository(repo repository.UserPaymentRepository) userAppOption {
-	return func(ua *userApp) {
-		ua.repository.payment = repo
-	}
-}
-
 func WithSmsVerificationRepository(repo repository.SmsVerificationRepository) userAppOption {
 	return func(ua *userApp) {
 		ua.repository.smsVerification = repo
@@ -38,12 +32,6 @@ func WithSmsVerificationRepository(repo repository.SmsVerificationRepository) us
 func WithSessionService(app sessionServiceInterface) userAppOption {
 	return func(ua *userApp) {
 		ua.service.session = app
-	}
-}
-
-func WithCardPaymentService(svc service.CardPaymentService) userAppOption {
-	return func(ua *userApp) {
-		ua.service.payment = svc
 	}
 }
 
@@ -77,6 +65,12 @@ func WithTaxiCallService(svc taxiCallInterface) userAppOption {
 	}
 }
 
+func WithUserPaymentService(svc userPaymentInterface) userAppOption {
+	return func(ua *userApp) {
+		ua.service.userPayment = svc
+	}
+}
+
 func (u userApp) validateApp() error {
 	if u.Transactor == nil {
 		return errors.New("user app need transator")
@@ -86,20 +80,12 @@ func (u userApp) validateApp() error {
 		return errors.New("user app need user repository")
 	}
 
-	if u.repository.payment == nil {
-		return errors.New("user app need user payment repository")
-	}
-
 	if u.repository.smsVerification == nil {
 		return errors.New("user app need sms verification repository")
 	}
 
 	if u.service.session == nil {
 		return errors.New("user app need user session repository")
-	}
-
-	if u.service.payment == nil {
-		return errors.New("user app need card payment service")
 	}
 
 	if u.service.smsSender == nil {
@@ -120,6 +106,10 @@ func (u userApp) validateApp() error {
 
 	if u.service.taxiCall == nil {
 		return errors.New("user app need taxi call service")
+	}
+
+	if u.service.userPayment == nil {
+		return errors.New("user app need user payment service")
 	}
 
 	return nil

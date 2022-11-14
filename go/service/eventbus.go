@@ -88,7 +88,7 @@ func ToEvent(msg *pubsub.Message) entity.Event {
 
 		retryCountAttr := rawMsg.Attributes[string(types.MessageSystemAttributeNameApproximateReceiveCount)]
 		retryCount, _ := strconv.Atoi(retryCountAttr)
-		event.RetryCount = retryCount
+		event.Attempt = retryCount
 	}
 
 	event.SetAck(func() error {

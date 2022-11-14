@@ -36,22 +36,29 @@ type taxiCallInterface interface {
 	UserCancelTaxiCallRequest(context.Context, string, string) error
 }
 
+type userPaymentInterface interface {
+	GetUserPayment(context.Context, string, string) (entity.UserPayment, error)
+	ListUserPayment(context.Context, string) ([]entity.UserPayment, entity.UserDefaultPayment, error)
+	RegisterUserPayment(context.Context, entity.User, request.UserPaymentRegisterRequest) (entity.UserPayment, error)
+	DeleteUserPayment(context.Context, entity.User, string) error
+	UpdateDefaultPayment(context.Context, request.DefaultPaymentUpdateRequest) error
+}
+
 type userApp struct {
 	app.Transactor
 	repository struct {
 		user            repository.UserRepository
-		payment         repository.UserPaymentRepository
 		smsVerification repository.SmsVerificationRepository // TODO(taekyeom) SMS 관련 로직은 별도 app으로 나중에 빼야 할듯?
 	}
 
 	service struct {
-		smsSender service.SmsSenderService
-		session   sessionServiceInterface
-		payment   service.CardPaymentService
-		route     service.MapRouteService
-		location  service.LocationService
-		push      pushServiceInterface
-		taxiCall  taxiCallInterface
+		smsSender   service.SmsSenderService
+		session     sessionServiceInterface
+		route       service.MapRouteService
+		location    service.LocationService
+		push        pushServiceInterface
+		taxiCall    taxiCallInterface
+		userPayment userPaymentInterface
 	}
 }
 

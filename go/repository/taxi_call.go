@@ -34,6 +34,7 @@ type TaxiCallRepository interface {
 	GetDriverTaxiCallContext(context.Context, bun.IDB, string) (entity.DriverTaxiCallContext, error)
 	UpsertDriverTaxiCallContext(context.Context, bun.IDB, entity.DriverTaxiCallContext) error
 	BulkUpsertDriverTaxiCallContext(context.Context, bun.IDB, []entity.DriverTaxiCallContext) error
+	GetDriverTaxiCallContextByTicketId(context.Context, bun.IDB, string) ([]entity.DriverTaxiCallContext, error)
 
 	GetDriverTaxiCallContextWithinRadius(context.Context, bun.IDB,
 		value.Point, int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
@@ -96,6 +97,18 @@ func (t taxiCallRepository) BulkUpsertDriverTaxiCallContext(ctx context.Context,
 	}
 
 	return nil
+}
+
+func (t taxiCallRepository) GetDriverTaxiCallContextByTicketId(ctx context.Context, db bun.IDB, ticketId string) ([]entity.DriverTaxiCallContext, error) {
+	resp := []entity.DriverTaxiCallContext{}
+
+	err := db.NewSelect().Model(&resp).Where("last_received_request_ticket = ?", ticketId).Scan(ctx)
+
+	if err != nil {
+		return []entity.DriverTaxiCallContext{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
 }
 
 func (t taxiCallRepository) GetTicketById(ctx context.Context, db bun.IDB, ticketId string) (entity.TaxiCallTicket, error) {

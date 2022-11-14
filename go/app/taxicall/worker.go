@@ -44,8 +44,9 @@ func (t taxicallApp) consume(ctx context.Context) error {
 			if errors.Is(err, context.Canceled) {
 				return
 			}
-			if event.RetryCount < 3 {
+			if event.Attempt < 4 {
 				event.Nack()
+				return
 			}
 		}
 		event.Ack()

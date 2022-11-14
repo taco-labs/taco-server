@@ -39,6 +39,10 @@ type TaxiCallRequest struct {
 	UpdateTime                time.Time            `bun:"update_time"`
 }
 
+func (t TaxiCallRequest) TotalPrice() int {
+	return t.BasePrice + t.AdditionalPrice
+}
+
 // TODO (taekyeom) 취소 수수료 같은 로직을 나중에 고려해야 할듯
 func (t *TaxiCallRequest) UpdateState(transitionTime time.Time, nextState enum.TaxiCallState) error {
 	if !t.CurrentState.TryChangeState(nextState) {

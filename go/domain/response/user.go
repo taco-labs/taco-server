@@ -66,11 +66,11 @@ func UserPaymentToResponse(userPayment entity.UserPayment) UserPaymentResponse {
 	}
 }
 
-type ListCardPaymentResponse struct {
+type ListUserPaymentResponse struct {
 	DefaultPaymentId string                `json:"defaultPaymentId"`
 	Payments         []UserPaymentResponse `json:"payments"`
 }
 
-type DeleteCardPaymentResponse struct {
+type DeleteUserPaymentResponse struct {
 	PaymentId string `json:"paymentId"`
 }

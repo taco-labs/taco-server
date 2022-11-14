@@ -1,6 +1,8 @@
 package payment
 
 import (
+	"errors"
+
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
@@ -20,7 +22,7 @@ func WithPaymentRepository(repo repository.UserPaymentRepository) paymentAppOpti
 	}
 }
 
-func WithPaymentService(svc service.CardPaymentService) paymentAppOption {
+func WithPaymentService(svc service.PaymentService) paymentAppOption {
 	return func(pa *paymentApp) {
 		pa.service.payment = svc
 	}
@@ -36,4 +38,40 @@ func WithWorkerPoolService(svc service.WorkerPoolService) paymentAppOption {
 	return func(pa *paymentApp) {
 		pa.service.workerPool = svc
 	}
+}
+
+func (p paymentApp) validateApp() error {
+	if p.Transactor == nil {
+		return errors.New("user payment app need transactor")
+	}
+
+	if p.repository.payment == nil {
+		return errors.New("user payment app need payment repository")
+	}
+
+	if p.service.payment == nil {
+		return errors.New("user payment app need payment service")
+	}
+
+	if p.service.eventSub == nil {
+		return errors.New("user payment app need event sub service")
+	}
+
+	if p.service.workerPool == nil {
+		return errors.New("user payment app need worker pool service")
+	}
+
+	return nil
+}
+
+func NewPaymentApp(opts ...paymentAppOption) (*paymentApp, error) {
+	app := &paymentApp{
+		waitCh: make(chan struct{}),
+	}
+
+	for _, opt := range opts {
+		opt(app)
+	}
+
+	return app, app.validateApp()
 }

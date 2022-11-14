@@ -10,18 +10,18 @@ import (
 )
 
 type EventRepository interface {
-	BatchGet(context.Context, bun.IDB, []string, int) ([]entity.Event, error)
+	BatchGet(context.Context, bun.IDB, string, int) ([]entity.Event, error)
 	BatchCommit(context.Context, bun.IDB, []entity.Event) error
 	BatchCreate(context.Context, bun.IDB, []entity.Event) error
 }
 
 type eventRepository struct{}
 
-func (e eventRepository) BatchGet(ctx context.Context, db bun.IDB, eventUris []string, maxSize int) ([]entity.Event, error) {
+func (e eventRepository) BatchGet(ctx context.Context, db bun.IDB, eventUriPrefix string, maxSize int) ([]entity.Event, error) {
 	resp := []entity.Event{}
 
 	err := db.NewSelect().Model(&resp).
-		Where("event_uri IN (?)", bun.In(eventUris)).
+		Where("event_uri LIKE ?", fmt.Sprintf("%s%%", eventUriPrefix)).
 		Order("create_time").
 		Limit(maxSize).
 		Scan(ctx)

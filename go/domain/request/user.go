@@ -21,6 +21,6 @@ type UserUpdateRequest struct {
 }
 
 type DefaultPaymentUpdateRequest struct {
-	Id        string `param:"userId"`
+	UserId    string `param:"userId"`
 	PaymentId string `param:"paymentId"`
 }

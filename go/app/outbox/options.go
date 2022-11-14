@@ -8,39 +8,39 @@ import (
 	"github.com/taco-labs/taco/go/service"
 )
 
-type outboxOpts func(*outboxApp)
+type outboxAppOption func(*outboxApp)
 
-func WithTransactor(transactor app.Transactor) outboxOpts {
+func WithTransactor(transactor app.Transactor) outboxAppOption {
 	return func(oa *outboxApp) {
 		oa.Transactor = transactor
 	}
 }
 
-func WithEventRepository(repo repository.EventRepository) outboxOpts {
+func WithEventRepository(repo repository.EventRepository) outboxAppOption {
 	return func(oa *outboxApp) {
 		oa.repository.event = repo
 	}
 }
 
-func WithEventPublishService(svc service.EventPublishService) outboxOpts {
+func WithEventPublishService(svc service.EventPublishService) outboxAppOption {
 	return func(oa *outboxApp) {
 		oa.service.eventPub = svc
 	}
 }
 
-func WithTargetEventUirs(uris []string) outboxOpts {
+func WithTargetEventUriPrefix(eventUriPrefix string) outboxAppOption {
 	return func(oa *outboxApp) {
-		oa.conf.targetEventUris = uris
+		oa.conf.targetEventUriPrefix = eventUriPrefix
 	}
 }
 
-func WithPollInterval(pollInterval time.Duration) outboxOpts {
+func WithPollInterval(pollInterval time.Duration) outboxAppOption {
 	return func(oa *outboxApp) {
 		oa.conf.pollInterval = pollInterval
 	}
 }
 
-func WithMaxMessages(maxMessages int) outboxOpts {
+func WithMaxMessages(maxMessages int) outboxAppOption {
 	return func(oa *outboxApp) {
 		oa.conf.maxMessages = maxMessages
 	}

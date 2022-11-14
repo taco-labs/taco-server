@@ -18,7 +18,7 @@ func (t taxiCallPushApp) Start(ctx context.Context) error {
 	return nil
 }
 
-func (t taxiCallPushApp) Stop(ctx context.Context) error {
+func (t taxiCallPushApp) Shutdown(ctx context.Context) error {
 	<-t.waitCh
 	return nil
 }
@@ -60,8 +60,9 @@ func (t taxiCallPushApp) consume(ctx context.Context) error {
 				return
 			}
 			// If error occurred, resend event with increased retry event count
-			if err != nil && event.RetryCount < 3 {
+			if err != nil && event.Attempt < 4 {
 				event.Nack()
+				return
 			}
 		}
 		event.Ack()
@@ -80,7 +81,7 @@ func (t taxiCallPushApp) handleUserNotification(ctx context.Context, event entit
 	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		token, err := t.repository.pushToken.Get(ctx, i, userNotificationCommand.UserId)
 		if err != nil {
-			return fmt.Errorf("app.taxiCallPushApp.handleUserNotification: error while get fcm token: %w", err)
+			return fmt.Errorf("app.taxiCallPushApp.handleUserNotification: error while get push token: %w", err)
 		}
 		fcmToken = token.FcmToken
 		return nil
@@ -123,15 +124,12 @@ func (t taxiCallPushApp) handleDriverNotification(ctx context.Context, event ent
 	if err != nil {
 		return fmt.Errorf("app.taxiCallPushApp.handleDriverNotification: erorr while unmarshal driver notificaiton event: %w, %v", value.ErrInternal, err)
 	}
-	if err != nil {
-		return err
-	}
 
 	var fcmToken string
 	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		token, err := t.repository.pushToken.Get(ctx, i, driverNotificationCommand.DriverId)
 		if err != nil {
-			return fmt.Errorf("app.taxiCallPushApp.handleUserNotification: error while get fcm token: %w", err)
+			return fmt.Errorf("app.taxiCallPushApp.handleDriverNotification: error while get push token: %w", err)
 		}
 		fcmToken = token.FcmToken
 		return nil

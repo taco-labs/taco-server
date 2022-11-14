@@ -22,7 +22,7 @@ type paymentApp struct {
 	}
 
 	service struct {
-		payment    service.CardPaymentService
+		payment    service.PaymentService
 		eventSub   service.EventSubscriptionService
 		workerPool service.WorkerPoolService
 	}
@@ -30,7 +30,28 @@ type paymentApp struct {
 	waitCh chan struct{}
 }
 
-func (u paymentApp) ListCardPayment(ctx context.Context, userId string) ([]entity.UserPayment, entity.UserDefaultPayment, error) {
+func (u paymentApp) GetUserPayment(ctx context.Context, userId string, userPaymentId string) (entity.UserPayment, error) {
+	var userPayment entity.UserPayment
+	err := u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		p, err := u.repository.payment.GetUserPayment(ctx, i, userPaymentId)
+		if err != nil {
+			return fmt.Errorf("app.userPayment.GetUserPayment: error while get user payment: %w", err)
+		}
+		if p.UserId != userId {
+			return fmt.Errorf("app.userPayment.GetUserPayment: unauthorized payment: %w", value.ErrUnAuthorized)
+		}
+		userPayment = p
+		return nil
+	})
+
+	if err != nil {
+		return entity.UserPayment{}, err
+	}
+
+	return userPayment, nil
+}
+
+func (u paymentApp) ListUserPayment(ctx context.Context, userId string) ([]entity.UserPayment, entity.UserDefaultPayment, error) {
 	var userPayments []entity.UserPayment
 	var userDefaultPayment entity.UserDefaultPayment
 	var err error
@@ -38,12 +59,12 @@ func (u paymentApp) ListCardPayment(ctx context.Context, userId string) ([]entit
 	err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		userPayments, err = u.repository.payment.ListUserPayment(ctx, i, userId)
 		if err != nil {
-			return fmt.Errorf("app.user.ListCardPayment: Error while list payments:%w", err)
+			return fmt.Errorf("app.userPayment.ListUserPayment: Error while list payments:%w", err)
 		}
 
 		userDefaultPayment, err = u.repository.payment.GetDefaultPaymentByUserId(ctx, i, userId)
 		if err != nil {
-			return fmt.Errorf("app.user.ListCardPayment: Error while get default payment payments:%w", err)
+			return fmt.Errorf("app.userPayment.ListUserPayment: Error while get default payment payments:%w", err)
 		}
 
 		return nil
@@ -56,12 +77,12 @@ func (u paymentApp) ListCardPayment(ctx context.Context, userId string) ([]entit
 	return userPayments, userDefaultPayment, nil
 }
 
-func (u paymentApp) RegisterCardPayment(ctx context.Context, user entity.User, req request.UserPaymentRegisterRequest) (entity.UserPayment, error) {
+func (u paymentApp) RegisterUserPayment(ctx context.Context, user entity.User, req request.UserPaymentRegisterRequest) (entity.UserPayment, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	payment, err := u.service.payment.RegisterCard(ctx, utils.MustNewUUID(), req)
 	if err != nil {
-		return entity.UserPayment{}, fmt.Errorf("app.user.RegisterCardPayment: Error while register card: %w", err)
+		return entity.UserPayment{}, fmt.Errorf("app.userPayment.RegisterUserPayment: Error while register card: %w", err)
 	}
 
 	var userPayment entity.UserPayment
@@ -81,7 +102,7 @@ func (u paymentApp) RegisterCardPayment(ctx context.Context, user entity.User, r
 
 		err = u.repository.payment.CreateUserPayment(ctx, i, userPayment)
 		if err != nil {
-			return fmt.Errorf("app.user.RegisterCardPayment: Error while create user payment:%w", err)
+			return fmt.Errorf("app.userPayment.RegisterUserPayment: Error while create user payment:%w", err)
 		}
 
 		if userPayment.DefaultPayment {
@@ -90,7 +111,7 @@ func (u paymentApp) RegisterCardPayment(ctx context.Context, user entity.User, r
 				PaymentId: userPayment.Id,
 			}
 			if err = u.repository.payment.UpsertDefaultPayment(ctx, i, userDefaultPayment); err != nil {
-				return fmt.Errorf("app.user.RegisterCardPayment: Error while update default payment: %w", err)
+				return fmt.Errorf("app.userPayment.RegisterUserPayment: Error while update default payment: %w", err)
 			}
 		}
 		return nil
@@ -105,15 +126,15 @@ func (u paymentApp) RegisterCardPayment(ctx context.Context, user entity.User, r
 	return userPayment, nil
 }
 
-func (u paymentApp) DeleteCardPayment(ctx context.Context, user entity.User, userPaymentId string) error {
+func (u paymentApp) DeleteUserPayment(ctx context.Context, user entity.User, userPaymentId string) error {
 	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		userPayment, err := u.repository.payment.GetUserPayment(ctx, i, userPaymentId)
 		if err != nil {
-			return fmt.Errorf("app.user.ListCardPayment: Error while find user payment:%w", err)
+			return fmt.Errorf("app.userPayment.ListUserPayment: Error while find user payment:%w", err)
 		}
 
 		if user.Id != userPayment.UserId {
-			return fmt.Errorf("app.user.ListCardPayment: user id does not matched:%w", value.ErrUnAuthorized)
+			return fmt.Errorf("app.userPayment.ListUserPayment: user id does not matched:%w", value.ErrUnAuthorized)
 		}
 
 		err = u.repository.payment.DeleteUserPayment(ctx, i, userPaymentId)
@@ -127,9 +148,9 @@ func (u paymentApp) DeleteCardPayment(ctx context.Context, user entity.User, use
 
 func (u paymentApp) UpdateDefaultPayment(ctx context.Context, req request.DefaultPaymentUpdateRequest) error {
 	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		userDefaultPayment, err := u.repository.payment.GetDefaultPaymentByUserId(ctx, i, req.Id)
+		userDefaultPayment, err := u.repository.payment.GetDefaultPaymentByUserId(ctx, i, req.UserId)
 		if err != nil {
-			return fmt.Errorf("app.user.UpdateDefaultPayment: error while find default user default payment by user id:\n %w", err)
+			return fmt.Errorf("app.userPayment.UpdateDefaultPayment: error while find default user default payment by user id:\n %w", err)
 		}
 
 		if userDefaultPayment.PaymentId == req.PaymentId {
@@ -141,14 +162,14 @@ func (u paymentApp) UpdateDefaultPayment(ctx context.Context, req request.Defaul
 			return err
 		}
 
-		if req.Id != userPayment.UserId {
+		if req.UserId != userPayment.UserId {
 			return value.ErrUnAuthorized
 		}
 
 		userDefaultPayment.PaymentId = userPayment.Id
 
 		if err = u.repository.payment.UpsertDefaultPayment(ctx, i, userDefaultPayment); err != nil {
-			return fmt.Errorf("app.user.UpdateDefaultPayment: error while update default payment:\n %w", err)
+			return fmt.Errorf("app.userPayment.UpdateDefaultPayment: error while update default payment:\n %w", err)
 		}
 
 		return nil

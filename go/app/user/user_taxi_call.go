@@ -7,9 +7,7 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
-	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/utils"
-	"github.com/uptrace/bun"
 )
 
 func (u userApp) ListTaxiCallRequest(ctx context.Context, req request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error) {
@@ -23,25 +21,9 @@ func (u userApp) GetLatestTaxiCallRequest(ctx context.Context, userId string) (e
 func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error) {
 	userId := utils.GetUserId(ctx)
 
-	var userPayment entity.UserPayment
-	err := u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		// check payment
-		payment, err := u.repository.payment.GetUserPayment(ctx, i, req.PaymentId)
-		if err != nil {
-			return fmt.Errorf("app.user.CreateTaxiCallRequest: error while get user payment:\n%w", err)
-		}
-
-		if payment.UserId != userId {
-			return fmt.Errorf("app.User.CreateTaxiCallRequest: unaurhorized payment:%w", value.ErrUnAuthorized)
-		}
-
-		userPayment = payment
-
-		return nil
-	})
-
+	userPayment, err := u.service.userPayment.GetUserPayment(ctx, userId, req.PaymentId)
 	if err != nil {
-		return entity.TaxiCallRequest{}, err
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while get user payment:\n%w", err)
 	}
 
 	return u.service.taxiCall.CreateTaxiCallRequest(ctx, userId, userPayment, req)

@@ -22,9 +22,9 @@ type outboxApp struct {
 		eventPub service.EventPublishService
 	}
 	conf struct {
-		targetEventUris []string
-		pollInterval    time.Duration // TODO(taekkyeom) exponential backoff for error case
-		maxMessages     int           // TODO (taekyeom) adaptive message batch sizes
+		targetEventUriPrefix string
+		pollInterval         time.Duration // TODO(taekkyeom) exponential backoff for error case
+		maxMessages          int           // TODO (taekyeom) adaptive message batch sizes
 	}
 }
 
@@ -72,7 +72,7 @@ func (o outboxApp) sendBestAffort(ctx context.Context) error {
 func (o outboxApp) sendMessageBatch(ctx context.Context) (bool, error) {
 	nonEmpty := true
 	err := o.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		events, err := o.repository.event.BatchGet(ctx, i, o.conf.targetEventUris, o.conf.maxMessages)
+		events, err := o.repository.event.BatchGet(ctx, i, o.conf.targetEventUriPrefix, o.conf.maxMessages)
 		if err != nil {
 			return fmt.Errorf("app.outbox.loop: error while batch get events: %w", err)
 		}
@@ -115,8 +115,8 @@ func (o outboxApp) validateApp() error {
 		return errors.New("outbox app need event publisher app")
 	}
 
-	if len(o.conf.targetEventUris) == 0 {
-		return errors.New("outbox app need target event uris")
+	if o.conf.targetEventUriPrefix == "" {
+		return errors.New("outbox app need target event uri prefix")
 	}
 
 	if o.conf.pollInterval.Microseconds() < 5 {
@@ -130,7 +130,7 @@ func (o outboxApp) validateApp() error {
 	return nil
 }
 
-func NewOutboxApp(opts ...outboxOpts) (outboxApp, error) {
+func NewOutboxApp(opts ...outboxAppOption) (outboxApp, error) {
 	app := outboxApp{
 		waitCh: make(chan struct{}),
 	}
