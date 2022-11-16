@@ -18,12 +18,13 @@ type paymentApp struct {
 	app.Transactor
 
 	repository struct {
-		payment repository.UserPaymentRepository
+		payment repository.PaymentRepository
 	}
 
 	service struct {
 		payment    service.PaymentService
 		eventSub   service.EventSubscriptionService
+		eventPub   service.EventPublishService
 		workerPool service.WorkerPoolService
 	}
 
@@ -46,6 +47,11 @@ func (u paymentApp) GetUserPayment(ctx context.Context, userId string, userPayme
 
 	if err != nil {
 		return entity.UserPayment{}, err
+	}
+
+	if userPayment.Invalid {
+		err = value.NewTacoError(value.ERR_INVALID_USER_PAYMENT, userPayment.InvalidErrorMessage)
+		return entity.UserPayment{}, fmt.Errorf("app.userPayment.GetUserPayment: invalid user payment: %w", err)
 	}
 
 	return userPayment, nil

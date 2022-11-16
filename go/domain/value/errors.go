@@ -13,6 +13,7 @@ const (
 	ERR_DB_INTERNAL          ErrCode = "ERR_DB_INTERNAL"
 	ERR_NOTFOUND             ErrCode = "ERR_NOT_FOUND"
 	ERR_EXTERNAL             ErrCode = "ERR_EXTERNAL"
+	ERR_EXTERNAL_PAYMENT     ErrCode = "ERR_EXTERNAL_PAYMENT"
 	ERR_ALREADY_EXISTS       ErrCode = "ERR_ALREADY_EXISTS"
 	ERR_INVALID              ErrCode = "ERR_INVALID"
 	ERR_INTERNAL             ErrCode = "ERR_INTERNAL"
@@ -20,6 +21,13 @@ const (
 	ERR_UNSUPPORTED          ErrCode = "ERR_UNSUPPORTED"
 	ERR_CALL_REQUEST_FAILED  ErrCode = "ERR_CALL_REQUEST_FAILED"
 	ERR_CALL_REQUEST_EXPIRED ErrCode = "ERR_CALL_REQUEST_EXPIRED"
+	ERR_INVALID_USER_PAYMENT ErrCode = "ERR_INVALID_USER_PAYMENT"
+
+	ERR_PAYMENT_DUPLICATED_ORDER        ErrCode = "ERR_PAYMENT_DUPLICATED_ORDER"
+	ERR_PAYMENT_INVALID_CARD_EXPIRATION ErrCode = "ERR_PAYMENT_INVALID_CARD_EXPIRATION"
+	ERR_PAYMENT_INVALID_CARD_NUMBER     ErrCode = "ERR_PAYMENT_INVALID_CARD_NUMBER"
+	ERR_PAYMENT_INVALID_STOPPED_CARD    ErrCode = "ERR_PAYMENT_INVALID_STOPPED_CARD"
+	ERR_PAYMENT_REJECT_ACCOUNT_PAYMENT  ErrCode = "ERR_PAYMENT_REJECT_ACCOUNT_PAYMENT"
 )
 
 type TacoError struct {
@@ -74,4 +82,25 @@ var (
 	ErrActiveTaxiCallRequestExists = TacoError{ERR_ALREADY_EXISTS, "active taxi call exists"}
 
 	ErrAlreadyExpiredCallRequest = TacoError{ERR_CALL_REQUEST_EXPIRED, "taxi call request expired"}
+
+	ErrInvalidUserPayment = TacoError{ERR_INVALID_USER_PAYMENT, "invalid user payment"}
+
+	ErrExternalPayment = TacoError{ERR_EXTERNAL_PAYMENT, "external payment service error"}
+
+	ErrPaymentDuplicatedOrder = TacoError{ERR_PAYMENT_DUPLICATED_ORDER, "duplicated order"}
+
+	ErrPaymentInvalidCardExpiration = TacoError{ERR_PAYMENT_INVALID_CARD_EXPIRATION, "invalid card expiration"}
+
+	ErrPaymentInvalidCardNumber = TacoError{ERR_PAYMENT_INVALID_CARD_EXPIRATION, "invalid card number"}
+
+	ErrPaymentInvalidStoppedCard = TacoError{ERR_PAYMENT_INVALID_STOPPED_CARD, "stopped card"}
+
+	ErrPaymentRejectAccountPayment = TacoError{ERR_PAYMENT_REJECT_ACCOUNT_PAYMENT, "reject account payment"}
 )
+
+func NewTacoError(errCode ErrCode, message string) TacoError {
+	return TacoError{
+		ErrCode: errCode,
+		Message: message,
+	}
+}

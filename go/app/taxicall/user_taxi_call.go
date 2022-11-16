@@ -157,11 +157,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 				Point:   req.Arrival,
 				Address: arrival,
 			},
-			PaymentSummary: value.PaymentSummary{
-				PaymentId:  userPayment.Id,
-				Company:    userPayment.CardCompany,
-				CardNumber: userPayment.RedactedCardNumber,
-			},
+			PaymentSummary:            userPayment.ToSummary(),
 			RequestBasePrice:          route.Price,
 			RequestMinAdditionalPrice: 0,           // TODO(taekyeom) To be paramterized
 			RequestMaxAdditionalPrice: route.Price, // TODO(taekyeom) To be paramterized

@@ -282,6 +282,7 @@ func main() {
 		payment.WithPaymentRepository(userPaymentRepository),
 		payment.WithPaymentService(tossPaymentService),
 		payment.WithEventSubService(paymentSubscriberService),
+		payment.WithEventPubService(paymentPublisherService),
 		payment.WithWorkerPoolService(paymentWorkerPool),
 	)
 	if err != nil {

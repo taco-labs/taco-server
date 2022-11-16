@@ -9,6 +9,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/service"
 	"github.com/uptrace/bun"
 )
 
@@ -45,38 +46,77 @@ func (p paymentApp) consume(ctx context.Context) error {
 	}
 
 	return p.service.workerPool.Submit(func() {
+		var err error
+		var events []entity.Event
+
+		defer func() {
+			if errors.Is(err, context.Canceled) {
+				return
+			}
+
+			for _, ev := range events {
+				if publishError := p.service.eventPub.SendMessage(ctx, ev); publishError != nil {
+					err = fmt.Errorf("app.payment.consume: error while publish message: %v: %w", publishError, err)
+					break
+				}
+			}
+
+			if err != nil {
+				// TODO (taekyeom) error logging
+				fmt.Printf("[PaymentApp.Worker.Consume] error while handle consumed message (attempt: %d): %+v\n", event.Attempt, err)
+				if event.Attempt < 3 {
+					event.Nack()
+					return
+				}
+				// TODO (taekyeom) retry limit logging
+			}
+			event.Ack()
+		}()
+
 		switch event.EventUri {
 		case command.EventUri_UserTransaction:
-			if event.Attempt < 4 {
-				err = p.handleTransaction(ctx, event)
-			} else {
-				// TODO (taekyeom) handle failed transaction이 실패하면?
-				err = p.handleFailedTransaction(ctx, event)
-			}
+			events, err = p.handleTransaction(ctx, event)
+		case command.EventUri_UserTransactionFailed:
+			events, err = p.handleFailedTransaction(ctx, event)
 		default:
 			// TODO(taekyeom) logging
-			fmt.Printf("[PaymentApp.Worker.Consume] Invalid EventUri '%v'", event.EventUri)
+			err = fmt.Errorf("%w: [PaymentApp.Worker.Consume] Invalid EventUri '%v'", value.ErrInvalidOperation, event.EventUri)
 		}
-		if errors.Is(err, context.Canceled) {
-			return
-		}
-		if err != nil {
-			fmt.Printf("[PaymentApp.Worker.Consume] error while handle consumed message: %+v\n", err)
-			event.Nack()
-			return
-		}
-		event.Ack()
 	})
 }
 
-func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) error {
+func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) (events []entity.Event, err error) {
 	cmd := command.PaymentUserTransactionCommand{}
 	if err := json.Unmarshal(ev.Payload, &cmd); err != nil {
-		return fmt.Errorf("app.payment.handleTransaction: failed to unmarshal transaction command: %w", err)
+		return []entity.Event{}, fmt.Errorf("app.payment.handleTransaction: failed to unmarshal transaction command: %w", err)
 	}
 
+	defer func() {
+		var tacoErr value.TacoError
+		if service.AsPaymentError(err, &tacoErr) && ev.Attempt == 3 {
+			failedTransactionEvent := command.NewPaymentUserTransactionFailedCommand(
+				cmd.UserId, cmd.PaymentId, cmd.OrderId, cmd.OrderName, cmd.Amount,
+				tacoErr.ErrCode, tacoErr.Message,
+			)
+			// TODO (taekyeom) Push notification
+			events = append(events, failedTransactionEvent)
+		}
+	}()
+
 	var userPayment entity.UserPayment
-	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	var userPaymentOrder entity.UserPaymentOrder
+
+	err = p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		// Precondition: payment in progress (see order entity, check order is done)
+		userPaymentOrder, err = p.repository.payment.GetPaymentOrder(ctx, i, cmd.OrderId)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.payment.handleTransaction: error while get payment order: %w", err)
+		}
+		if userPaymentOrder.OrderId == cmd.OrderId {
+			// TODO (taekyeom) duplication order logging
+			return nil
+		}
+
 		up, err := p.repository.payment.GetUserPayment(ctx, i, cmd.PaymentId)
 		if err != nil {
 			return fmt.Errorf("app.payment.handleTransaction: error while get user payment: %w", err)
@@ -91,10 +131,8 @@ func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) erro
 	})
 
 	if err != nil {
-		return err
+		return []entity.Event{}, err
 	}
-
-	fmt.Printf("HandleTransaction::%+v\n", cmd)
 
 	paymentTransaction := value.Payment{
 		OrderId:   cmd.OrderId,
@@ -102,19 +140,106 @@ func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) erro
 		OrderName: cmd.OrderName,
 	}
 
-	// TODO (taekyeom) order id 중복 요청 핸들링
-	_, err = p.service.payment.Transaction(ctx, userPayment, paymentTransaction)
-	if err != nil {
-		return fmt.Errorf("app.payment.handleTransaction: error while execute payment trasaction: %w", err)
+	transactionResult, err := p.service.payment.Transaction(ctx, userPayment, paymentTransaction)
+	if errors.Is(err, value.ErrPaymentDuplicatedOrder) && userPaymentOrder.OrderId != "" {
+		// TODO (taekyeom) duplication order logging
+		return []entity.Event{}, nil
+	}
+	if err != nil && !errors.Is(err, value.ErrPaymentDuplicatedOrder) {
+		return []entity.Event{}, fmt.Errorf("app.payment.handleTransaction: error while execute payment trasaction: %w", err)
 	}
 
-	// TODO (taekyeom) payment result handling
-	// p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-	// })
+	if transactionResult.OrderId == "" {
+		transactionResult, err = p.service.payment.GetTransactionResult(ctx, cmd.OrderId)
+		if err != nil {
+			return []entity.Event{}, fmt.Errorf("app.payment.handleTransaction: error while get transaction result from payment servie: %w", err)
+		}
+	}
 
-	return nil
+	err = p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		userPaymentOrder := entity.UserPaymentOrder{
+			OrderId:        cmd.OrderId,
+			UserId:         cmd.UserId,
+			PaymentSummary: userPayment.ToSummary(),
+			OrderName:      cmd.OrderName,
+			Amount:         cmd.Amount,
+			PaymentKey:     transactionResult.PaymentKey,
+			ReceiptUrl:     transactionResult.ReceiptUrl,
+			CreateTime:     ev.CreateTime,
+		}
+
+		if err := p.repository.payment.CreatePaymentOrder(ctx, i, userPaymentOrder); err != nil {
+			return fmt.Errorf("app.payment.handleTransaction: error while create payment order: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return []entity.Event{}, err
+	}
+
+	return []entity.Event{}, nil
 }
 
-func (p paymentApp) handleFailedTransaction(ctx context.Context, ev entity.Event) error {
-	return nil
+func (p paymentApp) handleFailedTransaction(ctx context.Context, ev entity.Event) ([]entity.Event, error) {
+	cmd := command.PaymentUserTransactionFailedCommand{}
+	if err := json.Unmarshal(ev.Payload, &cmd); err != nil {
+		return []entity.Event{}, fmt.Errorf("app.payment.handleFailedTransaction: failed to unmarshal transaction command: %w", err)
+	}
+
+	var events []entity.Event
+
+	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		// Set payment as invalid
+		userPayment, err := p.repository.payment.GetUserPayment(ctx, i, cmd.PaymentId)
+		if err != nil {
+			return fmt.Errorf("app.payment.handleFailedTransaction: error while get user pamyment: %w", err)
+		}
+
+		if userPayment.UserId != cmd.UserId {
+			return fmt.Errorf("app.payment.handleFailedTransaction: invalid user payment: %w", value.ErrUnAuthorized)
+		}
+
+		userPayment.Invalid = true
+		userPayment.InvalidErrorCode = cmd.FailedErrorCode
+		userPayment.InvalidErrorMessage = cmd.FailedErrorMessage
+
+		if err := p.repository.payment.UpdateUserPayment(ctx, i, userPayment); err != nil {
+			return fmt.Errorf("app.payment.handleFailedTransaction: error while update user payment: %w", err)
+		}
+
+		// If there is another payment, use it first
+		userPayments, err := p.repository.payment.ListUserPayment(ctx, i, cmd.UserId)
+		if err != nil {
+			return fmt.Errorf("app.payment.handleFailedTransaction: error while list user payment: %w", err)
+		}
+
+		for _, userPayment := range userPayments {
+			if userPayment.Id != cmd.PaymentId && !userPayment.Invalid {
+				fallbackTransactionCmd := command.NewPaymentUserTransactionCommand(
+					cmd.UserId, userPayment.Id, cmd.OrderId, cmd.OrderName, cmd.Amount,
+				)
+				events = append(events, fallbackTransactionCmd)
+				return nil
+			}
+		}
+
+		// There is no valid payment...
+		failedOrder := entity.UserPaymentFailedOrder{
+			OrderId:    cmd.OrderId,
+			UserId:     cmd.UserId,
+			OrderName:  cmd.OrderName,
+			Amount:     cmd.Amount,
+			CreateTime: ev.CreateTime,
+		}
+
+		if err := p.repository.payment.CreateFailedOrder(ctx, i, failedOrder); err != nil {
+			return fmt.Errorf("app.payment.handleFailedTransaction: error while create failed order: %w", err)
+		}
+
+		return nil
+	})
+
+	return events, err
 }

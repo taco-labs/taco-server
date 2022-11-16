@@ -11,6 +11,7 @@ type PaymentResult struct {
 	PaymentKey string
 	Amount     int
 	OrderName  string
+	ReceiptUrl string
 }
 
 type PaymentCancel struct {

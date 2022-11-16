@@ -16,7 +16,7 @@ func WithTransactor(transactor app.Transactor) paymentAppOption {
 	}
 }
 
-func WithPaymentRepository(repo repository.UserPaymentRepository) paymentAppOption {
+func WithPaymentRepository(repo repository.PaymentRepository) paymentAppOption {
 	return func(pa *paymentApp) {
 		pa.repository.payment = repo
 	}
@@ -31,6 +31,12 @@ func WithPaymentService(svc service.PaymentService) paymentAppOption {
 func WithEventSubService(svc service.EventSubscriptionService) paymentAppOption {
 	return func(pa *paymentApp) {
 		pa.service.eventSub = svc
+	}
+}
+
+func WithEventPubService(svc service.EventPublishService) paymentAppOption {
+	return func(pa *paymentApp) {
+		pa.service.eventPub = svc
 	}
 }
 
@@ -55,6 +61,10 @@ func (p paymentApp) validateApp() error {
 
 	if p.service.eventSub == nil {
 		return errors.New("user payment app need event sub service")
+	}
+
+	if p.service.eventPub == nil {
+		return errors.New("user payment app need event pub service")
 	}
 
 	if p.service.workerPool == nil {

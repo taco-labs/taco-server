@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
@@ -14,16 +15,23 @@ const (
 	tossPaymentCardReigstrationPath  = "v1/billing/authorizations/card"
 	tossPaymentTransactionPath       = "v1/billing/%s"
 	tossPaymentCancelTransactionPath = "v1/payments/%s/cancel"
+	tossPaymentGetTransaction        = "v1/payments/orders/%s"
 )
 
 type PaymentService interface {
 	RegisterCard(context.Context, string, request.UserPaymentRegisterRequest) (value.CardPaymentInfo, error)
 	Transaction(context.Context, entity.UserPayment, value.Payment) (value.PaymentResult, error) // TODO(taekyeom) 결제 기록 별도 보관 필요
 	CancelTransaction(context.Context, value.PaymentCancel) error
+	GetTransactionResult(context.Context, string) (value.PaymentResult, error)
 }
 
 type tossPaymentService struct {
 	client *resty.Client
+}
+
+type tossPaymentServiceError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 type tossPaymentCardRegisterRequest struct {
@@ -57,7 +65,7 @@ type tossPaymentTransactionRequest struct {
 	OrderName   string `json:"orderName"`
 }
 
-type tossPaymentTransactionResponse struct {
+type tossPaymentObjectResponse struct {
 	Version     string `json:"version"`
 	PaymentKey  string `json:"paymentKey"`
 	Type        string `json:"type"`
@@ -65,7 +73,9 @@ type tossPaymentTransactionResponse struct {
 	OrderName   string `json:"orderName"`
 	TotalAmount int    `json:"totalAmount"`
 	Status      string `json:"status"`
-	// TODO (taekyeom) Fill more informations
+	Receipt     struct {
+		Url string `json:"url"`
+	} `json:"receipt"`
 }
 
 type tossPaymentTransactionCancelRequest struct {
@@ -88,7 +98,12 @@ func (t tossPaymentService) RegisterCard(ctx context.Context, customerKey string
 
 	if err != nil {
 		// TODO(taekyeom) Error handling
-		return value.CardPaymentInfo{}, fmt.Errorf("%w: error from card registration: %v", value.ErrExternal, err)
+		return value.CardPaymentInfo{}, fmt.Errorf("%w: error from card registration: %v", value.ErrExternalPayment, err)
+	}
+
+	if resp.Error() != nil {
+		serviceErr := resp.Error().(*tossPaymentServiceError)
+		return value.CardPaymentInfo{}, handleTossPaymentServiceError(serviceErr)
 	}
 
 	tossPaymentResp := resp.Result().(*tossPaymentCardRegisterResponse)
@@ -112,23 +127,29 @@ func (t tossPaymentService) Transaction(ctx context.Context, userPayment entity.
 	}
 	resp, err := t.client.R().
 		SetBody(tossPaymentRequest).
-		SetResult(&tossPaymentTransactionResponse{}).
+		SetResult(&tossPaymentObjectResponse{}).
+		SetError(&tossPaymentServiceError{}).
+		SetHeader("TossPayments-Test-Code", "INVALID_CARD_EXPIRATION").
 		Post(fmt.Sprintf(tossPaymentTransactionPath, userPayment.BillingKey))
 
-	fmt.Printf("Transaction::%++v\n", resp.Result())
 	if err != nil {
 		// TODO(taekyeom) Error handling
-		return value.PaymentResult{}, fmt.Errorf("%w: error from card transaction: %v", value.ErrExternal, err)
+		return value.PaymentResult{}, fmt.Errorf("%w: error while invoking card transaction: %v", value.ErrExternalPayment, err)
 	}
 
-	// TODO (taekyoem) handle response from transaction
-	transactionResp := resp.Result().(*tossPaymentTransactionResponse)
+	if resp.Error() != nil {
+		serviceErr := resp.Error().(*tossPaymentServiceError)
+		return value.PaymentResult{}, handleTossPaymentServiceError(serviceErr)
+	}
+
+	transactionResp := resp.Result().(*tossPaymentObjectResponse)
 
 	result := value.PaymentResult{
 		OrderId:    transactionResp.OrderId,
 		PaymentKey: transactionResp.PaymentKey,
 		Amount:     transactionResp.TotalAmount,
 		OrderName:  transactionResp.OrderName,
+		ReceiptUrl: transactionResp.Receipt.Url,
 	}
 
 	return result, nil
@@ -140,14 +161,47 @@ func (t tossPaymentService) CancelTransaction(ctx context.Context, cancel value.
 		CancelAmount: cancel.CancelAmount,
 	}
 
-	_, err := t.client.R().
+	resp, err := t.client.R().
 		SetBody(tossPaymentRequest).
 		Post(fmt.Sprintf(tossPaymentCancelTransactionPath, cancel.PaymentKey))
 	if err != nil {
-		return fmt.Errorf("%w: error from transaction cancellation: %v", value.ErrExternal, err)
+		return fmt.Errorf("%w: error from transaction cancellation: %v", value.ErrExternalPayment, err)
+	}
+
+	if resp.Error() != nil {
+		serviceErr := resp.Error().(*tossPaymentServiceError)
+		return handleTossPaymentServiceError(serviceErr)
 	}
 
 	return nil
+}
+
+func (t tossPaymentService) GetTransactionResult(ctx context.Context, orderId string) (value.PaymentResult, error) {
+	resp, err := t.client.R().
+		SetResult(&tossPaymentObjectResponse{}).
+		SetError(&tossPaymentServiceError{}).
+		Get(fmt.Sprintf(tossPaymentGetTransaction, orderId))
+
+	if err != nil {
+		return value.PaymentResult{}, fmt.Errorf("%w: error from transaction cancellation: %v", value.ErrExternalPayment, err)
+	}
+
+	if resp.Error() != nil {
+		serviceErr := resp.Error().(*tossPaymentServiceError)
+		return value.PaymentResult{}, handleTossPaymentServiceError(serviceErr)
+	}
+
+	transactionResp := resp.Result().(*tossPaymentObjectResponse)
+
+	result := value.PaymentResult{
+		OrderId:    transactionResp.OrderId,
+		PaymentKey: transactionResp.PaymentKey,
+		Amount:     transactionResp.TotalAmount,
+		OrderName:  transactionResp.OrderName,
+		ReceiptUrl: transactionResp.Receipt.Url,
+	}
+
+	return result, nil
 }
 
 func NewTossPaymentService(endpoint string, apiKey string) *tossPaymentService {
@@ -155,9 +209,48 @@ func NewTossPaymentService(endpoint string, apiKey string) *tossPaymentService {
 		SetBaseURL(endpoint).
 		SetAuthScheme("Basic").
 		SetHeader("Content-Type", "application/json").
+		SetError(&tossPaymentServiceError{}).
 		SetAuthToken(apiKey)
 
 	return &tossPaymentService{
 		client: client,
 	}
+}
+
+func handleTossPaymentServiceError(serviceError *tossPaymentServiceError) value.TacoError {
+	var errCode value.ErrCode
+	errMessage := serviceError.Message
+	switch serviceError.Code {
+	case "DUPLICATED_ORDER_ID":
+		errCode = value.ERR_PAYMENT_DUPLICATED_ORDER
+	case "INVALID_CARD_EXPIRATION":
+		errCode = value.ERR_PAYMENT_INVALID_CARD_EXPIRATION
+	case "INVALID_CARD_NUMBER":
+		errCode = value.ERR_PAYMENT_INVALID_CARD_NUMBER
+	case "INVALID_STOPPED_CARD":
+		errCode = value.ERR_PAYMENT_INVALID_STOPPED_CARD
+	case "REJECT_ACCOUNT_PAYMENT":
+		errCode = value.ERR_PAYMENT_REJECT_ACCOUNT_PAYMENT
+	default:
+		errCode = value.ERR_EXTERNAL
+	}
+
+	return value.NewTacoError(errCode, errMessage)
+}
+
+func AsPaymentError(err error, target *value.TacoError) bool {
+	if !errors.As(err, target) {
+		return false
+	}
+
+	if target.Is(value.ErrExternalPayment) ||
+		target.Is(value.ErrPaymentDuplicatedOrder) ||
+		target.Is(value.ErrPaymentInvalidCardExpiration) ||
+		target.Is(value.ErrPaymentInvalidCardNumber) ||
+		target.Is(value.ErrPaymentInvalidStoppedCard) ||
+		target.Is(value.ErrPaymentRejectAccountPayment) {
+		return true
+	}
+
+	return false
 }

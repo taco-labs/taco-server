@@ -36,6 +36,21 @@ table "user_payment" {
     null = false
   }
 
+  column "invalid" {
+    type = boolean
+    null = false
+  }
+
+  column "invalid_error_code" {
+    type = text
+    null = false 
+  }
+
+  column "invalid_error_message" {
+    type = text
+    null = false
+  }
+
   column "billing_key" {
     type = text
     null = false
@@ -124,42 +139,6 @@ table "user_default_payment" {
   }
 }
 
-table "user_payment_invalid_state" {
-  schema = schema.taco
-
-  column "payment_id" {
-    type = uuid
-    null = false
-  }
-
-  column "invalid_reason" {
-    type = text
-    null = false
-  }
-
-  column "invalid_time" {
-    type = timestamp
-    null = false
-  }
-
-  primary_key {
-    columns = [
-      column.payment_id,
-    ]
-  }
-
-  foreign_key "user_payment_invalid_state_payment_fk" {
-    columns = [
-      column.payment_id,
-    ]
-    ref_columns = [
-      table.user_payment.column.id,
-    ]
-    on_delete = CASCADE
-    on_update = NO_ACTION
-  }
-}
-
 table "user_payment_order" {
   schema = schema.taco
 
@@ -184,23 +163,22 @@ table "user_payment_order" {
     null = false
   }
 
-  column "price" {
+  column "amount" {
     type = int
     null = false
   }
 
-  column "payment_result" {
-    type = jsonb
-    null = true
-    comment = "Payment result json from external payment service's response"
-  }
-
-  column "create_time" {
-    type = timestamp
+  column "payment_key" {
+    type = text
     null = false
   }
 
-  column "update_time" {
+  column "receipt_url" {
+    type = text
+    null = false
+  }
+
+  column "create_time" {
     type = timestamp
     null = false
   }
@@ -226,13 +204,13 @@ table "user_payment_order" {
 table "user_payment_failed_order" {
   schema = schema.taco
 
-  column "user_id" {
-    type = uuid
+  column "order_id" {
+    type = text
     null = false
   }
 
-  column "order_id" {
-    type = text
+  column "user_id" {
+    type = uuid
     null = false
   }
 
@@ -241,7 +219,7 @@ table "user_payment_failed_order" {
     null = false
   }
 
-  column "price" {
+  column "amount" {
     type = int
     null = false
   }
@@ -254,6 +232,14 @@ table "user_payment_failed_order" {
   primary_key {
     columns = [
       column.order_id,
+    ]
+  }
+
+  index "user_payment_failed_order_user_id_idx" {
+    unique = false
+    type = HASH
+    columns = [
+      column.user_id,
     ]
   }
 

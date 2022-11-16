@@ -3,6 +3,7 @@ package entity
 import (
 	"time"
 
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/uptrace/bun"
 )
 
@@ -17,8 +18,19 @@ type UserPayment struct {
 	CardExpirationYear  string    `bun:"card_expiration_year"`
 	CardExpirationMonth string    `bun:"card_expiration_month"`
 	BillingKey          string    `bun:"billing_key"`
+	Invalid             bool      `bun:"invalid"`
+	InvalidErrorCode    string    `bun:"invalid_error_code"`
+	InvalidErrorMessage string    `bun:"invalid_error_message"`
 	DefaultPayment      bool      `bun:"default_payment"`
 	CreateTime          time.Time `bun:"create_time"`
+}
+
+func (u UserPayment) ToSummary() value.PaymentSummary {
+	return value.PaymentSummary{
+		PaymentId:  u.Id,
+		Company:    u.CardCompany,
+		CardNumber: u.RedactedCardNumber,
+	}
 }
 
 type UserDefaultPayment struct {
@@ -26,4 +38,27 @@ type UserDefaultPayment struct {
 
 	UserId    string `bun:"user_id,pk"`
 	PaymentId string `bun:"payment_id"`
+}
+
+type UserPaymentOrder struct {
+	bun.BaseModel `bun:"table:user_payment_order"`
+
+	OrderId        string               `bun:"order_id,pk"`
+	UserId         string               `bun:"user_id"`
+	PaymentSummary value.PaymentSummary `bun:"payment_summary"`
+	OrderName      string               `bun:"order_name"`
+	Amount         int                  `bun:"amount"`
+	PaymentKey     string               `bun:"payment_key"`
+	ReceiptUrl     string               `bun:"receipt_url"`
+	CreateTime     time.Time            `bun:"create_time"`
+}
+
+type UserPaymentFailedOrder struct {
+	bun.BaseModel `bun:"table:user_payment_failed_order"`
+
+	OrderId    string    `bun:"order_id,pk"`
+	UserId     string    `bun:"user_id"`
+	OrderName  string    `bun:"order_name"`
+	Amount     int       `bun:"amount"`
+	CreateTime time.Time `bun:"create_time"`
 }

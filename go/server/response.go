@@ -43,7 +43,7 @@ func ToResponse(err error) error {
 	case value.ERR_NOTFOUND:
 		err := echo.NewHTTPError(http.StatusNotFound, tacoError)
 		herr.SetInternal(err)
-	case value.ERR_EXTERNAL:
+	case value.ERR_EXTERNAL, value.ERR_EXTERNAL_PAYMENT:
 		err := echo.NewHTTPError(http.StatusInternalServerError, tacoError)
 		herr.SetInternal(err)
 	case value.ERR_ALREADY_EXISTS:
@@ -59,7 +59,7 @@ func ToResponse(err error) error {
 		err := echo.NewHTTPError(http.StatusNotAcceptable, tacoError)
 		herr.SetInternal(err)
 	default:
-		err := echo.NewHTTPError(http.StatusInternalServerError, err)
+		err := echo.NewHTTPError(http.StatusInternalServerError, tacoError)
 		herr.SetInternal(err)
 	}
 
