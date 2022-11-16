@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	EventUri_UserTransaction       = "Payment/UserTransaction"
-	EventUri_UserTransactionFailed = "Payment/UserTransactionFailed"
+	EventUri_UserTransaction         = "Payment/UserTransaction"
+	EventUri_UserTransactionFailed   = "Payment/UserTransactionFailed"
+	EventUri_UserTransactionRecovery = "Payment/UserTransactionRecovery"
 )
 
 type PaymentUserTransactionCommand struct {
@@ -29,6 +30,11 @@ type PaymentUserTransactionFailedCommand struct {
 	Amount             int    `json:"amount"`
 	FailedErrorCode    string `json:"failedErrorCode"`
 	FailedErrorMessage string `json:"failedErrorMessage"`
+}
+
+type PaymentUserTransactionRecoveryCommand struct {
+	UserId    string `json:"userId"`
+	PaymentId string `json:"paymentId"`
 }
 
 func NewPaymentUserTransactionCommand(userId string, paymentId string, orderId string, orderName string, amount int) entity.Event {
@@ -69,6 +75,22 @@ func NewPaymentUserTransactionFailedCommand(
 	return entity.Event{
 		MessageId:    utils.MustNewUUID(),
 		EventUri:     EventUri_UserTransactionFailed,
+		DelaySeconds: 0,
+		Payload:      cmdJson,
+	}
+}
+
+func NewPaymentUserTransactionRecoveryCommand(userId string, paymentId string) entity.Event {
+	cmd := PaymentUserTransactionRecoveryCommand{
+		UserId:    userId,
+		PaymentId: paymentId,
+	}
+
+	cmdJson, _ := json.Marshal(cmd)
+
+	return entity.Event{
+		MessageId:    utils.MustNewUUID(),
+		EventUri:     EventUri_UserTransactionRecovery,
 		DelaySeconds: 0,
 		Payload:      cmdJson,
 	}

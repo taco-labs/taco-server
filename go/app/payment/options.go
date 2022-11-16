@@ -22,6 +22,12 @@ func WithPaymentRepository(repo repository.PaymentRepository) paymentAppOption {
 	}
 }
 
+func WithEventRepository(repo repository.EventRepository) paymentAppOption {
+	return func(pa *paymentApp) {
+		pa.repository.event = repo
+	}
+}
+
 func WithPaymentService(svc service.PaymentService) paymentAppOption {
 	return func(pa *paymentApp) {
 		pa.service.payment = svc
@@ -53,6 +59,10 @@ func (p paymentApp) validateApp() error {
 
 	if p.repository.payment == nil {
 		return errors.New("user payment app need payment repository")
+	}
+
+	if p.repository.event == nil {
+		return errors.New("user event app need event repository")
 	}
 
 	if p.service.payment == nil {

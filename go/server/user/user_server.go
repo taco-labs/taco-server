@@ -23,6 +23,7 @@ type UserApp interface {
 
 	ListUserPayment(context.Context, string) ([]entity.UserPayment, entity.UserDefaultPayment, error)
 	RegisterUserPayment(context.Context, request.UserPaymentRegisterRequest) (entity.UserPayment, error)
+	TryRecoverUserPayment(context.Context, string) error
 	DeleteUserPayment(context.Context, string) error
 	UpdateDefaultPayment(context.Context, request.DefaultPaymentUpdateRequest) error
 
@@ -159,6 +160,18 @@ func (u userServer) RegisterUserPayment(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusOK, response.UserPaymentToResponse(cardPayment))
+}
+
+func (u userServer) TryRecoverUserPayment(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	paymentId := e.Param("paymentId")
+	err := u.app.user.TryRecoverUserPayment(ctx, paymentId)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
 }
 
 func (u userServer) DeleteUserPayment(e echo.Context) error {

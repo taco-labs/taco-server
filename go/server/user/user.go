@@ -47,6 +47,7 @@ func (u *userServer) initController() error {
 	paymentGroup := u.echo.Group("/payment")
 	paymentGroup.POST("", u.RegisterUserPayment)
 	paymentGroup.DELETE("/:paymentId", u.DeleteUserPayment)
+	paymentGroup.PUT("/:paymentId/recovery", u.TryRecoverUserPayment)
 
 	taxiCallGroup := u.echo.Group("/taxicall")
 	taxiCallGroup.POST("", u.CreateTaxiCallRequest)

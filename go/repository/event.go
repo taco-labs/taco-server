@@ -34,6 +34,9 @@ func (e eventRepository) BatchGet(ctx context.Context, db bun.IDB, eventUriPrefi
 }
 
 func (e eventRepository) BatchCommit(ctx context.Context, db bun.IDB, events []entity.Event) error {
+	if len(events) == 0 {
+		return nil
+	}
 	res, err := db.NewDelete().Model(&events).WherePK().Exec(ctx)
 
 	if err != nil {
@@ -52,6 +55,10 @@ func (e eventRepository) BatchCommit(ctx context.Context, db bun.IDB, events []e
 }
 
 func (e eventRepository) BatchCreate(ctx context.Context, db bun.IDB, events []entity.Event) error {
+	if len(events) == 0 {
+		return nil
+	}
+
 	res, err := db.NewInsert().Model(&events).Exec(ctx)
 
 	if err != nil {

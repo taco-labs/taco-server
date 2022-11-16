@@ -89,10 +89,8 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 			return fmt.Errorf("app.taxicall.process [%s]: failed to handle taxi call progress command: %w", cmd.TaxiCallRequestId, err)
 		}
 
-		if len(events) > 0 {
-			if err := t.repository.event.BatchCreate(ctx, i, events); err != nil {
-				return fmt.Errorf("app.taxicall.process [%s]: failed to insert event: %w", cmd.TaxiCallRequestId, err)
-			}
+		if err := t.repository.event.BatchCreate(ctx, i, events); err != nil {
+			return fmt.Errorf("app.taxicall.process [%s]: failed to insert event: %w", cmd.TaxiCallRequestId, err)
 		}
 
 		return nil

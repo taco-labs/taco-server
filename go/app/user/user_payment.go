@@ -42,6 +42,15 @@ func (u userApp) RegisterUserPayment(ctx context.Context, req request.UserPaymen
 	return userPayment, nil
 }
 
+func (u userApp) TryRecoverUserPayment(ctx context.Context, userPaymentId string) error {
+	userId := utils.GetUserId(ctx)
+	err := u.service.userPayment.TryRecoverUserPayment(ctx, userId, userPaymentId)
+	if err != nil {
+		return fmt.Errorf("app.user.TryRecoverUserPayment: error from payment service: %w", err)
+	}
+	return nil
+}
+
 func (u userApp) DeleteUserPayment(ctx context.Context, userPaymentId string) error {
 	userId := utils.GetUserId(ctx)
 

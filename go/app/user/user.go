@@ -40,6 +40,7 @@ type userPaymentInterface interface {
 	GetUserPayment(context.Context, string, string) (entity.UserPayment, error)
 	ListUserPayment(context.Context, string) ([]entity.UserPayment, entity.UserDefaultPayment, error)
 	RegisterUserPayment(context.Context, entity.User, request.UserPaymentRegisterRequest) (entity.UserPayment, error)
+	TryRecoverUserPayment(context.Context, string, string) error
 	DeleteUserPayment(context.Context, entity.User, string) error
 	UpdateDefaultPayment(context.Context, request.DefaultPaymentUpdateRequest) error
 }

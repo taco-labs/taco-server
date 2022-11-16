@@ -280,6 +280,7 @@ func main() {
 	paymentApp, err := payment.NewPaymentApp(
 		payment.WithTransactor(transactor),
 		payment.WithPaymentRepository(userPaymentRepository),
+		payment.WithEventRepository(eventRepository),
 		payment.WithPaymentService(tossPaymentService),
 		payment.WithEventSubService(paymentSubscriberService),
 		payment.WithEventPubService(paymentPublisherService),

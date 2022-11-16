@@ -128,8 +128,6 @@ func (t tossPaymentService) Transaction(ctx context.Context, userPayment entity.
 	resp, err := t.client.R().
 		SetBody(tossPaymentRequest).
 		SetResult(&tossPaymentObjectResponse{}).
-		SetError(&tossPaymentServiceError{}).
-		SetHeader("TossPayments-Test-Code", "INVALID_CARD_EXPIRATION").
 		Post(fmt.Sprintf(tossPaymentTransactionPath, userPayment.BillingKey))
 
 	if err != nil {
@@ -179,7 +177,6 @@ func (t tossPaymentService) CancelTransaction(ctx context.Context, cancel value.
 func (t tossPaymentService) GetTransactionResult(ctx context.Context, orderId string) (value.PaymentResult, error) {
 	resp, err := t.client.R().
 		SetResult(&tossPaymentObjectResponse{}).
-		SetError(&tossPaymentServiceError{}).
 		Get(fmt.Sprintf(tossPaymentGetTransaction, orderId))
 
 	if err != nil {

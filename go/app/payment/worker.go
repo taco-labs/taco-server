@@ -78,6 +78,8 @@ func (p paymentApp) consume(ctx context.Context) error {
 			events, err = p.handleTransaction(ctx, event)
 		case command.EventUri_UserTransactionFailed:
 			events, err = p.handleFailedTransaction(ctx, event)
+		case command.EventUri_UserTransactionRecovery:
+			events, err = p.handleRecovery(ctx, event)
 		default:
 			// TODO(taekyeom) logging
 			err = fmt.Errorf("%w: [PaymentApp.Worker.Consume] Invalid EventUri '%v'", value.ErrInvalidOperation, event.EventUri)
@@ -124,6 +126,10 @@ func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) (eve
 
 		if up.UserId != cmd.UserId {
 			return fmt.Errorf("app.payment.handleTransaction: invalid user payment: %w", value.ErrUnAuthorized)
+		}
+		if up.Invalid {
+			return fmt.Errorf("app.payment.handleTransaction: invalid user payment: %v, %v %w",
+				up.InvalidErrorCode, up.InvalidErrorMessage, value.ErrInvalidUserPayment)
 		}
 		userPayment = up
 
@@ -242,4 +248,92 @@ func (p paymentApp) handleFailedTransaction(ctx context.Context, ev entity.Event
 	})
 
 	return events, err
+}
+
+func (p paymentApp) handleRecovery(ctx context.Context, ev entity.Event) ([]entity.Event, error) {
+	cmd := command.PaymentUserTransactionRecoveryCommand{}
+	if err := json.Unmarshal(ev.Payload, &cmd); err != nil {
+		return []entity.Event{}, fmt.Errorf("app.payment.handleRecovery: failed to unmarshal transaction command: %w", err)
+	}
+
+	// Set payment as invalid
+	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		userPayment, err := p.repository.payment.GetUserPayment(ctx, i, cmd.PaymentId)
+		if err != nil {
+			return fmt.Errorf("app.payment.handleRecovery: error while get user pamyment: %w", err)
+		}
+
+		if userPayment.UserId != cmd.UserId {
+			return fmt.Errorf("app.payment.handleRecovery: invalid user payment: %w", value.ErrUnAuthorized)
+		}
+
+		failedOrders, err := p.repository.payment.GetFailedOrdersByUserId(ctx, i, cmd.UserId)
+		if err != nil {
+			return fmt.Errorf("app.payment.handleRecovery: error while get failed orders: %w", err)
+		}
+
+		// TODO (taekyeom) optimize it...
+		for _, failedOrder := range failedOrders {
+			userPaymentOrder, err := p.repository.payment.GetPaymentOrder(ctx, i, failedOrder.OrderId)
+			if err != nil && !errors.Is(err, value.ErrNotFound) {
+				return fmt.Errorf("app.payment.handleRecovery: error while get payment order: %w", err)
+			}
+			if userPaymentOrder.OrderId == failedOrder.OrderId {
+				continue
+			}
+			paymentTransaction := value.Payment{
+				// OrderId   string
+				// Amount    int
+				// OrderName string
+				OrderId:   failedOrder.OrderId,
+				Amount:    failedOrder.Amount,
+				OrderName: failedOrder.OrderName,
+			}
+			transactionResult, err := p.service.payment.Transaction(ctx, userPayment, paymentTransaction)
+			if errors.Is(err, value.ErrPaymentDuplicatedOrder) && userPaymentOrder.OrderId != "" {
+				// TODO (taekyeom) duplication order logging
+				continue
+			}
+			if err != nil && !errors.Is(err, value.ErrPaymentDuplicatedOrder) {
+				return fmt.Errorf("app.payment.handleRecovery: error while execute payment trasaction: %w", err)
+			}
+
+			if transactionResult.OrderId == "" {
+				transactionResult, err = p.service.payment.GetTransactionResult(ctx, failedOrder.OrderId)
+				if err != nil {
+					return fmt.Errorf("app.payment.handleRecovery: error while get transaction result from payment servie: %w", err)
+				}
+			}
+
+			userPaymentOrder = entity.UserPaymentOrder{
+				OrderId:        failedOrder.OrderId,
+				UserId:         cmd.UserId,
+				PaymentSummary: userPayment.ToSummary(),
+				OrderName:      failedOrder.OrderName,
+				Amount:         failedOrder.Amount,
+				PaymentKey:     transactionResult.PaymentKey,
+				ReceiptUrl:     transactionResult.ReceiptUrl,
+				CreateTime:     ev.CreateTime,
+			}
+
+			if err := p.repository.payment.CreatePaymentOrder(ctx, i, userPaymentOrder); err != nil {
+				return fmt.Errorf("app.payment.handleRecovery: error while create payment order: %w", err)
+			}
+
+			if err := p.repository.payment.DeleteFailedOrder(ctx, i, failedOrder); err != nil {
+				return fmt.Errorf("app.payment.handleRecovery: error while delete failed order: %w", err)
+			}
+		}
+
+		userPayment.Invalid = false
+		userPayment.InvalidErrorCode = ""
+		userPayment.InvalidErrorMessage = ""
+		if err := p.repository.payment.UpdateUserPayment(ctx, i, userPayment); err != nil {
+			return fmt.Errorf("app.payment.handleRecovery: error while update user payment: %w", err)
+		}
+
+		return nil
+	})
+
+	return []entity.Event{}, err
 }

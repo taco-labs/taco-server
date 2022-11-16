@@ -6,11 +6,13 @@ import (
 
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
+	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
 )
 
@@ -19,6 +21,7 @@ type paymentApp struct {
 
 	repository struct {
 		payment repository.PaymentRepository
+		event   repository.EventRepository
 	}
 
 	service struct {
@@ -120,6 +123,19 @@ func (u paymentApp) RegisterUserPayment(ctx context.Context, user entity.User, r
 				return fmt.Errorf("app.userPayment.RegisterUserPayment: Error while update default payment: %w", err)
 			}
 		}
+
+		// TODO (taekyeom) publish event & handle in background?
+		failedOrders, err := u.repository.payment.GetFailedOrdersByUserId(ctx, i, user.Id)
+		if err != nil {
+			return fmt.Errorf("app.userPayment.RegisterUserPayment: Error while get failed orders: %w", err)
+		}
+		recoveryOrders := slices.Map(failedOrders, func(i entity.UserPaymentFailedOrder) entity.Event {
+			return command.NewPaymentUserTransactionCommand(user.Id, userPayment.Id, i.OrderId, i.OrderName, i.Amount)
+		})
+		if err := u.repository.event.BatchCreate(ctx, i, recoveryOrders); err != nil {
+			return fmt.Errorf("app.userPayment.RegisterUserPayment: Error while create recovery payment events: %w", err)
+		}
+
 		return nil
 	})
 
@@ -130,6 +146,25 @@ func (u paymentApp) RegisterUserPayment(ctx context.Context, user entity.User, r
 	// TODO (taekyeom) Handle failed order when new card is registered
 
 	return userPayment, nil
+}
+
+func (u paymentApp) TryRecoverUserPayment(ctx context.Context, userId string, userPaymentId string) error {
+	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		userPayment, err := u.repository.payment.GetUserPayment(ctx, i, userPaymentId)
+		if err != nil {
+			return fmt.Errorf("app.userPayment.TryRecoverUserPayment: error while get user payment: %w", err)
+		}
+		if userPayment.UserId != userId {
+			return fmt.Errorf("app.userPayment.TryRecoverUserPayment: unauthorized payment: %w", value.ErrUnAuthorized)
+		}
+
+		recoveryCommand := command.NewPaymentUserTransactionRecoveryCommand(userId, userPaymentId)
+		if err := u.repository.event.BatchCreate(ctx, i, []entity.Event{recoveryCommand}); err != nil {
+			return fmt.Errorf("app.userPayment.TryRecoverUserPayment: Error while create recovery payment events: %w", err)
+		}
+
+		return nil
+	})
 }
 
 func (u paymentApp) DeleteUserPayment(ctx context.Context, user entity.User, userPaymentId string) error {
