@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	EventUri_UserTaxiCallNotification   = "TaxiCallNotification/User"
-	EventUri_DriverTaxiCallNotification = "TaxiCallNotification/Driver"
+	EventUri_RawMessage                 = "Push/RawMessage"
+	EventUri_UserTaxiCallNotification   = "Push/UserTaxiCall"
+	EventUri_DriverTaxiCallNotification = "Push/DriverTaxiCall"
 )
 
-type UserTaxiCallNotificationCommand struct {
+type PushUserTaxiCallCommand struct {
 	UserId               string         `json:"userId"`
 	TaxiCallRequestId    string         `json:"taxiCallRequestId"`
 	TaxiCallState        string         `json:"taxiCallState"`
@@ -27,7 +28,7 @@ type UserTaxiCallNotificationCommand struct {
 	SearchRangeInMinutes int            `json:"searchRangeInMinutes,omitempty"`
 }
 
-type DriverTaxiCallNotificationCommand struct {
+type PushDriverTaxiCallCommand struct {
 	DriverId          string         `json:"driverId"`
 	UserId            string         `json:"userId"`
 	TaxiCallRequestId string         `json:"taxiCallRequestId"`
@@ -41,10 +42,10 @@ type DriverTaxiCallNotificationCommand struct {
 	Attempt           int            `json:"attempt"`
 }
 
-func NewUserTaxiCallNotificationCommand(taxiCallRequest entity.TaxiCallRequest,
+func NewPushUserTaxiCallCommand(taxiCallRequest entity.TaxiCallRequest,
 	taxiCallTicket entity.TaxiCallTicket,
 	driverTaxiCallContext entity.DriverTaxiCallContext) entity.Event {
-	cmd := UserTaxiCallNotificationCommand{
+	cmd := PushUserTaxiCallCommand{
 		UserId:               taxiCallRequest.UserId,
 		TaxiCallRequestId:    taxiCallRequest.Id,
 		TaxiCallState:        string(taxiCallRequest.CurrentState),
@@ -68,12 +69,12 @@ func NewUserTaxiCallNotificationCommand(taxiCallRequest entity.TaxiCallRequest,
 	}
 }
 
-func NewDriverTaxiCallNotificationCommand(
+func NewPushDriverTaxiCallCommand(
 	driverId string,
 	taxiCallRequest entity.TaxiCallRequest,
 	taxiCallTicket entity.TaxiCallTicket,
 	driverTaxiCallContext entity.DriverTaxiCallContext) entity.Event {
-	cmd := DriverTaxiCallNotificationCommand{
+	cmd := PushDriverTaxiCallCommand{
 		DriverId:          driverId,
 		Attempt:           taxiCallTicket.Attempt,
 		UserId:            taxiCallRequest.UserId,
@@ -94,5 +95,16 @@ func NewDriverTaxiCallNotificationCommand(
 		EventUri:     EventUri_DriverTaxiCallNotification,
 		DelaySeconds: 0,
 		Payload:      cmdJson,
+	}
+}
+
+func NewRawMessageCommand(notification value.Notification) entity.Event {
+	notificationJson, _ := json.Marshal(notification)
+
+	return entity.Event{
+		MessageId:    utils.MustNewUUID(),
+		EventUri:     EventUri_RawMessage,
+		DelaySeconds: 0,
+		Payload:      notificationJson,
 	}
 }

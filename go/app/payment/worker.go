@@ -178,6 +178,8 @@ func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) (eve
 			return fmt.Errorf("app.payment.handleTransaction: error while create payment order: %w", err)
 		}
 
+		events = append(events, NewPaymentSuccessNotification(userPaymentOrder))
+
 		return nil
 	})
 
@@ -221,12 +223,13 @@ func (p paymentApp) handleFailedTransaction(ctx context.Context, ev entity.Event
 			return fmt.Errorf("app.payment.handleFailedTransaction: error while list user payment: %w", err)
 		}
 
-		for _, userPayment := range userPayments {
-			if userPayment.Id != cmd.PaymentId && !userPayment.Invalid {
+		for _, fallbackUserPayment := range userPayments {
+			if fallbackUserPayment.Id != cmd.PaymentId && !fallbackUserPayment.Invalid {
 				fallbackTransactionCmd := command.NewPaymentUserTransactionCommand(
-					cmd.UserId, userPayment.Id, cmd.OrderId, cmd.OrderName, cmd.Amount,
+					cmd.UserId, fallbackUserPayment.Id, cmd.OrderId, cmd.OrderName, cmd.Amount,
 				)
-				events = append(events, fallbackTransactionCmd)
+				fallbackTransactionPush := NewPaymentFallbackNotification(userPayment, fallbackUserPayment)
+				events = append(events, fallbackTransactionCmd, fallbackTransactionPush)
 				return nil
 			}
 		}
@@ -244,6 +247,8 @@ func (p paymentApp) handleFailedTransaction(ctx context.Context, ev entity.Event
 			return fmt.Errorf("app.payment.handleFailedTransaction: error while create failed order: %w", err)
 		}
 
+		events = append(events, NewPaymentFailedNotification(cmd.UserId))
+
 		return nil
 	})
 
@@ -255,6 +260,8 @@ func (p paymentApp) handleRecovery(ctx context.Context, ev entity.Event) ([]enti
 	if err := json.Unmarshal(ev.Payload, &cmd); err != nil {
 		return []entity.Event{}, fmt.Errorf("app.payment.handleRecovery: failed to unmarshal transaction command: %w", err)
 	}
+
+	var events []entity.Event
 
 	// Set payment as invalid
 	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
@@ -331,6 +338,8 @@ func (p paymentApp) handleRecovery(ctx context.Context, ev entity.Event) ([]enti
 		if err := p.repository.payment.UpdateUserPayment(ctx, i, userPayment); err != nil {
 			return fmt.Errorf("app.payment.handleRecovery: error while update user payment: %w", err)
 		}
+
+		events = append(events, NewPaymentRecoveryNotification(userPayment))
 
 		return nil
 	})

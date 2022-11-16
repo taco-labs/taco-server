@@ -179,9 +179,9 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 
 		taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState,
 			receiveTime, receiveTime.Add(time.Second*10))
-		userCmd := command.NewUserTaxiCallNotificationCommand(taxiCallRequest, taxiCallTicket, entity.DriverTaxiCallContext{})
+		userCmd := command.NewPushUserTaxiCallCommand(taxiCallRequest, taxiCallTicket, entity.DriverTaxiCallContext{})
 		driverCmds := slices.Map(driverTaxiCallContexts, func(i entity.DriverTaxiCallContext) entity.Event {
-			return command.NewDriverTaxiCallNotificationCommand(i.DriverId, taxiCallRequest, taxiCallTicket, i)
+			return command.NewPushDriverTaxiCallCommand(i.DriverId, taxiCallRequest, taxiCallTicket, i)
 		})
 
 		events = append(events, taxiCallCmd)
@@ -244,7 +244,7 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while bulk update driver contexts: %w", taxiCallRequest.Id, err)
 		}
 
-		events = append(events, command.NewUserTaxiCallNotificationCommand(
+		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
 			taxiCallTicket,
 			driverTaxiCallContext,
@@ -276,7 +276,7 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, reciev
 		if err := t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
 			return fmt.Errorf("app.taxicall.handleDone [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
 		}
-		events = append(events, command.NewUserTaxiCallNotificationCommand(
+		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},
@@ -311,7 +311,7 @@ func (t taxicallApp) handleUserCancelld(ctx context.Context, eventTime time.Time
 		}
 
 		if taxiCallRequest.DriverId.Valid {
-			events = append(events, command.NewDriverTaxiCallNotificationCommand(
+			events = append(events, command.NewPushDriverTaxiCallCommand(
 				taxiCallRequest.DriverId.String,
 				taxiCallRequest,
 				entity.TaxiCallTicket{},
@@ -351,7 +351,7 @@ func (t taxicallApp) handleDriverCancelld(ctx context.Context, eventTime time.Ti
 			return fmt.Errorf("app.taxicall.handleDriverCancelled [%s]: error while upsert taxi call context: %w", taxiCallRequest.Id, err)
 		}
 
-		events = append(events, command.NewUserTaxiCallNotificationCommand(
+		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},
@@ -378,7 +378,7 @@ func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, reci
 		if err := t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
 			return fmt.Errorf("app.taxicall.handleFailed [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
 		}
-		events = append(events, command.NewUserTaxiCallNotificationCommand(
+		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},

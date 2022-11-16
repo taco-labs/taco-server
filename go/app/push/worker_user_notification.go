@@ -12,7 +12,7 @@ import (
 )
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestProgress(ctx context.Context, fcmToken string,
-	eventTime time.Time, cmd command.UserTaxiCallNotificationCommand) (value.Notification, error) {
+	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
 	data := map[string]string{
 		"taxiCallRequestId":      cmd.TaxiCallRequestId,
 		"taxiCallState":          cmd.TaxiCallState,
@@ -27,7 +27,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestProgress(ctx context.Context, 
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, fcmToken string,
-	eventTime time.Time, cmd command.UserTaxiCallNotificationCommand) (value.Notification, error) {
+	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
 	// Get Driver
 	var driver entity.Driver
 	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
@@ -73,7 +73,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestFailed(ctx context.Context, fcmToken string,
-	eventTime time.Time, cmd command.UserTaxiCallNotificationCommand) (value.Notification, error) {
+	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
 
 	message := value.NotificationMessage{
 		Title: "배차 실패",
@@ -93,7 +93,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestFailed(ctx context.Context, fc
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmToken string,
-	eventTime time.Time, cmd command.UserTaxiCallNotificationCommand) (value.Notification, error) {
+	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
 
 	message := value.NotificationMessage{
 		Title: "운행 완료",
@@ -115,7 +115,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmT
 }
 
 func (t taxiCallPushApp) handleDriverTaxiCallRequestCanceled(ctx context.Context, fcmToken string,
-	eventTime time.Time, cmd command.UserTaxiCallNotificationCommand) (value.Notification, error) {
+	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
 	message := value.NotificationMessage{
 		Title: "운행 취소",
 		Body:  "기사님이 택시 운행을 취소하였습니다.",

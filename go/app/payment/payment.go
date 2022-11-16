@@ -12,7 +12,6 @@ import (
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
-	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
 )
 
@@ -129,11 +128,11 @@ func (u paymentApp) RegisterUserPayment(ctx context.Context, user entity.User, r
 		if err != nil {
 			return fmt.Errorf("app.userPayment.RegisterUserPayment: Error while get failed orders: %w", err)
 		}
-		recoveryOrders := slices.Map(failedOrders, func(i entity.UserPaymentFailedOrder) entity.Event {
-			return command.NewPaymentUserTransactionCommand(user.Id, userPayment.Id, i.OrderId, i.OrderName, i.Amount)
-		})
-		if err := u.repository.event.BatchCreate(ctx, i, recoveryOrders); err != nil {
-			return fmt.Errorf("app.userPayment.RegisterUserPayment: Error while create recovery payment events: %w", err)
+		if len(failedOrders) > 0 {
+			recoveryCommand := command.NewPaymentUserTransactionRecoveryCommand(user.Id, userPayment.Id)
+			if err := u.repository.event.BatchCreate(ctx, i, []entity.Event{recoveryCommand}); err != nil {
+				return fmt.Errorf("app.userPayment.TryRecoverUserPayment: Error while create recovery payment events: %w", err)
+			}
 		}
 
 		return nil

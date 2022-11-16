@@ -12,7 +12,7 @@ import (
 )
 
 func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx context.Context, fcmToken string,
-	eventTime time.Time, cmd command.DriverTaxiCallNotificationCommand) (value.Notification, error) {
+	eventTime time.Time, cmd command.PushDriverTaxiCallCommand) (value.Notification, error) {
 
 	routeBetweenDeparture, err := t.service.route.GetRoute(ctx, cmd.DriverLocation, cmd.Departure.Point)
 	if err != nil {
@@ -72,7 +72,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestCanceled(ctx context.Context, fcmToken string,
-	eventTime time.Time, cmd command.DriverTaxiCallNotificationCommand) (value.Notification, error) {
+	eventTime time.Time, cmd command.PushDriverTaxiCallCommand) (value.Notification, error) {
 	message := value.NotificationMessage{
 		Title: "운행 취소",
 		Body:  "승객이 택시 운행을 취소하였습니다.",

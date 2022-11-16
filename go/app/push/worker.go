@@ -71,7 +71,7 @@ func (t taxiCallPushApp) consume(ctx context.Context) error {
 }
 
 func (t taxiCallPushApp) handleUserNotification(ctx context.Context, event entity.Event) error {
-	userNotificationCommand := command.UserTaxiCallNotificationCommand{}
+	userNotificationCommand := command.PushUserTaxiCallCommand{}
 	err := json.Unmarshal(event.Payload, &userNotificationCommand)
 	if err != nil {
 		return fmt.Errorf("app.taxiCallPushApp.handleUserNotification: erorr while unmarshal user notificaiton event: %w, %v", value.ErrInternal, err)
@@ -119,7 +119,7 @@ func (t taxiCallPushApp) handleUserNotification(ctx context.Context, event entit
 }
 
 func (t taxiCallPushApp) handleDriverNotification(ctx context.Context, event entity.Event) error {
-	driverNotificationCommand := command.DriverTaxiCallNotificationCommand{}
+	driverNotificationCommand := command.PushDriverTaxiCallCommand{}
 	err := json.Unmarshal(event.Payload, &driverNotificationCommand)
 	if err != nil {
 		return fmt.Errorf("app.taxiCallPushApp.handleDriverNotification: erorr while unmarshal driver notificaiton event: %w, %v", value.ErrInternal, err)

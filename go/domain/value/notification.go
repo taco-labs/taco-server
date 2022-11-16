@@ -1,12 +1,12 @@
 package value
 
 type Notification struct {
-	Principal string
-	Message   NotificationMessage
-	Data      map[string]string
+	Principal string              `json:"principal"`
+	Message   NotificationMessage `json:"message"`
+	Data      map[string]string   `json:"data"`
 }
 
 type NotificationMessage struct {
-	Title string
-	Body  string
+	Title string `json:"title"`
+	Body  string `json:"body"`
 }
