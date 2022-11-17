@@ -2,8 +2,10 @@ FROM taco:dev as builder
 
 FROM gcr.io/distroless/static-debian11
 
+WORKDIR /
+
 COPY --from=builder /go/src/github.com/taco-labs/taco/main /main
-COPY --from=builder /go/src/github.com/taco-labs/taco/go/templates /go/template
+COPY --from=builder /go/src/github.com/taco-labs/taco/go/templates /go/templates
 
 COPY ./docker/entrypoint.server.sh /entrypoint.sh
 
