@@ -98,7 +98,7 @@ func (p paypleExtension) Apply(e *echo.Echo) {
 }
 
 func NewPaypleExtension(opts ...paypleExtensionOption) (*paypleExtension, error) {
-	templates, err := template.ParseGlob("templates/*.html")
+	templates, err := template.ParseGlob("go/templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("error while initialize templates: %w", err)
 	}
