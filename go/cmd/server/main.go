@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"time"
 
 	firebase "firebase.google.com/go"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -168,7 +169,8 @@ func main() {
 
 	sqsClient := sqs.NewFromConfig(awsconf)
 	notificationSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.NotificationTopic.Uri, &awssnssqs.SubscriptionOptions{
-		Raw: true,
+		WaitTime: time.Second,
+		Raw:      true,
 	})
 	defer notificationSubscriber.Shutdown(ctx)
 	notificationSubscriberService := service.NewSqsSubService(notificationSubscriber)
@@ -180,7 +182,8 @@ func main() {
 	notificationPublisherService := service.NewSqsPubService(notificationPublisher)
 
 	taxicallSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.TaxicallTopic.Uri, &awssnssqs.SubscriptionOptions{
-		Raw: true,
+		WaitTime: time.Second,
+		Raw:      true,
 	})
 	defer taxicallSubscriber.Shutdown(ctx)
 	taxicallSubscriberService := service.NewSqsSubService(taxicallSubscriber)
@@ -192,7 +195,8 @@ func main() {
 	taxicallPublisherService := service.NewSqsPubService(taxicallPublisher)
 
 	paymentSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.PaymentTopic.Uri, &awssnssqs.SubscriptionOptions{
-		Raw: true,
+		WaitTime: time.Second,
+		Raw:      true,
 	})
 	defer paymentSubscriber.Shutdown(ctx)
 	paymentSubscriberService := service.NewSqsSubService(paymentSubscriber)
