@@ -93,6 +93,10 @@ func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) (eve
 		return []entity.Event{}, fmt.Errorf("app.payment.handleTransaction: failed to unmarshal transaction command: %w", err)
 	}
 
+	if cmd.Amount == 0 {
+		return []entity.Event{}, nil
+	}
+
 	defer func() {
 		var tacoErr value.TacoError
 		if service.AsPaymentError(err, &tacoErr) && ev.Attempt == 3 {

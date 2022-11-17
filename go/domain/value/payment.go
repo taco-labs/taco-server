@@ -1,5 +1,12 @@
 package value
 
+type PaymentRegistrationRequestParam struct {
+	RequestId       int
+	UserPhone       string
+	AuthKey         string
+	RegistrationUrl string
+}
+
 type Payment struct {
 	OrderId   string
 	Amount    int

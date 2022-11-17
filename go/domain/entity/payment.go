@@ -7,6 +7,15 @@ import (
 	"github.com/uptrace/bun"
 )
 
+type UserPaymentRegistrationRequest struct {
+	bun.BaseModel `bun:"table:user_payment_registration_request"`
+
+	RequestId  int       `bun:"request_id,pk"`
+	PaymentId  string    `bun:"payment_id"`
+	UserId     string    `bun:"user_id"`
+	CreateTime time.Time `bun:"create_time"`
+}
+
 type UserPayment struct {
 	bun.BaseModel `bun:"table:user_payment"`
 

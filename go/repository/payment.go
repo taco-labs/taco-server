@@ -12,6 +12,11 @@ import (
 )
 
 type PaymentRepository interface {
+	// Payment registration entity
+	GetUserPaymentRegistrationRequest(context.Context, bun.IDB, int) (entity.UserPaymentRegistrationRequest, error)
+	CreateUserPaymentRegistrationRequest(context.Context, bun.IDB, entity.UserPaymentRegistrationRequest) (entity.UserPaymentRegistrationRequest, error)
+	DeleteUserPaymentRegistrationRequest(context.Context, bun.IDB, entity.UserPaymentRegistrationRequest) error
+
 	// Payment entity
 	GetUserPayment(context.Context, bun.IDB, string) (entity.UserPayment, error)
 	ListUserPayment(context.Context, bun.IDB, string) ([]entity.UserPayment, error) // TODO (taekyeom) pagination?
@@ -34,6 +39,59 @@ type PaymentRepository interface {
 }
 
 type userPaymentRepository struct{}
+
+func (u userPaymentRepository) GetUserPaymentRegistrationRequest(ctx context.Context, db bun.IDB, requestId int) (entity.UserPaymentRegistrationRequest, error) {
+	resp := entity.UserPaymentRegistrationRequest{
+		RequestId: requestId,
+	}
+
+	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
+
+	if errors.Is(sql.ErrNoRows, err) {
+		return entity.UserPaymentRegistrationRequest{}, value.ErrNotFound
+	}
+	if err != nil {
+		return entity.UserPaymentRegistrationRequest{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (u userPaymentRepository) CreateUserPaymentRegistrationRequest(ctx context.Context, db bun.IDB, request entity.UserPaymentRegistrationRequest) (entity.UserPaymentRegistrationRequest, error) {
+	res, err := db.NewInsert().Model(&request).ExcludeColumn("request_id").Returning("*").Exec(ctx)
+
+	if err != nil {
+		return entity.UserPaymentRegistrationRequest{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return entity.UserPaymentRegistrationRequest{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return entity.UserPaymentRegistrationRequest{}, fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return request, nil
+}
+
+func (u userPaymentRepository) DeleteUserPaymentRegistrationRequest(ctx context.Context, db bun.IDB, request entity.UserPaymentRegistrationRequest) error {
+	res, err := db.NewDelete().Model(&request).WherePK().Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
 
 func (u userPaymentRepository) GetUserPayment(ctx context.Context, db bun.IDB, paymentId string) (entity.UserPayment, error) {
 	defaultPaymentSubq := db.NewSelect().Model(&entity.UserDefaultPayment{}).Where("payment_id = ?", paymentId)

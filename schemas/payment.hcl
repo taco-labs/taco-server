@@ -90,6 +90,39 @@ table "user_payment" {
   }
 }
 
+table "user_payment_registration_request" {
+  schema = schema.taco
+
+  column "request_id" {
+    null = false
+    type = int
+    identity {
+      generated = ALWAYS
+    }
+  }
+
+  column "payment_id" {
+    type = uuid
+    null = false
+  }
+
+  column "user_id" {
+    type = uuid
+    null = false
+  }
+
+  column "create_time" {
+    type = timestamp
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.request_id,
+    ]
+  }
+}
+
 table "user_default_payment" {
   schema = schema.taco
 

@@ -45,6 +45,8 @@ func (t TacoError) Is(target error) bool {
 }
 
 var (
+	ErrUnsupported = TacoError{ERR_UNSUPPORTED, "unsupported"}
+
 	ErrUnAuthenticated = TacoError{ERR_UNAUTHENTICATED, "unauthenticated"}
 
 	ErrUnAuthorized = TacoError{ERR_UNAUTHORIZED, "unauthorized"}

@@ -285,8 +285,8 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, reciev
 			taxiCallRequest.UserId,
 			taxiCallRequest.PaymentSummary.PaymentId,
 			taxiCallRequest.Id,
-			"택시 이용 요금", // TODO (taekyeom) order name generation?
-			taxiCallRequest.TotalPrice(),
+			"타코 이용 요금", // TODO (taekyeom) order name generation?
+			taxiCallRequest.AdditionalPrice,
 		))
 		return nil
 	})

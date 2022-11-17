@@ -18,6 +18,9 @@ var skipSet = map[string]struct{}{
 	"/user/signin/sms/verify":  {},
 	"/user/signup":             {},
 	"/healthz":                 {},
+
+	// TODO (taekyeom) skip set도 외부 extension이 제어 가능하도록 개선 필요
+	"/payment/payple/result_callback": {},
 }
 
 type userSessionApp interface {
@@ -32,6 +35,7 @@ func (s sessionMiddleware) Get() echo.MiddlewareFunc {
 	return middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
 		Skipper:   s.skipper,
 		Validator: s.validateSession,
+		KeyLookup: fmt.Sprintf("header:%s,query:apiKey", echo.HeaderAuthorization),
 	})
 }
 

@@ -30,6 +30,7 @@ import (
 	backofficeserver "github.com/taco-labs/taco/go/server/backoffice"
 	driverserver "github.com/taco-labs/taco/go/server/driver"
 	userserver "github.com/taco-labs/taco/go/server/user"
+	paypleextension "github.com/taco-labs/taco/go/server/user/extensions/payple"
 	"github.com/taco-labs/taco/go/service"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -115,8 +116,10 @@ func main() {
 	)
 
 	// TODO(taekyeom) Replace mock to real one
-	tossPaymentService := service.NewTossPaymentService(
+	payplePaymentService := service.NewPayplePaymentService(
 		config.PaymentService.Endpoint,
+		config.PaymentService.RefererDomain,
+		config.PaymentService.ApiKey,
 		config.PaymentService.ApiSecret,
 	)
 
@@ -281,7 +284,7 @@ func main() {
 		payment.WithTransactor(transactor),
 		payment.WithPaymentRepository(userPaymentRepository),
 		payment.WithEventRepository(eventRepository),
-		payment.WithPaymentService(tossPaymentService),
+		payment.WithPaymentService(payplePaymentService),
 		payment.WithEventSubService(paymentSubscriberService),
 		payment.WithEventPubService(paymentPublisherService),
 		payment.WithWorkerPoolService(paymentWorkerPool),
@@ -428,6 +431,16 @@ func main() {
 
 	backofficeSessionMiddleware := backofficeserver.NewSessionMiddleware(config.Backoffice.Secret)
 
+	// Init server extensions
+	userServerPaypleExtension, err := paypleextension.NewPaypleExtension(
+		paypleextension.WithPayplePaymentApp(userApp),
+		paypleextension.WithDomain(config.PaymentService.RefererDomain),
+	)
+	if err != nil {
+		fmt.Printf("Failed to setup payple extension: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Init servers
 	userServer, err := userserver.NewUserServer(
 		userserver.WithEndpoint("0.0.0.0"),
@@ -435,6 +448,7 @@ func main() {
 		userserver.WithUserApp(userApp),
 		userserver.WithMiddleware(userSessionMiddleware.Get()),
 		userserver.WithMiddleware(userserver.UserIdChecker),
+		userserver.WithExtension(userServerPaypleExtension.Apply),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup user server: %v\n", err)

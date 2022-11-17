@@ -37,6 +37,8 @@ type taxiCallInterface interface {
 }
 
 type userPaymentInterface interface {
+	GetCardRegistrationRequestParam(context.Context, entity.User) (value.PaymentRegistrationRequestParam, error)
+	RegistrationCallback(context.Context, request.PaymentRegistrationCallbackRequest) (entity.UserPayment, error)
 	GetUserPayment(context.Context, string, string) (entity.UserPayment, error)
 	ListUserPayment(context.Context, string) ([]entity.UserPayment, entity.UserDefaultPayment, error)
 	RegisterUserPayment(context.Context, entity.User, request.UserPaymentRegisterRequest) (entity.UserPayment, error)

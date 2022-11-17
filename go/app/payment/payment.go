@@ -2,6 +2,7 @@ package payment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/taco-labs/taco/go/app"
@@ -31,6 +32,92 @@ type paymentApp struct {
 	}
 
 	waitCh chan struct{}
+}
+
+func (u paymentApp) GetCardRegistrationRequestParam(ctx context.Context, user entity.User) (value.PaymentRegistrationRequestParam, error) {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	var requestParam value.PaymentRegistrationRequestParam
+	err := u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		registrationRequest, err := u.repository.payment.CreateUserPaymentRegistrationRequest(ctx, i, entity.UserPaymentRegistrationRequest{
+			PaymentId:  utils.MustNewUUID(),
+			UserId:     user.Id,
+			CreateTime: requestTime,
+		})
+		if err != nil {
+			return fmt.Errorf("app.payment.GetCardRegistrationRequestParam: error while create request entity: %w", err)
+		}
+
+		rp, err := u.service.payment.GetCardRegistrationRequestParam(ctx, registrationRequest.RequestId, user)
+		if err != nil {
+			return fmt.Errorf("app.payment.GetCardRegistrationRequestParam: error while get requets param: %w", err)
+		}
+
+		requestParam = rp
+
+		return nil
+	})
+
+	if err != nil {
+		return value.PaymentRegistrationRequestParam{}, err
+	}
+
+	return requestParam, nil
+}
+
+func (u paymentApp) RegistrationCallback(ctx context.Context, req request.PaymentRegistrationCallbackRequest) (entity.UserPayment, error) {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	var userPayment entity.UserPayment
+
+	err := u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		registrationRequest, err := u.repository.payment.GetUserPaymentRegistrationRequest(ctx, i, req.RequestId)
+		if errors.Is(err, value.ErrNotFound) {
+			// TODO (taekyeom) already reigstered... just logging with warn later
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("app.payment.RegistrationCallback: error while get payment registration request")
+		}
+
+		userPayment = entity.UserPayment{
+			Id:                 registrationRequest.PaymentId,
+			UserId:             registrationRequest.UserId,
+			CardCompany:        req.CardCompany,
+			RedactedCardNumber: req.CardNumber,
+			BillingKey:         req.BillingKey,
+			Invalid:            false,
+			CreateTime:         requestTime,
+		}
+
+		if err := u.repository.payment.CreateUserPayment(ctx, i, userPayment); err != nil {
+			return fmt.Errorf("app.payment.RegistrationCallback: error while create user payment: %w", err)
+		}
+
+		// TODO (taekyeom) publish event & handle in background?
+		failedOrders, err := u.repository.payment.GetFailedOrdersByUserId(ctx, i, userPayment.UserId)
+		if err != nil {
+			return fmt.Errorf("app.payment.RegistrationCallback: Error while get failed orders: %w", err)
+		}
+		if len(failedOrders) > 0 {
+			recoveryCommand := command.NewPaymentUserTransactionRecoveryCommand(userPayment.UserId, userPayment.Id)
+			if err := u.repository.event.BatchCreate(ctx, i, []entity.Event{recoveryCommand}); err != nil {
+				return fmt.Errorf("app.payment.RegistrationCallback: Error while create recovery payment events: %w", err)
+			}
+		}
+
+		if err := u.repository.payment.DeleteUserPaymentRegistrationRequest(ctx, i, registrationRequest); err != nil {
+			return fmt.Errorf("app.payment.RegistrationCallback: Error while delete registration request: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return entity.UserPayment{}, err
+	}
+
+	return userPayment, nil
 }
 
 func (u paymentApp) GetUserPayment(ctx context.Context, userId string, userPaymentId string) (entity.UserPayment, error) {

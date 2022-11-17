@@ -49,6 +49,8 @@ func (t taxiCallPushApp) consume(ctx context.Context) error {
 
 	return t.service.workerPool.Submit(func() {
 		switch event.EventUri {
+		case command.EventUri_RawMessage:
+			err = t.handleRawMessage(ctx, event)
 		case command.EventUri_UserTaxiCallNotification:
 			err = t.handleUserNotification(ctx, event)
 		case command.EventUri_DriverTaxiCallNotification:
@@ -68,6 +70,43 @@ func (t taxiCallPushApp) consume(ctx context.Context) error {
 		event.Ack()
 	})
 
+}
+
+func (t taxiCallPushApp) handleRawMessage(ctx context.Context, event entity.Event) error {
+	cmd := command.PushRawCommand{}
+	err := json.Unmarshal(event.Payload, &cmd)
+	if err != nil {
+		return fmt.Errorf("app.taxicallPushApp.handleRawMessage: error while unmarshal notification: %w", err)
+	}
+
+	var fcmToken string
+	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		token, err := t.repository.pushToken.Get(ctx, i, cmd.AccountId)
+		if err != nil {
+			return fmt.Errorf("app.taxiCallPushApp.handleRawMessage: error while get push token: %w", err)
+		}
+		fcmToken = token.FcmToken
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	notification := value.Notification{
+		Principal: fcmToken,
+		Message: value.NotificationMessage{
+			Title: cmd.MessageTitle,
+			Body:  cmd.MessageBody,
+		},
+		Data: cmd.Data,
+	}
+
+	if err := t.service.notification.SendNotification(ctx, notification); err != nil {
+		return fmt.Errorf("app.taxiCallPushApp.handleRawMessage: error while send notification: %w", err)
+	}
+
+	return nil
 }
 
 func (t taxiCallPushApp) handleUserNotification(ctx context.Context, event entity.Event) error {

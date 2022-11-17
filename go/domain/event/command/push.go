@@ -42,6 +42,13 @@ type PushDriverTaxiCallCommand struct {
 	Attempt           int            `json:"attempt"`
 }
 
+type PushRawCommand struct {
+	AccountId    string            `json:"accountId"`
+	MessageTitle string            `json:"messageTitle"`
+	MessageBody  string            `json:"messageBody"`
+	Data         map[string]string `json:"data"`
+}
+
 func NewPushUserTaxiCallCommand(taxiCallRequest entity.TaxiCallRequest,
 	taxiCallTicket entity.TaxiCallTicket,
 	driverTaxiCallContext entity.DriverTaxiCallContext) entity.Event {
@@ -98,8 +105,14 @@ func NewPushDriverTaxiCallCommand(
 	}
 }
 
-func NewRawMessageCommand(notification value.Notification) entity.Event {
-	notificationJson, _ := json.Marshal(notification)
+func NewRawMessageCommand(accountId, messageTitle, messageBody string, data map[string]string) entity.Event {
+	cmd := PushRawCommand{
+		AccountId:    accountId,
+		MessageTitle: messageTitle,
+		MessageBody:  messageBody,
+		Data:         data,
+	}
+	notificationJson, _ := json.Marshal(cmd)
 
 	return entity.Event{
 		MessageId:    utils.MustNewUUID(),

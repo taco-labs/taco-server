@@ -27,3 +27,9 @@ func WithMiddleware(middleware echo.MiddlewareFunc) userServerOption {
 		us.middlewares = append(us.middlewares, middleware)
 	}
 }
+
+func WithExtension(extension func(*echo.Echo)) userServerOption {
+	return func(us *userServer) {
+		extension(us.echo)
+	}
+}
