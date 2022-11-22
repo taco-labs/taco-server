@@ -66,6 +66,8 @@ func (t taxicallApp) DeactivateDriverContext(ctx context.Context, driverId strin
 }
 
 func (t taxicallApp) UpdateDriverLocation(ctx context.Context, req request.DriverLocationUpdateRequest) error {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driverLocationDto := entity.DriverLocation{
 			DriverId: req.DriverId,
@@ -73,6 +75,7 @@ func (t taxicallApp) UpdateDriverLocation(ctx context.Context, req request.Drive
 				Latitude:  req.Latitude,
 				Longitude: req.Longitude,
 			},
+			UpdateTime: requestTime,
 		}
 
 		if err := t.repository.driverLocation.Upsert(ctx, i, driverLocationDto); err != nil {

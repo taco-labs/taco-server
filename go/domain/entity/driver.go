@@ -50,6 +50,7 @@ type DriverSettlementAccount struct {
 }
 
 type DriverLocation struct {
-	Location value.Point
-	DriverId string
+	Location   value.Point
+	DriverId   string
+	UpdateTime time.Time
 }

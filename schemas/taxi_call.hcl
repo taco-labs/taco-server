@@ -262,6 +262,11 @@ table "driver_location" {
     type = sql("geometry(point,4326)")
   }
 
+  column "update_time" {
+    type = timestamp
+    null = false
+  }
+
   primary_key {
     columns = [
       column.driver_id,
