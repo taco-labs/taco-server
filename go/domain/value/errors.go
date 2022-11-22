@@ -73,7 +73,7 @@ var (
 
 	ErrConfirmationNeededStateTransition = TacoError{ERR_NEED_CONFIRMATION, "need confirmation"}
 
-	ErrUnsupportedRegion = TacoError{ERR_UNSUPPORTED, "unsupported region"}
+	ErrUnsupportedServiceRegion = TacoError{ERR_UNSUPPORTED, "unsupported region"}
 
 	ErrNotYetActivated = TacoError{ERR_UNAUTHORIZED, "not yet activated account"}
 

@@ -22,6 +22,7 @@ type DriverResponse struct {
 	DriverLicenseId            string                `json:"driverLicenseId"`
 	CompanyRegistrationNumber  string                `json:"companyRegistrationNumber"`
 	CarNumber                  string                `json:"carNumber"`
+	ServiceRegion              string                `json:"serviceRegion"`
 	DriverLicenseImageUploaded bool                  `json:"driverLicenseImageUploaded"`
 	DriverProfileImageUploaded bool                  `json:"driverProfileImageUploaded"`
 	UploadUrls                 value.DriverImageUrls `json:"uploadUrls"`
@@ -44,6 +45,7 @@ func DriverToResponse(driver entity.Driver) DriverResponse {
 		Gender:                     driver.Gender,
 		DriverLicenseId:            driver.DriverLicenseId,
 		CarNumber:                  driver.CarNumber,
+		ServiceRegion:              driver.ServiceRegion,
 		CompanyRegistrationNumber:  driver.CompanyRegistrationNumber,
 		AppOs:                      string(driver.AppOs),
 		AppVersion:                 driver.AppVersion,

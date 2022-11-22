@@ -108,7 +108,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 
 	// TODO(taekyeom) To be paramterized
 	if !(departure.AvailableRegion() && arrival.AvailableRegion()) {
-		return entity.TaxiCallRequest{}, fmt.Errorf("%w: not supported region", value.ErrUnsupportedRegion)
+		return entity.TaxiCallRequest{}, fmt.Errorf("%w: not supported region", value.ErrUnsupportedServiceRegion)
 	}
 
 	route, err := t.service.route.GetRoute(ctx, req.Departure, req.Arrival)

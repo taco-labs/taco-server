@@ -151,7 +151,7 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 
 		// Get drivers
 		driverTaxiCallContexts, err := t.repository.taxiCallRequest.
-			GetDriverTaxiCallContextWithinRadius(ctx, i, taxiCallRequest.Departure.Point, taxiCallTicket.GetRadius(),
+			GetDriverTaxiCallContextWithinRadius(ctx, i, taxiCallRequest.Departure, taxiCallRequest.Arrival, taxiCallTicket.GetRadius(),
 				taxiCallTicket.TicketId, receiveTime)
 		if err != nil {
 			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while get driver contexts within radius: %w", taxiCallRequest.Id, err)

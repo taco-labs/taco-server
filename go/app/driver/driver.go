@@ -193,6 +193,11 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrUnAuthorized)
 		}
 
+		_, supportedRegion := value.SupportedServiceRegions[req.ServiceRegion]
+		if !supportedRegion {
+			return fmt.Errorf("app.Driver.Signup: unsupported service region: %w", value.ErrUnsupportedServiceRegion)
+		}
+
 		newDriverDto = entity.DriverDto{
 			Id:                         utils.MustNewUUID(),
 			DriverType:                 enum.DriverTypeFromString(req.DriverType),
@@ -207,6 +212,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			DriverLicenseId:            req.DriverLicenseId,
 			CompanyRegistrationNumber:  req.CompanyRegistrationNumber,
 			CarNumber:                  req.CarNumber,
+			ServiceRegion:              req.ServiceRegion,
 			DriverLicenseImageUploaded: false,
 			DriverProfileImageUploaded: false,
 			OnDuty:                     false,

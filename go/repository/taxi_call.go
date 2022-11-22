@@ -37,7 +37,7 @@ type TaxiCallRepository interface {
 	GetDriverTaxiCallContextByTicketId(context.Context, bun.IDB, string) ([]entity.DriverTaxiCallContext, error)
 
 	GetDriverTaxiCallContextWithinRadius(context.Context, bun.IDB,
-		value.Point, int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
+		value.Location, value.Location, int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
 
 	GetDriverTaxiCallSettlement(context.Context, bun.IDB, string) (entity.DriverTaxiCallSettlement, error)
 	CreateDriverTaxiCallSettlement(context.Context, bun.IDB, entity.DriverTaxiCallSettlement) error
@@ -330,7 +330,7 @@ func (t taxiCallRepository) Update(ctx context.Context, db bun.IDB, taxiCallRequ
 }
 
 func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Context, db bun.IDB,
-	point value.Point, raidus int, ticketId string, requestTime time.Time) ([]entity.DriverTaxiCallContext, error) {
+	departure value.Location, arrival value.Location, raidus int, ticketId string, requestTime time.Time) ([]entity.DriverTaxiCallContext, error) {
 
 	type tempModel struct {
 		entity.DriverTaxiCallContext `bun:",extend"`
@@ -345,7 +345,8 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		ColumnExpr("driver_id").
 		ColumnExpr("location").
 		// TODO (taekyeom) Handle public schema search path...
-		ColumnExpr("public.ST_DistanceSphere(location, public.ST_GeomFromText('POINT(? ?)',4326)) as distance", point.Longitude, point.Latitude)
+		ColumnExpr("public.ST_DistanceSphere(location, public.ST_GeomFromText('POINT(? ?)',4326)) as distance",
+			departure.Point.Longitude, departure.Point.Latitude)
 
 	locationWithDistanceFiltered := db.NewSelect().
 		TableExpr("driver_distance").
@@ -354,13 +355,22 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		ColumnExpr("distance").
 		Where("distance <= ?", raidus)
 
+	driverServiceRegion := db.NewSelect().
+		TableExpr("driver").
+		Column("id").
+		ColumnExpr("service_region").
+		Where("service_region = ?", departure.Address.RegionDepth1).
+		WhereOr("service_region = ?", arrival.Address.RegionDepth1)
+
 	err := db.NewSelect().
 		With("driver_distance", locationWithDistance).
 		With("driver_distance_filtered", locationWithDistanceFiltered).
+		With("driver_service_region", driverServiceRegion).
 		Model(&resp).
 		ColumnExpr("driver_taxi_call_context.*").
 		ColumnExpr("location").
 		Join("JOIN driver_distance_filtered AS t2 ON t2.driver_id = ?TableName.driver_id").
+		Join("JOIN driver_service_region AS t3 ON t3.id = ?TableName.driver_id").
 		Where("can_receive").
 		Where("last_received_request_ticket <> ? AND (rejected_last_request_ticket OR ? - last_receive_time > '10 seconds')", ticketId, requestTime).
 		Order("distance").

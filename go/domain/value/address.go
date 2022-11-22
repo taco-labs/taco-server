@@ -7,6 +7,10 @@ import (
 	"github.com/twpayne/go-geom/encoding/ewkbhex"
 )
 
+var SupportedServiceRegions = map[string]struct{}{
+	"서울": {},
+}
+
 type Address struct {
 	AddressName   string `json:"addressName"`
 	RegionDepth1  string `json:"regionDepth1"`
@@ -17,7 +21,8 @@ type Address struct {
 }
 
 func (r Address) AvailableRegion() bool {
-	return r.RegionDepth1 == "서울" && (r.RegionDepth2 == "서초구" || r.RegionDepth2 == "강남구")
+	_, ok := SupportedServiceRegions[r.RegionDepth1]
+	return ok
 }
 
 type AddressSummary struct {

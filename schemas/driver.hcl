@@ -34,6 +34,11 @@ table "driver" {
     null = false
   }
 
+  column "service_region" {
+    type = text
+    null = false
+  }
+
   column "phone" {
     type = text
     null = false
