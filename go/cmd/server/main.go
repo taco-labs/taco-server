@@ -39,9 +39,17 @@ import (
 	"github.com/uptrace/bun/extra/bundebug"
 	"gocloud.dev/pubsub/awssnssqs"
 	firebasepubsub "gocloud.dev/pubsub/firebase"
+
+	_ "net/http/pprof"
 )
 
 func main() {
+	// pprof
+
+	go func() {
+		http.ListenAndServe(":8090", nil)
+	}()
+
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
