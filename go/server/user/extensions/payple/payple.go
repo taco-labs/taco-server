@@ -11,7 +11,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
-	"github.com/taco-labs/taco/go/domain/response"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/server"
 	"github.com/taco-labs/taco/go/utils"
@@ -61,7 +60,7 @@ func (p paypleExtension) RegistCardPayment(e echo.Context) error {
 		"requestId": resp.RequestId,
 	}
 
-	return e.Render(http.StatusOK, "payple.html", params)
+	return e.Render(http.StatusOK, "payple_register.html", params)
 }
 
 func (p paypleExtension) RegisterCardPaymentResultCallback(e echo.Context) error {
@@ -72,7 +71,7 @@ func (p paypleExtension) RegisterCardPaymentResultCallback(e echo.Context) error
 		return err
 	}
 	if !body.Success() {
-		return server.ToResponse(value.NewTacoError(value.ERR_EXTERNAL_PAYMENT, body.ResultMessage))
+		return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_failure", p.domain))
 	}
 
 	requestId, _ := strconv.Atoi(body.RequestId)
@@ -83,17 +82,29 @@ func (p paypleExtension) RegisterCardPaymentResultCallback(e echo.Context) error
 		CardNumber:  body.CardNumber,
 	}
 
-	userPayment, err := p.app.userApp.RegistrationCallback(ctx, req)
+	_, err := p.app.userApp.RegistrationCallback(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		// TODO (taekyeom) server logging?
+		// return server.ToResponse(err)
+		return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_failure", p.domain))
 	}
 
-	return e.JSON(http.StatusOK, response.UserPaymentToResponse(userPayment))
+	return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_success", p.domain))
+}
+
+func (p paypleExtension) RegisterCardPaymentSuccess(e echo.Context) error {
+	return e.Render(http.StatusOK, "payple_register_success.html", map[string]interface{}{})
+}
+
+func (p paypleExtension) RegisterCardPaymentFailure(e echo.Context) error {
+	return e.Render(http.StatusOK, "payple_register_failure.html", map[string]interface{}{})
 }
 
 func (p paypleExtension) Apply(e *echo.Echo) {
 	e.GET("/payment/payple/register", p.RegistCardPayment)
 	e.POST("/payment/payple/result_callback", p.RegisterCardPaymentResultCallback)
+	e.GET("/payment/payple/register_success", p.RegisterCardPaymentSuccess)
+	e.GET("/payment/payple/register_failure", p.RegisterCardPaymentFailure)
 	e.Renderer = p.renderer
 }
 
