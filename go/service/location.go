@@ -92,11 +92,19 @@ func (k kakaoLocationService) GetAddress(ctx context.Context, point value.Point)
 		return value.Address{}, fmt.Errorf("%w: error from kakao coord2regioncode: %v", value.ErrExternal, err)
 	}
 
-	addressResp := resp.Result().(*kakaoAddressResponse)
+	addressResp := resp.Result().(*kakaoAddressResponse).Documents[0].Address
 
-	roadAddress := addressResp.Documents[0].Address
+	address := value.Address{
+		AddressName:   addressResp.AddressName,
+		RegionDepth1:  addressResp.RegionDepth1,
+		RegionDepth2:  addressResp.RegionDepth2,
+		RegionDepth3:  addressResp.RegionDepth3,
+		MainAddressNo: addressResp.MainAddressNo,
+		SubAddressNo:  addressResp.SubAddressNo,
+		ServiceRegion: value.GetServiceRegion(addressResp.AddressName),
+	}
 
-	return value.Address(roadAddress), nil
+	return address, nil
 }
 
 func NewKakaoLocationService(endpoint string, apiKey string) *kakaoLocationService {

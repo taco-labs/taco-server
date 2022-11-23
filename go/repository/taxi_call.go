@@ -359,8 +359,8 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		TableExpr("driver").
 		Column("id").
 		ColumnExpr("service_region").
-		Where("service_region = ?", departure.Address.RegionDepth1).
-		WhereOr("service_region = ?", arrival.Address.RegionDepth1)
+		Where("service_region = ?", departure.Address.ServiceRegion).
+		WhereOr("service_region = ?", arrival.Address.ServiceRegion)
 
 	err := db.NewSelect().
 		With("driver_distance", locationWithDistance).
@@ -391,10 +391,6 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 }
 
 func (t taxiCallRepository) GetDriverTaxiCallContext(ctx context.Context, db bun.IDB, driverId string) (entity.DriverTaxiCallContext, error) {
-	// resp := entity.DriverTaxiCallContext{
-	// 	DriverId: driverId,
-	// }
-
 	resp := struct {
 		entity.DriverTaxiCallContext `bun:",extend"`
 
