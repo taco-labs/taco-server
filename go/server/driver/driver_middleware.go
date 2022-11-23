@@ -20,10 +20,13 @@ var skipSet = map[string]struct{}{
 	"/healthz":                   {},
 }
 
-var allowNonActivatedPaths = map[string]struct{}{
-	"/driver/:driverId":                    {},
-	"/driver/:driverId/image_urls":         {},
-	"/driver/:driverId/settlement_account": {},
+var denyNonActiveDriverPath = map[string]struct{}{
+	"/driver/:driverId/on_duty":               {},
+	"/driver/:driverId/location":              {},
+	"/taxicall/ticket/:ticketId":              {},
+	"/taxicall/:taxiCallRequestId":            {},
+	"/taxicall/:taxiCallRequestId/to_arrival": {},
+	"/taxicall/:taxiCallRequestId/done":       {},
 }
 
 type driverSessionApp interface {
@@ -38,6 +41,9 @@ func (s sessionMiddleware) Get() echo.MiddlewareFunc {
 	return middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
 		Skipper:   s.skipper,
 		Validator: s.validateSession,
+		ErrorHandler: func(err error, c echo.Context) error {
+			return server.ToResponse(err)
+		},
 	})
 }
 
@@ -56,12 +62,8 @@ func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, er
 		return false, err
 	}
 
-	_, ok := allowNonActivatedPaths[key]
-	if ok {
-		return true, nil
-	}
-
-	if !session.Activated {
+	_, denyPath := denyNonActiveDriverPath[c.Path()]
+	if !session.Activated && denyPath {
 		return false, value.ErrNotYetActivated
 	}
 

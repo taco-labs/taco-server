@@ -35,7 +35,7 @@ func ToResponse(err error) error {
 
 	switch tacoError.ErrCode {
 	case value.ERR_UNAUTHENTICATED, value.ERR_UNAUTHORIZED, value.ERR_SESSION_EXPIRED:
-		err := echo.NewHTTPError(http.StatusBadRequest)
+		err := echo.NewHTTPError(http.StatusBadRequest, tacoError)
 		herr.SetInternal(err)
 	case value.ERR_DB_INTERNAL, value.ERR_INTERNAL:
 		err := echo.NewHTTPError(http.StatusInternalServerError, tacoError)

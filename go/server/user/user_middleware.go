@@ -38,6 +38,9 @@ func (s sessionMiddleware) Get() echo.MiddlewareFunc {
 		Skipper:   s.skipper,
 		Validator: s.validateSession,
 		KeyLookup: fmt.Sprintf("header:%s,query:apiKey", echo.HeaderAuthorization),
+		ErrorHandler: func(err error, c echo.Context) error {
+			return server.ToResponse(err)
+		},
 	})
 }
 
