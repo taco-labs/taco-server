@@ -64,11 +64,12 @@ type driverApp struct {
 	}
 
 	service struct {
-		smsSender service.SmsSenderService
-		session   sessionServiceInterface
-		push      pushServiceInterface
-		taxiCall  driverTaxiCallInterface
-		imageUrl  service.ImageUrlService
+		smsSender         service.SmsSenderService
+		session           sessionServiceInterface
+		push              pushServiceInterface
+		taxiCall          driverTaxiCallInterface
+		imageUrl          service.ImageUrlService
+		settlementAccount service.SettlementAccountService
 	}
 }
 

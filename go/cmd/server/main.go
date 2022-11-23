@@ -132,6 +132,21 @@ func main() {
 		config.PaymentService.ApiSecret,
 	)
 
+	var settlementAccountService service.SettlementAccountService
+	switch config.SettlementAccountService.Type {
+	case "mock":
+		settlementAccountService = service.NewMockSettlementAccountService()
+	case "payple":
+		settlementAccountService = service.NewPaypleSettlemtnAccountService(
+			config.SettlementAccountService.Endpoint,
+			config.SettlementAccountService.ApiKey,
+			config.SettlementAccountService.ApiSecret,
+		)
+	default:
+		fmt.Printf("Invalid settlement account service type: '%s'\n", config.SettlementAccountService.Type)
+		os.Exit(1)
+	}
+
 	taxicallAntWorkerPool, err := ants.NewPool(config.TaxicallApp.PoolSize,
 		ants.WithPreAlloc(config.TaxicallApp.PreAlloc),
 	)
@@ -391,6 +406,7 @@ func main() {
 		driver.WithPushService(pushApp),
 		driver.WithTaxiCallService(taxicallApp),
 		driver.WithImageUrlService(cachedS3ImagePresignedUrlService),
+		driver.WithSettlementAccountService(settlementAccountService),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver app: %v\n", err)

@@ -31,6 +31,13 @@ type PaymentServiceConfig struct {
 	RefererDomain string `env:"TACO_PAYMENT_SERVICE_REFERER_DOMAIN,required"`
 }
 
+type SettlementAccountServiceConfig struct {
+	Type      string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_TYPE,default=mock"`
+	Endpoint  string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_ENDPOINT"`
+	ApiKey    string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_API_KEY"`
+	ApiSecret string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_API_SECRET"`
+}
+
 type RouteServiceConfig struct {
 	Endpoint  string `env:"TACO_ROUTE_SERVICE_ENDPOINT,required"`
 	ApiKey    string `env:"TACO_ROUTE_SERVICE_API_KEY,required"`

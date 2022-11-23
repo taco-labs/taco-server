@@ -70,6 +70,12 @@ func WithImageUrlService(svc service.ImageUrlService) driverAppOption {
 	}
 }
 
+func WithSettlementAccountService(svc service.SettlementAccountService) driverAppOption {
+	return func(da *driverApp) {
+		da.service.settlementAccount = svc
+	}
+}
+
 func (d driverApp) validateApp() error {
 	if d.Transactor == nil {
 		return errors.New("driver app need transactor")
@@ -109,6 +115,10 @@ func (d driverApp) validateApp() error {
 
 	if d.service.imageUrl == nil {
 		return errors.New("driver app need image url service")
+	}
+
+	if d.service.settlementAccount == nil {
+		return errors.New("driver app need settlement account service")
 	}
 
 	return nil

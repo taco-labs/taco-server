@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/value"
@@ -38,6 +39,10 @@ type DriverDto struct {
 	CreateTime                 time.Time       `bun:"create_time"`
 	UpdateTime                 time.Time       `bun:"update_time"`
 	DeleteTime                 time.Time       `bun:"delete_time"`
+}
+
+func (d DriverDto) FullName() string {
+	return fmt.Sprintf("%s%s", d.LastName, d.FirstName)
 }
 
 type DriverSettlementAccount struct {
