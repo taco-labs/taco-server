@@ -21,8 +21,9 @@ var skipSet = map[string]struct{}{
 }
 
 var allowNonActivatedPaths = map[string]struct{}{
-	"/driver/:driverId":            {},
-	"/driver/:driverId/image_urls": {},
+	"/driver/:driverId":                    {},
+	"/driver/:driverId/image_urls":         {},
+	"/driver/:driverId/settlement_account": {},
 }
 
 type driverSessionApp interface {
