@@ -10,6 +10,7 @@ import (
 
 var SupportedServiceRegions = map[string]struct{}{
 	"서울":     {},
+	"경기 고양":  {},
 	"경기 과천":  {},
 	"경기 광명":  {},
 	"경기 광주":  {},
