@@ -2,16 +2,18 @@ package command
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/utils"
 )
 
-const (
-	EventUri_RawMessage                 = "Push/RawMessage"
-	EventUri_UserTaxiCallNotification   = "Push/UserTaxiCall"
-	EventUri_DriverTaxiCallNotification = "Push/DriverTaxiCall"
+var (
+	EventUri_PushPrefix                 = "Push/"
+	EventUri_RawMessage                 = fmt.Sprintf("%sRawMessage", EventUri_PushPrefix)
+	EventUri_UserTaxiCallNotification   = fmt.Sprintf("%sUserTaxiCall", EventUri_PushPrefix)
+	EventUri_DriverTaxiCallNotification = fmt.Sprintf("%sDriverTaxiCall", EventUri_PushPrefix)
 )
 
 type PushUserTaxiCallCommand struct {

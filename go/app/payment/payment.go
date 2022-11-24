@@ -25,13 +25,8 @@ type paymentApp struct {
 	}
 
 	service struct {
-		payment    service.PaymentService
-		eventSub   service.EventSubscriptionService
-		eventPub   service.EventPublishService
-		workerPool service.WorkerPoolService
+		payment service.PaymentService
 	}
-
-	waitCh chan struct{}
 }
 
 func (u paymentApp) GetCardRegistrationRequestParam(ctx context.Context, user entity.User) (value.PaymentRegistrationRequestParam, error) {

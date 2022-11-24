@@ -147,32 +147,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	taxicallAntWorkerPool, err := ants.NewPool(config.TaxicallApp.PoolSize,
-		ants.WithPreAlloc(config.TaxicallApp.PreAlloc),
+	eventStreamAntWorkerPool, err := ants.NewPool(config.EventStream.EventStreamWorkerPool.PoolSize,
+		ants.WithPreAlloc(config.EventStream.EventStreamWorkerPool.PreAlloc),
 	)
 	if err != nil {
-		fmt.Printf("Failed to instantiate taxicall ant worker pool: %+v\n", err)
+		fmt.Printf("Failed to instantiate event stream ant worker pool: %+v\n", err)
 		os.Exit(1)
 	}
-	taxicallWorkerPool := service.NewAntWorkerPoolService(taxicallAntWorkerPool)
-
-	pushAntWorkerPool, err := ants.NewPool(config.PushApp.PoolSize,
-		ants.WithPreAlloc(config.PushApp.PreAlloc),
-	)
-	if err != nil {
-		fmt.Printf("Failed to instantiate push app ant worker pool: %+v\n", err)
-		os.Exit(1)
-	}
-	pushWorkerPool := service.NewAntWorkerPoolService(pushAntWorkerPool)
-
-	paymentAntWorkerPool, err := ants.NewPool(config.PaymentApp.PoolSize,
-		ants.WithPreAlloc(config.PaymentApp.PreAlloc),
-	)
-	if err != nil {
-		fmt.Printf("Failed to instantiate payment app ant worker pool: %+v\n", err)
-		os.Exit(1)
-	}
-	paymentWorkerPool := service.NewAntWorkerPoolService(paymentAntWorkerPool)
+	eventStreamWorkerPool := service.NewAntWorkerPoolService(eventStreamAntWorkerPool)
 
 	firebaseApp, err := firebase.NewApp(ctx, nil)
 	if err != nil {
@@ -191,44 +173,18 @@ func main() {
 	notificationService := service.NewFirebaseNotificationService(firebasepub)
 
 	sqsClient := sqs.NewFromConfig(awsconf)
-	notificationSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.NotificationTopic.Uri, &awssnssqs.SubscriptionOptions{
+	eventSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.EventStream.EventTopic.Uri, &awssnssqs.SubscriptionOptions{
 		WaitTime: time.Second,
 		Raw:      true,
 	})
-	defer notificationSubscriber.Shutdown(ctx)
-	notificationSubscriberService := service.NewSqsSubService(notificationSubscriber)
+	defer eventSubscriber.Shutdown(ctx)
+	eventSubscriberService := service.NewSqsSubService(eventSubscriber)
+	eventSubsriberStreamService := service.NewEventSubscriptionStreamService(eventSubscriberService, eventStreamWorkerPool)
 
-	notificationPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, config.NotificationTopic.Uri, &awssnssqs.TopicOptions{
+	eventPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, config.EventStream.EventTopic.Uri, &awssnssqs.TopicOptions{
 		BodyBase64Encoding: awssnssqs.Never,
 	})
-	defer notificationPublisher.Shutdown(ctx)
-	notificationPublisherService := service.NewSqsPubService(notificationPublisher)
-
-	taxicallSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.TaxicallTopic.Uri, &awssnssqs.SubscriptionOptions{
-		WaitTime: time.Second,
-		Raw:      true,
-	})
-	defer taxicallSubscriber.Shutdown(ctx)
-	taxicallSubscriberService := service.NewSqsSubService(taxicallSubscriber)
-
-	taxicallPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, config.TaxicallTopic.Uri, &awssnssqs.TopicOptions{
-		BodyBase64Encoding: awssnssqs.Never,
-	})
-	defer taxicallPublisher.Shutdown(ctx)
-	taxicallPublisherService := service.NewSqsPubService(taxicallPublisher)
-
-	paymentSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.PaymentTopic.Uri, &awssnssqs.SubscriptionOptions{
-		WaitTime: time.Second,
-		Raw:      true,
-	})
-	defer paymentSubscriber.Shutdown(ctx)
-	paymentSubscriberService := service.NewSqsSubService(paymentSubscriber)
-
-	paymentPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, config.PaymentTopic.Uri, &awssnssqs.TopicOptions{
-		BodyBase64Encoding: awssnssqs.Never,
-	})
-	defer paymentPublisher.Shutdown(ctx)
-	paymentPublisherService := service.NewSqsPubService(paymentPublisher)
+	eventPublisherService := service.NewSqsPubService(eventPublisher)
 
 	s3Client := s3.NewFromConfig(awsconf)
 	presignedClient := s3.NewPresignClient(s3Client)
@@ -282,10 +238,8 @@ func main() {
 		push.WithRouteService(mapRouteService),
 		push.WithNotificationService(notificationService),
 		push.WithPushTokenRepository(pushTokenRepository),
-		push.WithEventSubscribeService(notificationSubscriberService),
 		push.WithUserGetterService(userGetterDelegator),
 		push.WithDriverGetterService(driverGetterDelegator),
-		push.WithWorkerPoolService(pushWorkerPool),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup push app: %v\n", err)
@@ -299,8 +253,6 @@ func main() {
 		taxicall.WithEventRepository(eventRepository),
 		taxicall.WithRouteServie(mapRouteService),
 		taxicall.WithLocationService(locationService),
-		taxicall.WithEventSubscriberService(taxicallSubscriberService),
-		taxicall.WithWorkerPoolService(taxicallWorkerPool),
 	)
 	if err != nil {
 		fmt.Printf("Failed to start taxi call app: %v\n", err)
@@ -312,51 +264,22 @@ func main() {
 		payment.WithPaymentRepository(userPaymentRepository),
 		payment.WithEventRepository(eventRepository),
 		payment.WithPaymentService(payplePaymentService),
-		payment.WithEventSubService(paymentSubscriberService),
-		payment.WithEventPubService(paymentPublisherService),
-		payment.WithWorkerPoolService(paymentWorkerPool),
 	)
 	if err != nil {
 		fmt.Printf("Failed to start user payment app: %v\n", err)
 		os.Exit(1)
 	}
 
-	notificationOutboxApp, err := outbox.NewOutboxApp(
+	outboxApp, err := outbox.NewOutboxApp(
 		outbox.WithTransactor(transactor),
 		outbox.WithEventRepository(eventRepository),
-		outbox.WithEventPublishService(notificationPublisherService),
-		outbox.WithTargetEventUriPrefix(config.NotificationOutbox.EventUriPrefix),
-		outbox.WithPollInterval(config.NotificationOutbox.PollInterval),
-		outbox.WithMaxMessages(config.NotificationOutbox.MaxMessages),
+		outbox.WithEventPublishService(eventPublisherService),
+		outbox.WithTargetEventUriPrefix(config.EventStream.EventOutbox.EventUriPrefix),
+		outbox.WithPollInterval(config.EventStream.EventOutbox.PollInterval),
+		outbox.WithMaxMessages(config.EventStream.EventOutbox.MaxMessages),
 	)
 	if err != nil {
 		fmt.Printf("Failed to initialize notification outbox app: %+v\n", err)
-		os.Exit(1)
-	}
-
-	taxicallOutboxApp, err := outbox.NewOutboxApp(
-		outbox.WithTransactor(transactor),
-		outbox.WithEventRepository(eventRepository),
-		outbox.WithEventPublishService(taxicallPublisherService),
-		outbox.WithTargetEventUriPrefix(config.TaxicallOutbox.EventUriPrefix),
-		outbox.WithPollInterval(config.TaxicallOutbox.PollInterval),
-		outbox.WithMaxMessages(config.TaxicallOutbox.MaxMessages),
-	)
-	if err != nil {
-		fmt.Printf("Failed to initialize taxicall outbox app: %+v\n", err)
-		os.Exit(1)
-	}
-
-	paymentOutboxApp, err := outbox.NewOutboxApp(
-		outbox.WithTransactor(transactor),
-		outbox.WithEventRepository(eventRepository),
-		outbox.WithEventPublishService(paymentPublisherService),
-		outbox.WithTargetEventUriPrefix(config.PaymentOutbox.EventUriPrefix),
-		outbox.WithPollInterval(config.PaymentOutbox.PollInterval),
-		outbox.WithMaxMessages(config.PaymentOutbox.MaxMessages),
-	)
-	if err != nil {
-		fmt.Printf("Failed to initialize payment outbox app: %+v\n", err)
 		os.Exit(1)
 	}
 
@@ -416,41 +339,20 @@ func main() {
 	// Run apps
 	userGetterDelegator.Set(userApp)
 	driverGetterDelegator.Set(driverApp)
-	if err := pushApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start push app event loop: %v\n", err)
-		os.Exit(1)
-	}
-	defer pushApp.Shutdown(ctx)
 
-	if err := taxicallApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start taxi call app event loop: %v\n", err)
-		os.Exit(1)
-	}
-	defer taxicallApp.Shutdown(ctx)
+	// Run subscription stream
+	eventSubsriberStreamService.Add(pushApp)
+	eventSubsriberStreamService.Add(taxicallApp)
+	eventSubsriberStreamService.Add(paymentApp)
 
-	if err := paymentApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start user payment app event loop: %v\n", err)
-		os.Exit(1)
-	}
-	defer paymentApp.Shutdown(ctx)
+	eventSubsriberStreamService.Run(ctx)
+	defer eventSubsriberStreamService.Shutdown(ctx)
 
-	if err := notificationOutboxApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start notification outbox app: %+v\n", err)
+	if err := outboxApp.Start(ctx); err != nil {
+		fmt.Printf("Failed to start outbox app: %+v\n", err)
 		os.Exit(1)
 	}
-	defer notificationOutboxApp.Shuwdown()
-
-	if err := taxicallOutboxApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start taxicall outbox app: %+v\n", err)
-		os.Exit(1)
-	}
-	defer taxicallOutboxApp.Shuwdown()
-
-	if err := paymentOutboxApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start payment outbox app: %+v\n", err)
-		os.Exit(1)
-	}
-	defer paymentOutboxApp.Shuwdown()
+	defer outboxApp.Shuwdown()
 
 	// Init middlewares
 	userSessionMiddleware := userserver.NewSessionMiddleware(userSessionApp)

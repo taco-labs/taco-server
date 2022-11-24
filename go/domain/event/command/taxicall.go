@@ -2,6 +2,7 @@ package command
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -9,8 +10,9 @@ import (
 	"github.com/taco-labs/taco/go/utils"
 )
 
-const (
-	EventUri_TaxiCallProcess = "TaxiCall/Process"
+var (
+	EventUri_TaxiCallPrefix  = "TaxiCall/"
+	EventUri_TaxiCallProcess = fmt.Sprintf("%sProcess", EventUri_TaxiCallPrefix)
 )
 
 type TaxiCallProcessMessage struct {

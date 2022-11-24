@@ -14,10 +14,7 @@ type taxicallApp struct {
 		event           repository.EventRepository
 	}
 	service struct {
-		route      service.MapRouteService
-		location   service.LocationService
-		eventSub   service.EventSubscriptionService
-		workerPool service.WorkerPoolService
+		route    service.MapRouteService
+		location service.LocationService
 	}
-	waitCh chan struct{}
 }

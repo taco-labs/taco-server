@@ -31,12 +31,9 @@ type taxiCallPushApp struct {
 	service struct {
 		route        service.MapRouteService
 		notification service.NotificationService
-		eventSub     service.EventSubscriptionService
 		userGetter   userGetterInterface
 		driverGetter driverGetterInterface
-		workerPool   service.WorkerPoolService
 	}
-	waitCh chan struct{}
 }
 
 func (t taxiCallPushApp) CreatePushToken(ctx context.Context, req request.CreatePushTokenRequest) (entity.PushToken, error) {

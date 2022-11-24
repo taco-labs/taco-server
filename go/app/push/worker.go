@@ -3,8 +3,8 @@ package push
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
@@ -13,41 +13,16 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func (t taxiCallPushApp) Start(ctx context.Context) error {
-	go t.loop(ctx)
-	return nil
+func (t taxiCallPushApp) Accept(ctx context.Context, event entity.Event) bool {
+	return strings.HasPrefix(event.EventUri, command.EventUri_PushPrefix)
 }
 
-func (t taxiCallPushApp) Shutdown(ctx context.Context) error {
-	<-t.waitCh
-	return nil
-}
-
-func (t taxiCallPushApp) loop(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("shutting down [Taxi Call Push Consumer] stream...")
-			t.waitCh <- struct{}{}
-			return
-		default:
-			err := t.consume(ctx)
-			if err != nil {
-				//TODO (taekyeom) logging
-				fmt.Printf("[TaxiCallPushApp.Worker] error while consume event: %+v\n", err)
-			}
-		}
-	}
-}
-
-// TODO (taekyeom) parallelize
-func (t taxiCallPushApp) consume(ctx context.Context) error {
-	event, err := t.service.eventSub.GetMessage(ctx)
-	if err != nil {
+func (t taxiCallPushApp) Process(ctx context.Context, event entity.Event) error {
+	select {
+	case <-ctx.Done():
 		return nil
-	}
-
-	return t.service.workerPool.Submit(func() {
+	default:
+		var err error
 		switch event.EventUri {
 		case command.EventUri_RawMessage:
 			err = t.handleRawMessage(ctx, event)
@@ -56,20 +31,8 @@ func (t taxiCallPushApp) consume(ctx context.Context) error {
 		case command.EventUri_DriverTaxiCallNotification:
 			err = t.handleDriverNotification(ctx, event)
 		}
-		if err != nil {
-			fmt.Printf("[PushApp.Worker.Consume] error while handle consumed message: %+v\n", err)
-			if errors.Is(err, context.Canceled) {
-				return
-			}
-			// If error occurred, resend event with increased retry event count
-			if err != nil && event.Attempt < 4 {
-				event.Nack()
-				return
-			}
-		}
-		event.Ack()
-	})
-
+		return err
+	}
 }
 
 func (t taxiCallPushApp) handleRawMessage(ctx context.Context, event entity.Event) error {

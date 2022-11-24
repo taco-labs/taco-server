@@ -34,12 +34,6 @@ func WithNotificationService(svc service.NotificationService) pushAppOption {
 	}
 }
 
-func WithEventSubscribeService(svc service.EventSubscriptionService) pushAppOption {
-	return func(tcpa *taxiCallPushApp) {
-		tcpa.service.eventSub = svc
-	}
-}
-
 func WithUserGetterService(svc userGetterInterface) pushAppOption {
 	return func(tcpa *taxiCallPushApp) {
 		tcpa.service.userGetter = svc
@@ -49,12 +43,6 @@ func WithUserGetterService(svc userGetterInterface) pushAppOption {
 func WithDriverGetterService(svc driverGetterInterface) pushAppOption {
 	return func(tcpa *taxiCallPushApp) {
 		tcpa.service.driverGetter = svc
-	}
-}
-
-func WithWorkerPoolService(svc service.WorkerPoolService) pushAppOption {
-	return func(tcpa *taxiCallPushApp) {
-		tcpa.service.workerPool = svc
 	}
 }
 
@@ -75,10 +63,6 @@ func (t taxiCallPushApp) validate() error {
 		return errors.New("taxi call push app need notification service")
 	}
 
-	if t.service.eventSub == nil {
-		return errors.New("taxi call push app need event subscriber")
-	}
-
 	if t.service.userGetter == nil {
 		return errors.New("taxi call push app need user getter")
 	}
@@ -87,17 +71,11 @@ func (t taxiCallPushApp) validate() error {
 		return errors.New("taxi call push app need driver getter")
 	}
 
-	if t.service.workerPool == nil {
-		return errors.New("taxi call push app need worker pool")
-	}
-
 	return nil
 }
 
 func NewPushApp(opts ...pushAppOption) (taxiCallPushApp, error) {
-	app := taxiCallPushApp{
-		waitCh: make(chan struct{}),
-	}
+	app := taxiCallPushApp{}
 
 	for _, opt := range opts {
 		opt(&app)

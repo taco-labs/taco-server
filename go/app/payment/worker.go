@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
@@ -13,78 +14,50 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func (p paymentApp) Start(ctx context.Context) error {
-	go p.loop(ctx)
-	return nil
+func (p paymentApp) Accept(ctx context.Context, event entity.Event) bool {
+	return strings.HasPrefix(event.EventUri, command.EventUri_PaymentPrefix)
 }
 
-func (p paymentApp) Shutdown(ctx context.Context) error {
-	<-p.waitCh
-	return nil
-}
-
-func (p paymentApp) loop(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("shutting down [Payment App Consumer] stream...")
-			p.waitCh <- struct{}{}
-			return
-		default:
-			err := p.consume(ctx)
-			if err != nil {
-				fmt.Printf("[PaymentApp.Worker] error while consume event: %+v\n", err)
-			}
-		}
-	}
-}
-
-func (p paymentApp) consume(ctx context.Context) error {
-	event, err := p.service.eventSub.GetMessage(ctx)
-	if err != nil {
+func (p paymentApp) Process(ctx context.Context, event entity.Event) error {
+	select {
+	case <-ctx.Done():
 		return nil
+	default:
+		return p.handleEvent(ctx, event)
+	}
+}
+
+func (p paymentApp) handleEvent(ctx context.Context, event entity.Event) error {
+	var err error
+	var events []entity.Event
+
+	defer func() {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+
+		publishErr := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+			return p.repository.event.BatchCreate(ctx, i, events)
+		})
+		if publishErr != nil {
+			// TODO (taekyeom) stack error (using multi err?)
+			err = publishErr
+		}
+	}()
+
+	switch event.EventUri {
+	case command.EventUri_UserTransaction:
+		events, err = p.handleTransaction(ctx, event)
+	case command.EventUri_UserTransactionFailed:
+		events, err = p.handleFailedTransaction(ctx, event)
+	case command.EventUri_UserTransactionRecovery:
+		events, err = p.handleRecovery(ctx, event)
+	default:
+		// TODO(taekyeom) logging
+		err = fmt.Errorf("%w: [PaymentApp.Worker.Consume] Invalid EventUri '%v'", value.ErrInvalidOperation, event.EventUri)
 	}
 
-	return p.service.workerPool.Submit(func() {
-		var err error
-		var events []entity.Event
-
-		defer func() {
-			if errors.Is(err, context.Canceled) {
-				return
-			}
-
-			for _, ev := range events {
-				if publishError := p.service.eventPub.SendMessage(ctx, ev); publishError != nil {
-					err = fmt.Errorf("app.payment.consume: error while publish message: %v: %w", publishError, err)
-					break
-				}
-			}
-
-			if err != nil {
-				// TODO (taekyeom) error logging
-				fmt.Printf("[PaymentApp.Worker.Consume] error while handle consumed message (attempt: %d): %+v\n", event.Attempt, err)
-				if event.Attempt < 3 {
-					event.Nack()
-					return
-				}
-				// TODO (taekyeom) retry limit logging
-			}
-			event.Ack()
-		}()
-
-		switch event.EventUri {
-		case command.EventUri_UserTransaction:
-			events, err = p.handleTransaction(ctx, event)
-		case command.EventUri_UserTransactionFailed:
-			events, err = p.handleFailedTransaction(ctx, event)
-		case command.EventUri_UserTransactionRecovery:
-			events, err = p.handleRecovery(ctx, event)
-		default:
-			// TODO(taekyeom) logging
-			err = fmt.Errorf("%w: [PaymentApp.Worker.Consume] Invalid EventUri '%v'", value.ErrInvalidOperation, event.EventUri)
-		}
-	})
+	return err
 }
 
 func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) (events []entity.Event, err error) {

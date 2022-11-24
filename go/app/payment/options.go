@@ -34,24 +34,6 @@ func WithPaymentService(svc service.PaymentService) paymentAppOption {
 	}
 }
 
-func WithEventSubService(svc service.EventSubscriptionService) paymentAppOption {
-	return func(pa *paymentApp) {
-		pa.service.eventSub = svc
-	}
-}
-
-func WithEventPubService(svc service.EventPublishService) paymentAppOption {
-	return func(pa *paymentApp) {
-		pa.service.eventPub = svc
-	}
-}
-
-func WithWorkerPoolService(svc service.WorkerPoolService) paymentAppOption {
-	return func(pa *paymentApp) {
-		pa.service.workerPool = svc
-	}
-}
-
 func (p paymentApp) validateApp() error {
 	if p.Transactor == nil {
 		return errors.New("user payment app need transactor")
@@ -69,25 +51,11 @@ func (p paymentApp) validateApp() error {
 		return errors.New("user payment app need payment service")
 	}
 
-	if p.service.eventSub == nil {
-		return errors.New("user payment app need event sub service")
-	}
-
-	if p.service.eventPub == nil {
-		return errors.New("user payment app need event pub service")
-	}
-
-	if p.service.workerPool == nil {
-		return errors.New("user payment app need worker pool service")
-	}
-
 	return nil
 }
 
 func NewPaymentApp(opts ...paymentAppOption) (*paymentApp, error) {
-	app := &paymentApp{
-		waitCh: make(chan struct{}),
-	}
+	app := &paymentApp{}
 
 	for _, opt := range opts {
 		opt(app)

@@ -2,16 +2,18 @@ package command
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/utils"
 )
 
-const (
-	EventUri_UserTransaction         = "Payment/UserTransaction"
-	EventUri_UserTransactionFailed   = "Payment/UserTransactionFailed"
-	EventUri_UserTransactionRecovery = "Payment/UserTransactionRecovery"
+var (
+	EventUri_PaymentPrefix           = "Payment/"
+	EventUri_UserTransaction         = fmt.Sprintf("%sUserTransaction", EventUri_PaymentPrefix)
+	EventUri_UserTransactionFailed   = fmt.Sprintf("%sUserTransactionFailed", EventUri_PaymentPrefix)
+	EventUri_UserTransactionRecovery = fmt.Sprintf("%sUserTransactionRecovery", EventUri_PaymentPrefix)
 )
 
 type PaymentUserTransactionCommand struct {

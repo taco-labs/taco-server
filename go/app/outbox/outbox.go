@@ -115,10 +115,6 @@ func (o outboxApp) validateApp() error {
 		return errors.New("outbox app need event publisher app")
 	}
 
-	if o.conf.targetEventUriPrefix == "" {
-		return errors.New("outbox app need target event uri prefix")
-	}
-
 	if o.conf.pollInterval.Microseconds() < 5 {
 		return errors.New("outbox app required at least 5 microseconds poll interval")
 	}

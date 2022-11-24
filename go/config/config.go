@@ -58,7 +58,7 @@ type FirebaseConfig struct {
 }
 
 type EventOutboxConfig struct {
-	EventUriPrefix string        `env:"EVENT_URI_PREFIX,required"`
+	EventUriPrefix string        `env:"EVENT_URI_PREFIX"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL,required"`
 	MaxMessages    int           `env:"MAX_MESSAGES,required"`
 }

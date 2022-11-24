@@ -2,53 +2,21 @@ package taxicall
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"strings"
+
+	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/event/command"
 )
 
-func (t taxicallApp) Start(ctx context.Context) error {
-	go t.loop(ctx)
-	return nil
+func (t taxicallApp) Accept(ctx context.Context, event entity.Event) bool {
+	return strings.HasPrefix(event.EventUri, command.EventUri_TaxiCallPrefix)
 }
 
-func (t taxicallApp) Shutdown(ctx context.Context) error {
-	<-t.waitCh
-	return nil
-}
-
-func (t taxicallApp) loop(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("shutting down [Taxi Call Consumer] stream...")
-			t.waitCh <- struct{}{}
-		default:
-			err := t.consume(ctx)
-			if err != nil {
-				//TODO (taekyeom) logging
-				fmt.Printf("[TaxicallApp.Worker] error while consume event: %+v\n", err)
-			}
-		}
-	}
-}
-
-func (t taxicallApp) consume(ctx context.Context) error {
-	event, err := t.service.eventSub.GetMessage(ctx)
-	if err != nil {
+func (t taxicallApp) Process(ctx context.Context, event entity.Event) error {
+	select {
+	case <-ctx.Done():
 		return nil
+	default:
+		return t.handleEvent(ctx, event)
 	}
-	return t.service.workerPool.Submit(func() {
-		err := t.handleEvent(ctx, event)
-		if err != nil {
-			fmt.Printf("[TaxicallApp.Worker.Consume] error while handle consumed message: %+v\n", err)
-			if errors.Is(err, context.Canceled) {
-				return
-			}
-			if event.Attempt < 4 {
-				event.Nack()
-				return
-			}
-		}
-		event.Ack()
-	})
 }
