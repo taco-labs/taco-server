@@ -22,6 +22,36 @@ func Filter[I any](ins []I, f func(I) bool) []I {
 	return out
 }
 
+func Foreach[I any](ins []I, f func(I)) {
+	for idx := range ins {
+		f(ins[idx])
+	}
+}
+
+func ForeachErr[I any](ins []I, f func(I) error) error {
+	for idx := range ins {
+		if err := f(ins[idx]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ForeachRef[I any](ins []I, f func(*I)) {
+	for idx := range ins {
+		f(&ins[idx])
+	}
+}
+
+func ForeachErrRef[I any](ins []I, f func(*I) error) error {
+	for idx := range ins {
+		if err := f(&ins[idx]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func MapErr[I any, O any](ins []I, f func(I) (O, error)) ([]O, error) {
 	out := make([]O, 0, len(ins))
 

@@ -9,6 +9,7 @@ type CreateTaxiCallRequest struct {
 	Departure value.Point `json:"departure"`
 	Arrival   value.Point `json:"arrival"`
 	PaymentId string      `json:"paymentId"`
+	TagIds    []int       `json:"tagIds"`
 }
 
 // TODO (taekyeom) validation

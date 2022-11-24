@@ -39,6 +39,7 @@ type PushDriverTaxiCallCommand struct {
 	AdditionalPrice   int            `json:"additionalPrice,omitempty"`
 	Departure         value.Location `json:"departureAddress,omitempty"`
 	Arrival           value.Location `json:"arrivalAddress,omitempty"`
+	Tags              []string       `json:"tags"`
 	Attempt           int            `json:"attempt"`
 }
 
@@ -93,6 +94,7 @@ func NewPushDriverTaxiCallCommand(
 		AdditionalPrice:   taxiCallTicket.AdditionalPrice,
 		Departure:         taxiCallRequest.Departure,
 		Arrival:           taxiCallRequest.Arrival,
+		Tags:              taxiCallRequest.Tags,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)

@@ -40,6 +40,11 @@ table "taxi_call_request" {
     null = false
   }
 
+  column "tag_ids" {
+    type = sql("int[]")
+    null = false
+  }
+
   column "taxi_call_state" {
     type = enum.taxi_call_state
     null = false

@@ -3,6 +3,7 @@ package push
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -62,6 +63,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"arrivalSubAddressNo":         cmd.Arrival.Address.SubAddressNo,
 		"userId":                      cmd.UserId,
 		"userPhone":                   user.Phone,
+		"tags":                        strings.Join(cmd.Tags, ","),
 	}
 
 	return value.Notification{

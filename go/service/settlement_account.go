@@ -52,8 +52,6 @@ func (p paypleSettlementAccountService) AuthorizeSettlementAccount(ctx context.C
 		return false, fmt.Errorf("%w: error from payple transaction: messge: [%s]%s", value.ErrExternal, authorizeResp.Result, authorizeResp.Message)
 	}
 
-	fmt.Printf("Result: %+v\n", authorizeResp)
-
 	return authorizeResp.AccountHolderName == driver.FullName(), nil
 }
 

@@ -22,12 +22,14 @@ type TaxiCallRequest struct {
 	// In Memroy
 	Dryrun bool        `bun:"-"`
 	Route  value.Route `bun:"-"`
+	Tags   []string    `bun:"-"`
 
 	Id                        string               `bun:"id,pk"`
 	UserId                    string               `bun:"user_id"`
 	DriverId                  sql.NullString       `bun:"driver_id"`
 	Departure                 value.Location       `bun:"departure,type:jsonb"`
 	Arrival                   value.Location       `bun:"arrival,type:jsonb"`
+	TagIds                    []int                `bun:"tag_ids,array"`
 	PaymentSummary            value.PaymentSummary `bun:"payment_summary,type:jsonb"`
 	RequestBasePrice          int                  `bun:"request_base_price"`
 	RequestMinAdditionalPrice int                  `bun:"request_min_additional_price"`

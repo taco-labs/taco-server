@@ -11,9 +11,20 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
+	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
 	"golang.org/x/sync/errgroup"
 )
+
+func (t taxicallApp) ListTags(ctx context.Context) ([]value.Tag, error) {
+	var tags []value.Tag
+
+	for id, tag := range value.TagMap {
+		tags = append(tags, value.Tag{Id: id, Tag: tag})
+	}
+
+	return tags, nil
+}
 
 // TODO (taekyeom) userId / driverId 구분 없이 principal로 통합해야 할듯
 func (t taxicallApp) ListUserTaxiCallRequest(ctx context.Context, req request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error) {
@@ -26,6 +37,19 @@ func (t taxicallApp) ListUserTaxiCallRequest(ctx context.Context, req request.Li
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.ListUserTaxiCallRequest: error while get taxi call requests:\n%w", err)
 		}
+
+		err := slices.ForeachErrRef(taxiCallRequests, func(i *entity.TaxiCallRequest) error {
+			tags, err := slices.MapErr(i.TagIds, value.GetTagById)
+			if err != nil {
+				return err
+			}
+			i.Tags = tags
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.ListUserTaxiCallRequest: error while get tags: %w", err)
+		}
+
 		return nil
 	})
 
@@ -45,6 +69,13 @@ func (t taxicallApp) LatestUserTaxiCallRequest(ctx context.Context, userId strin
 		if err != nil {
 			return fmt.Errorf("app.taxCall.GetLatestTaxiCall: error while get latest taxi call:\n%w", err)
 		}
+
+		tags, err := slices.MapErr(latestTaxiCallRequest.TagIds, value.GetTagById)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.GetLatestTaxiCall: error while get tags: %w", err)
+		}
+		latestTaxiCallRequest.Tags = tags
+
 		return nil
 	})
 
@@ -58,8 +89,13 @@ func (t taxicallApp) LatestUserTaxiCallRequest(ctx context.Context, userId strin
 func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, userPayment entity.UserPayment, req request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
+	tags, err := slices.MapErr(req.TagIds, value.GetTagById)
+	if err != nil {
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.taxicall.CreateTaxiCallRequest: error while get tags: %w", err)
+	}
+
 	// First, check latest taxiCallRequest is active
-	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// check latest call
 		latestTaxiCallRequest, err := t.repository.taxiCallRequest.GetLatestByUserId(ctx, i, userId)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
@@ -129,6 +165,8 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 				Point:   req.Arrival,
 				Address: arrival,
 			},
+			TagIds:                    req.TagIds,
+			Tags:                      tags,
 			RequestBasePrice:          route.Price,
 			RequestMinAdditionalPrice: 0,                           // TODO(taekyeom) To be paramterized
 			RequestMaxAdditionalPrice: (route.Price / 1000) * 1000, // TODO(taekyeom) To be paramterized
@@ -157,6 +195,8 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 				Point:   req.Arrival,
 				Address: arrival,
 			},
+			TagIds:                    req.TagIds,
+			Tags:                      tags,
 			PaymentSummary:            userPayment.ToSummary(),
 			RequestBasePrice:          route.Price,
 			RequestMinAdditionalPrice: 0,           // TODO(taekyeom) To be paramterized

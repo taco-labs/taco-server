@@ -50,6 +50,7 @@ func (u *userServer) initController() error {
 	paymentGroup.PUT("/:paymentId/recovery", u.TryRecoverUserPayment)
 
 	taxiCallGroup := u.echo.Group("/taxicall")
+	taxiCallGroup.GET("/tags", u.ListTags)
 	taxiCallGroup.POST("", u.CreateTaxiCallRequest)
 	taxiCallGroup.DELETE("/:taxiCallRequestId", u.CancelTaxiCallRequest)
 

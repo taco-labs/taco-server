@@ -23,6 +23,7 @@ type TaxiCallRequestResponse struct {
 	DriverId                  *string                `json:"driverId"`
 	Departure                 value.Location         `json:"departure"`
 	Arrival                   value.Location         `json:"arrival"`
+	Tags                      []string               `json:"tags"`
 	Payment                   PaymentSummaryResponse `json:"payment"`
 	RequestBasePrice          int                    `json:"requestBasePrice"`
 	RequestMinAdditionalPrice int                    `json:"requestMinAdditionalPrice"`
@@ -63,6 +64,7 @@ func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallR
 		}(),
 		Departure:                 taxiCallRequest.Departure,
 		Arrival:                   taxiCallRequest.Arrival,
+		Tags:                      taxiCallRequest.Tags,
 		Payment:                   PaymentSummaryToResponse(taxiCallRequest.PaymentSummary),
 		RequestBasePrice:          taxiCallRequest.RequestBasePrice,
 		RequestMinAdditionalPrice: taxiCallRequest.RequestMinAdditionalPrice,

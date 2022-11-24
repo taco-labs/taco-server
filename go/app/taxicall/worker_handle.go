@@ -44,6 +44,12 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 			return fmt.Errorf("app.taxicall.process [%s]: error while get call request: %w", cmd.TaxiCallRequestId, err)
 		}
 
+		tags, err := slices.MapErr(taxiCallRequest.TagIds, value.GetTagById)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.process [%s]: error while get tags: %w", cmd.TaxiCallRequestId, err)
+		}
+		taxiCallRequest.Tags = tags
+
 		//TODO (taekyeom) make taxi call request failed when retry count exceeded
 		// if retryCount > 3 {
 		// 	// TODO (taekyeom) logging

@@ -27,6 +27,7 @@ type UserApp interface {
 	DeleteUserPayment(context.Context, string) error
 	UpdateDefaultPayment(context.Context, request.DefaultPaymentUpdateRequest) error
 
+	ListTags(context.Context) ([]value.Tag, error)
 	ListTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
@@ -232,6 +233,17 @@ func (u userServer) GetLatestTaxiCallRequest(e echo.Context) error {
 
 	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
 	return e.JSON(http.StatusOK, resp)
+}
+
+func (u userServer) ListTags(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	tags, err := u.app.user.ListTags(ctx)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	return e.JSON(http.StatusOK, tags)
 }
 
 func (u userServer) ListTaxiCallRequest(e echo.Context) error {

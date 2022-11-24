@@ -7,8 +7,13 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/utils"
 )
+
+func (u userApp) ListTags(ctx context.Context) ([]value.Tag, error) {
+	return u.service.taxiCall.ListTags(ctx)
+}
 
 func (u userApp) ListTaxiCallRequest(ctx context.Context, req request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error) {
 	return u.service.taxiCall.ListUserTaxiCallRequest(ctx, req)
