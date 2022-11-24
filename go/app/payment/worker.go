@@ -52,12 +52,27 @@ func (p paymentApp) handleEvent(ctx context.Context, event entity.Event) error {
 		events, err = p.handleFailedTransaction(ctx, event)
 	case command.EventUri_UserTransactionRecovery:
 		events, err = p.handleRecovery(ctx, event)
+	case command.EventUri_UserDeletePayment:
+		events, err = p.handleDeletePayment(ctx, event)
 	default:
 		// TODO(taekyeom) logging
 		err = fmt.Errorf("%w: [PaymentApp.Worker.Consume] Invalid EventUri '%v'", value.ErrInvalidOperation, event.EventUri)
 	}
 
 	return err
+}
+
+func (p paymentApp) handleDeletePayment(ctx context.Context, ev entity.Event) ([]entity.Event, error) {
+	cmd := command.PaymentUserPaymentDeleteCommand{}
+	if err := json.Unmarshal(ev.Payload, &cmd); err != nil {
+		return []entity.Event{}, fmt.Errorf("app.payment.handleDeletePayment: failed to unmarshal command: %w", err)
+	}
+
+	if err := p.service.payment.DeleteCard(ctx, cmd.BillingKey); err != nil {
+		return []entity.Event{}, fmt.Errorf("app.payment.handleDeletePayment: failed to delete from payment service: %w", err)
+	}
+
+	return []entity.Event{}, nil
 }
 
 func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) (events []entity.Event, err error) {

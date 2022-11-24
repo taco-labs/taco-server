@@ -22,6 +22,7 @@ type PaymentRepository interface {
 	ListUserPayment(context.Context, bun.IDB, string) ([]entity.UserPayment, error) // TODO (taekyeom) pagination?
 	CreateUserPayment(context.Context, bun.IDB, entity.UserPayment) error
 	DeleteUserPayment(context.Context, bun.IDB, string) error
+	BatchDeleteUserPayment(context.Context, bun.IDB, string) ([]entity.UserPayment, error)
 	UpdateUserPayment(context.Context, bun.IDB, entity.UserPayment) error
 
 	// Default payment entity
@@ -153,7 +154,9 @@ func (u userPaymentRepository) CreateUserPayment(ctx context.Context, db bun.IDB
 }
 
 func (u userPaymentRepository) DeleteUserPayment(ctx context.Context, db bun.IDB, userPaymentId string) error {
-	res, err := db.NewDelete().Model(&entity.UserPayment{}).WherePK(userPaymentId).Exec(ctx)
+	res, err := db.NewDelete().Model(&entity.UserPayment{
+		Id: userPaymentId,
+	}).WherePK().Exec(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
 		return value.ErrUserNotFound
@@ -171,6 +174,18 @@ func (u userPaymentRepository) DeleteUserPayment(ctx context.Context, db bun.IDB
 	}
 
 	return nil
+}
+
+func (u userPaymentRepository) BatchDeleteUserPayment(ctx context.Context, db bun.IDB, userId string) ([]entity.UserPayment, error) {
+	resp := []entity.UserPayment{}
+
+	_, err := db.NewDelete().Model(&resp).Returning("*").Where("user_id = ?", userId).Exec(ctx)
+
+	if err != nil {
+		return []entity.UserPayment{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
 }
 
 func (u userPaymentRepository) UpdateUserPayment(ctx context.Context, db bun.IDB, userPayment entity.UserPayment) error {

@@ -69,11 +69,28 @@ type paypleTransactionResponse struct {
 	ReceiptUrl string `json:"PCD_PAY_CARDRECEIPT"`
 }
 
+func (p paypleTransactionResponse) Success() bool {
+	return p.Result == "success"
+}
+
 type paypleGetTransactionRequest struct {
 }
 
-func (p paypleTransactionResponse) Success() bool {
-	return p.Result == "success"
+type paypleDeletePaymentRequest struct {
+	CustomerId  string `json:"PCD_CST_ID"`
+	CustomerKey string `json:"PCD_CUST_KEY"`
+	AuthKey     string `json:"PCD_AUTH_KEY"`
+	BillingKey  string `json:"PCD_PAYER_ID"`
+}
+
+type paypleDeletePaymentResponse struct {
+	Result  string `json:"PCD_PAY_RST"`
+	Code    string `json:"PCD_PAY_CODE"`
+	Message string `json:"PCD_PAY_MSG"`
+}
+
+func (p paypleDeletePaymentResponse) Success() bool {
+	return p.Result == "success" && p.Code == "PUER0000"
 }
 
 func (p payplePaymentService) GetCardRegistrationRequestParam(ctx context.Context, requestId int, user entity.User) (value.PaymentRegistrationRequestParam, error) {
@@ -151,8 +168,53 @@ func (p payplePaymentService) RegisterCard(context.Context, string, request.User
 	return value.CardPaymentInfo{}, value.ErrUnsupported
 }
 
-func (p payplePaymentService) DeleteCard(ctx context.Context, paymentId string) error {
-	return value.ErrUnsupported
+func (p payplePaymentService) DeleteCard(ctx context.Context, billingKey string) error {
+	request := struct {
+		CustomerId  string `json:"cst_id"`
+		CustomerKey string `json:"custKey"`
+		PayWork     string `json:"PCD_PAY_WORK"`
+	}{
+		p.customerId,
+		p.customerKey,
+		"PUSERDEL",
+	}
+
+	resp, err := p.client.R().
+		SetBody(request).
+		SetResult(&payplePartnerAuthenticationResponse{}).
+		Post("php/auth.php")
+
+	if err != nil {
+		return fmt.Errorf("%w: error while auth request: %v", value.ErrExternalPayment, err)
+	}
+
+	authResp := resp.Result().(*payplePartnerAuthenticationResponse)
+	if !authResp.Success() {
+		return fmt.Errorf("%w: error response while authentication: %v", value.ErrExternalPayment, authResp.ResultMsg)
+	}
+
+	deleteRequest := paypleDeletePaymentRequest{
+		authResp.CustomerId,
+		authResp.CustomerKey,
+		authResp.AuthKey,
+		billingKey,
+	}
+
+	resp, err = p.client.R().
+		SetBody(deleteRequest).
+		SetResult(&paypleDeletePaymentResponse{}).
+		Post(authResp.PayUrl)
+
+	if err != nil {
+		return fmt.Errorf("%w: error while delete request: %v", value.ErrExternalPayment, err)
+	}
+
+	deleteResp := resp.Result().(*paypleDeletePaymentResponse)
+	if !deleteResp.Success() {
+		return fmt.Errorf("%w: error response while delete payment: %v", value.ErrExternalPayment, deleteResp.Message)
+	}
+
+	return nil
 }
 
 func (p payplePaymentService) CancelTransaction(context.Context, value.PaymentCancel) error {

@@ -45,6 +45,7 @@ type userPaymentInterface interface {
 	RegisterUserPayment(context.Context, entity.User, request.UserPaymentRegisterRequest) (entity.UserPayment, error)
 	TryRecoverUserPayment(context.Context, string, string) error
 	DeleteUserPayment(context.Context, entity.User, string) error
+	BatchDeleteUserPayment(context.Context, entity.User) error
 	UpdateDefaultPayment(context.Context, request.DefaultPaymentUpdateRequest) error
 }
 
@@ -293,6 +294,10 @@ func (u userApp) DeleteUser(ctx context.Context, userId string) error {
 
 		if err = u.repository.user.DeleteUser(ctx, i, user); err != nil {
 			return fmt.Errorf("app.user.DeleteUser: error while delete user:\n %w", err)
+		}
+
+		if err := u.service.userPayment.BatchDeleteUserPayment(ctx, user); err != nil {
+			return fmt.Errorf("app.user.DeleteUser: error while batch delete user payment:\n %w", err)
 		}
 
 		// Delete push token

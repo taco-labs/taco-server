@@ -13,6 +13,7 @@ import (
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
+	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
 )
 
@@ -252,16 +253,39 @@ func (u paymentApp) DeleteUserPayment(ctx context.Context, user entity.User, use
 	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		userPayment, err := u.repository.payment.GetUserPayment(ctx, i, userPaymentId)
 		if err != nil {
-			return fmt.Errorf("app.userPayment.ListUserPayment: Error while find user payment:%w", err)
+			return fmt.Errorf("app.userPayment.DeleteUserPayment: Error while find user payment:%w", err)
 		}
 
 		if user.Id != userPayment.UserId {
-			return fmt.Errorf("app.userPayment.ListUserPayment: user id does not matched:%w", value.ErrUnAuthorized)
+			return fmt.Errorf("app.userPayment.DeleteUserPayment: user id does not matched:%w", value.ErrUnAuthorized)
 		}
 
-		err = u.repository.payment.DeleteUserPayment(ctx, i, userPaymentId)
+		if err = u.repository.payment.DeleteUserPayment(ctx, i, userPaymentId); err != nil {
+			return fmt.Errorf("app.userPayment.DeleteUserPayment: error while delete user payment: %w", err)
+		}
+
+		deleteCmd := command.NewPaymentUserPaymentDeleteCommand(user.Id, userPaymentId, userPayment.BillingKey)
+		if err = u.repository.event.BatchCreate(ctx, i, []entity.Event{deleteCmd}); err != nil {
+			return fmt.Errorf("app.userPayment.DeleteUserPayment: error while create user payment delete command: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (u paymentApp) BatchDeleteUserPayment(ctx context.Context, user entity.User) error {
+	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		deletedUserPayments, err := u.repository.payment.BatchDeleteUserPayment(ctx, i, user.Id)
 		if err != nil {
-			return err
+			return fmt.Errorf("app.userPayment.BatchDeleteUserPayment: error while batch delete user payment: %w", err)
+		}
+
+		deleteCmds := slices.Map(deletedUserPayments, func(i entity.UserPayment) entity.Event {
+			return command.NewPaymentUserPaymentDeleteCommand(i.UserId, i.Id, i.BillingKey)
+		})
+
+		if err := u.repository.event.BatchCreate(ctx, i, deleteCmds); err != nil {
+			return fmt.Errorf("app.userPayment.BatchDeleteUserPayment: error while create payment delete commands: %w", err)
 		}
 
 		return nil

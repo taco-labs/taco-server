@@ -31,6 +31,8 @@ type userApp interface {
 
 type paypleResultRequest struct {
 	Result        string `form:"PCD_PAY_RST"`
+	Code          string `form:"PCD_PAY_CODE"`
+	Message       string `form:"PCD_PAY_MSG"`
 	RequestId     string `form:"PCD_PAYER_NO"`
 	ResultMessage string `form:"PCD_PAY_CODE"`
 	BillingKey    string `form:"PCD_PAYER_ID"`
@@ -39,7 +41,7 @@ type paypleResultRequest struct {
 }
 
 func (p paypleResultRequest) Success() bool {
-	return p.Result == "success"
+	return p.Result == "success" && p.Code == "0000"
 }
 
 func (p paypleExtension) RegistCardPayment(e echo.Context) error {
@@ -68,7 +70,7 @@ func (p paypleExtension) RegisterCardPaymentResultCallback(e echo.Context) error
 
 	body := paypleResultRequest{}
 	if err := e.Bind(&body); err != nil {
-		return err
+		return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_failure", p.domain))
 	}
 	if !body.Success() {
 		return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_failure", p.domain))

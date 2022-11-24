@@ -74,20 +74,6 @@ table "user_payment" {
       column.user_id,
     ]
   }
-
-  foreign_key "user_payment_fk" {
-    columns = [
-      column.user_id,
-    ]
-
-    ref_columns = [
-      table.user.column.id,
-    ]
-
-    on_delete = CASCADE
-
-    on_update = NO_ACTION
-  }
 }
 
 table "user_payment_registration_request" {
@@ -147,17 +133,6 @@ table "user_default_payment" {
     columns = [
       column.payment_id,
     ]
-  }
-
-  foreign_key "user_default_payment_user_id_fk" {
-    columns = [
-      column.user_id,
-    ]
-    ref_columns = [
-      table.user.column.id,
-    ]
-    on_delete = CASCADE
-    on_update = NO_ACTION
   }
 
   foreign_key "user_default_payment_user_payment_fk" {

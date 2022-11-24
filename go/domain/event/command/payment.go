@@ -11,10 +11,17 @@ import (
 
 var (
 	EventUri_PaymentPrefix           = "Payment/"
+	EventUri_UserDeletePayment       = fmt.Sprintf("%sUserRemovePayment", EventUri_PaymentPrefix)
 	EventUri_UserTransaction         = fmt.Sprintf("%sUserTransaction", EventUri_PaymentPrefix)
 	EventUri_UserTransactionFailed   = fmt.Sprintf("%sUserTransactionFailed", EventUri_PaymentPrefix)
 	EventUri_UserTransactionRecovery = fmt.Sprintf("%sUserTransactionRecovery", EventUri_PaymentPrefix)
 )
+
+type PaymentUserPaymentDeleteCommand struct {
+	UserId     string `json:"userId"`
+	PaymentId  string `json:"paymentId"`
+	BillingKey string `json:"billingKey"`
+}
 
 type PaymentUserTransactionCommand struct {
 	UserId    string `json:"userId"`
@@ -37,6 +44,23 @@ type PaymentUserTransactionFailedCommand struct {
 type PaymentUserTransactionRecoveryCommand struct {
 	UserId    string `json:"userId"`
 	PaymentId string `json:"paymentId"`
+}
+
+func NewPaymentUserPaymentDeleteCommand(userId string, paymentId string, billingKey string) entity.Event {
+	cmd := PaymentUserPaymentDeleteCommand{
+		UserId:     userId,
+		PaymentId:  paymentId,
+		BillingKey: billingKey,
+	}
+
+	cmdJson, _ := json.Marshal(cmd)
+
+	return entity.Event{
+		MessageId:    utils.MustNewUUID(),
+		EventUri:     EventUri_UserDeletePayment,
+		DelaySeconds: 0,
+		Payload:      cmdJson,
+	}
 }
 
 func NewPaymentUserTransactionCommand(userId string, paymentId string, orderId string, orderName string, amount int) entity.Event {
