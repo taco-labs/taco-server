@@ -73,7 +73,7 @@ func (s EventSubscriptionStreamService) consume(ctx context.Context) error {
 	}
 
 	// TODO (structued error)
-	return fmt.Errorf("service.EventSubscriptionStreamService: Invalid event %v\n", event)
+	return fmt.Errorf("service.EventSubscriptionStreamService: Invalid event %v", event)
 }
 
 func (s EventSubscriptionStreamService) Shutdown(ctx context.Context) {

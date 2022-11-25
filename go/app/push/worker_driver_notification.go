@@ -34,10 +34,8 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		return value.Notification{}, err
 	}
 
-	message := value.NotificationMessage{
-		Title: fmt.Sprintf("배차 요청 (약 %d분)", int(routeBetweenDeparture.ETA.Minutes())),
-		Body:  fmt.Sprintf("%s (추가 요금 %d)", cmd.Departure.Address.AddressName, cmd.AdditionalPrice),
-	}
+	messageTitle := fmt.Sprintf("배차 요청 (약 %d분)", int(routeBetweenDeparture.ETA.Minutes()))
+	messageBody := fmt.Sprintf("%s (추가 요금 %d)", cmd.Departure.Address.AddressName, cmd.AdditionalPrice)
 
 	data := map[string]string{
 		"taxiCallRequestId":            cmd.TaxiCallRequestId,
@@ -66,28 +64,19 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"tags":                         strings.Join(cmd.Tags, ","),
 	}
 
-	return value.Notification{
-		Principal: fcmToken,
-		Message:   message,
-		Data:      data,
-	}, nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestCanceled(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushDriverTaxiCallCommand) (value.Notification, error) {
-	message := value.NotificationMessage{
-		Title: "운행 취소",
-		Body:  "승객이 택시 운행을 취소하였습니다.",
-	}
+
+	messageTitle := "운행 취소"
+	messageBody := "승객이 택시 운행을 취소하였습니다."
 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
 		"taxiCallState":     cmd.TaxiCallState,
 	}
 
-	return value.Notification{
-		Principal: fcmToken,
-		Message:   message,
-		Data:      data,
-	}, nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
 }

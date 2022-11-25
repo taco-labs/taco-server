@@ -20,10 +20,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestProgress(ctx context.Context, 
 		"searchRangeInMinutes":   fmt.Sprint(cmd.SearchRangeInMinutes),
 	}
 
-	return value.Notification{
-		Principal: fcmToken,
-		Data:      data,
-	}, nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, "", "", data), nil
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, fcmToken string,
@@ -48,10 +45,8 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 			fmt.Errorf("app.push.handleUserTaxiCallRequestAccepted: error while get route between driver location and departure: %w", err)
 	}
 
-	message := value.NotificationMessage{
-		Title: fmt.Sprintf("배차 완료 (약 %d분)", int(routeBetweenDeparture.ETA.Minutes())),
-		Body:  fmt.Sprintf("%s (추가 요금 %d)", cmd.Departure.Address.AddressName, cmd.AdditionalPrice),
-	}
+	messageTitle := fmt.Sprintf("배차 완료 (약 %d분)", int(routeBetweenDeparture.ETA.Minutes()))
+	messageBody := fmt.Sprintf("%s (추가 요금 %d)", cmd.Departure.Address.AddressName, cmd.AdditionalPrice)
 
 	data := map[string]string{
 		"taxiCallRequestId":     cmd.TaxiCallRequestId,
@@ -65,40 +60,28 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		"whenDriverToDeparture": fmt.Sprint(time.Now().Add(routeBetweenDeparture.ETA)),
 	}
 
-	return value.Notification{
-		Principal: fcmToken,
-		Message:   message,
-		Data:      data,
-	}, nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestFailed(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
 
-	message := value.NotificationMessage{
-		Title: "배차 실패",
-		Body:  "택시 배차에 실패했습니다",
-	}
+	messageTitle := "배차 실패"
+	messageBody := "택시 배차에 실패했습니다"
 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
 		"taxiCallState":     cmd.TaxiCallState,
 	}
 
-	return value.Notification{
-		Principal: fcmToken,
-		Message:   message,
-		Data:      data,
-	}, nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
 
-	message := value.NotificationMessage{
-		Title: "운행 완료",
-		Body:  "택시 운행이 완료되었습니다.",
-	}
+	messageTitle := "운행 완료"
+	messageBody := "택시 운행이 완료되었습니다."
 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
@@ -107,28 +90,18 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmT
 		"additionalPrice":   fmt.Sprint(cmd.AdditionalPrice),
 	}
 
-	return value.Notification{
-		Principal: fcmToken,
-		Message:   message,
-		Data:      data,
-	}, nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
 }
 
 func (t taxiCallPushApp) handleDriverTaxiCallRequestCanceled(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
-	message := value.NotificationMessage{
-		Title: "운행 취소",
-		Body:  "기사님이 택시 운행을 취소하였습니다.",
-	}
+	messageTitle := "운행 취소"
+	messageBody := "기사님이 택시 운행을 취소하였습니다."
 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
 		"taxiCallState":     cmd.TaxiCallState,
 	}
 
-	return value.Notification{
-		Principal: fcmToken,
-		Message:   message,
-		Data:      data,
-	}, nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
 }

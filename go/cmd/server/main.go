@@ -307,6 +307,10 @@ func main() {
 		driversettlement.WithTransactor(transactor),
 		driversettlement.WithSettlementRepository(driverSettlementRepository),
 	)
+	if err != nil {
+		fmt.Printf("Failed to setup driver settlement app: %v\n", err)
+		os.Exit(1)
+	}
 
 	userApp, err := user.NewUserApp(
 		user.WithTransactor(transactor),

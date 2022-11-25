@@ -37,9 +37,12 @@ func notificationToMessage(notification value.Notification) *pubsub.Message {
 }
 
 func notificationToFcmMessage(notification value.Notification) *messaging.Message {
+	data := notification.Data
+	data["category"] = notification.Category
+
 	message := messaging.Message{
 		Token: notification.Principal,
-		Data:  notification.Data,
+		Data:  data,
 	}
 	if notification.Message.Title != "" {
 		message.Notification = &messaging.Notification{

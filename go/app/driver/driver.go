@@ -435,6 +435,12 @@ func (d driverApp) ActivateDriver(ctx context.Context, driverId string) error {
 		if err != nil {
 			return fmt.Errorf("app.Driver.ActivateDriver: error while find driver by id:%w", err)
 		}
+
+		// TODO (taekyeom) use different error?
+		if driver.Active {
+			return fmt.Errorf("app.Driver.ActivateDriver: already activated: %w", value.ErrAlreadyExists)
+		}
+
 		driver.Active = true
 
 		if err := d.repository.driver.Update(ctx, i, driver); err != nil {
@@ -443,6 +449,11 @@ func (d driverApp) ActivateDriver(ctx context.Context, driverId string) error {
 
 		if err := d.service.session.ActivateByDriverId(ctx, driverId); err != nil {
 			return fmt.Errorf("app.Driver.ActivateDriver: error while activate driver session:%w", err)
+		}
+
+		driverActivatedPushNotification := NewDriverActivatedNotification(driver.Id)
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{driverActivatedPushNotification}); err != nil {
+			return fmt.Errorf("app.Driver.ActivateDriver: error while create driver activated push event: %w", err)
 		}
 
 		return nil

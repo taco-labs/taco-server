@@ -58,6 +58,7 @@ func (t taxiCallPushApp) handleRawMessage(ctx context.Context, event entity.Even
 
 	notification := value.Notification{
 		Principal: fcmToken,
+		Category:  cmd.Category,
 		Message: value.NotificationMessage{
 			Title: cmd.MessageTitle,
 			Body:  cmd.MessageBody,

@@ -47,6 +47,7 @@ type PushDriverTaxiCallCommand struct {
 
 type PushRawCommand struct {
 	AccountId    string            `json:"accountId"`
+	Category     string            `json:"category"`
 	MessageTitle string            `json:"messageTitle"`
 	MessageBody  string            `json:"messageBody"`
 	Data         map[string]string `json:"data"`
@@ -109,9 +110,10 @@ func NewPushDriverTaxiCallCommand(
 	}
 }
 
-func NewRawMessageCommand(accountId, messageTitle, messageBody string, data map[string]string) entity.Event {
+func NewRawMessageCommand(accountId, messageTitle, messageBody, category string, data map[string]string) entity.Event {
 	cmd := PushRawCommand{
 		AccountId:    accountId,
+		Category:     category,
 		MessageTitle: messageTitle,
 		MessageBody:  messageBody,
 		Data:         data,
