@@ -358,13 +358,13 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while upsert taxi call context: %w", err)
 		}
 
-		taxiCallSettlement := entity.DriverTaxiCallSettlement{
-			TaxiCallRequestId: taxiCallRequest.Id,
-			SettlementDone:    false,
-		}
-		if err := t.repository.taxiCallRequest.CreateDriverTaxiCallSettlement(ctx, i, taxiCallSettlement); err != nil {
-			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while create taxi call settlement: %w", err)
-		}
+		// taxiCallSettlement := entity.DriverTaxiCallSettlement{
+		// 	TaxiCallRequestId: taxiCallRequest.Id,
+		// 	SettlementDone:    false,
+		// }
+		// if err := t.repository.taxiCallRequest.CreateDriverTaxiCallSettlement(ctx, i, taxiCallSettlement); err != nil {
+		// 	return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while create taxi call settlement: %w", err)
+		// }
 
 		processMessage := command.NewTaxiCallProgressCommand(
 			taxiCallRequest.Id,

@@ -38,51 +38,13 @@ type TaxiCallRepository interface {
 
 	GetDriverTaxiCallContextWithinRadius(context.Context, bun.IDB,
 		value.Location, value.Location, int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
-
-	GetDriverTaxiCallSettlement(context.Context, bun.IDB, string) (entity.DriverTaxiCallSettlement, error)
-	CreateDriverTaxiCallSettlement(context.Context, bun.IDB, entity.DriverTaxiCallSettlement) error
 }
 
 type taxiCallRepository struct{}
 
-func (t taxiCallRepository) GetDriverTaxiCallSettlement(ctx context.Context, db bun.IDB, requestId string) (entity.DriverTaxiCallSettlement, error) {
-	resp := entity.DriverTaxiCallSettlement{
-		TaxiCallRequestId: requestId,
-	}
-
-	err := db.NewSelect().
-		Model(&resp).WherePK().Scan(ctx)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return entity.DriverTaxiCallSettlement{}, value.ErrNotFound
-	}
-	if err != nil {
-		return entity.DriverTaxiCallSettlement{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	return resp, nil
-}
-
-func (t taxiCallRepository) CreateDriverTaxiCallSettlement(ctx context.Context, db bun.IDB, settlement entity.DriverTaxiCallSettlement) error {
-	res, err := db.NewInsert().Model(&settlement).Exec(ctx)
-
-	if err != nil {
-		return fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
-	}
-	if rowsAffected != 1 {
-		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
-	}
-
-	return nil
-}
-
 func (t taxiCallRepository) BulkUpsertDriverTaxiCallContext(ctx context.Context, db bun.IDB,
 	callContexts []entity.DriverTaxiCallContext) error {
+
 	_, err := db.NewInsert().
 		Model(&callContexts).
 		On("CONFLICT (driver_id) DO UPDATE").

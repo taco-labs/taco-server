@@ -5,6 +5,7 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/utils/slices"
 )
 
 type DriverResponse struct {
@@ -79,4 +80,46 @@ func DriverSettlemtnAccountToResponse(account entity.DriverSettlementAccount) Dr
 type DriverImageUrlResponse struct {
 	UploadUrls   value.DriverImageUrls `json:"uploadUrls"`
 	DownloadUrls value.DriverImageUrls `json:"downloadUrls"`
+}
+
+type DriverExpectedSettlementResponse struct {
+	DriverId       string `json:"driverId"`
+	ExpectedAmount int    `json:"expectedAmount"`
+}
+
+func DriverExpectedSettlementToResponse(expectedSettlement entity.DriverExpectedSettlement) DriverExpectedSettlementResponse {
+	return DriverExpectedSettlementResponse{
+		DriverId:       expectedSettlement.DriverId,
+		ExpectedAmount: expectedSettlement.ExpectedAmount,
+	}
+}
+
+type DriverSettlementHistoryResponse struct {
+	DriverId              string    `json:"driverId"`
+	SettlementPeriodStart time.Time `json:"settlementPeriodStart"`
+	SettlementPeriodEnd   time.Time `json:"settlementPeriodEnd"`
+	CreateTime            time.Time `json:"createTime"`
+	Amount                int       `json:"amount"`
+}
+
+func DriverSettlementHistoryToResponse(settlementHistory entity.DriverSettlementHistory) DriverSettlementHistoryResponse {
+	return DriverSettlementHistoryResponse{
+		DriverId:              settlementHistory.DriverId,
+		SettlementPeriodStart: settlementHistory.SettlementPeriodStart,
+		SettlementPeriodEnd:   settlementHistory.SettlementPeriodEnd,
+		CreateTime:            settlementHistory.CreateTime,
+		Amount:                settlementHistory.Amount,
+	}
+}
+
+type ListDriverSettlementHistoryResponse struct {
+	PageToken time.Time                         `json:"pageToken"`
+	Histories []DriverSettlementHistoryResponse `json:"histories"`
+}
+
+func ListDriverSettlementHistoryToResponse(settlementHistories []entity.DriverSettlementHistory, pageToken time.Time) ListDriverSettlementHistoryResponse {
+	return ListDriverSettlementHistoryResponse{
+		PageToken: pageToken,
+		Histories: slices.Map(settlementHistories, DriverSettlementHistoryToResponse),
+	}
 }

@@ -76,6 +76,12 @@ func WithSettlementAccountService(svc service.SettlementAccountService) driverAp
 	}
 }
 
+func WithDriverSettlementService(svc driverSettlementInterface) driverAppOption {
+	return func(da *driverApp) {
+		da.service.driverSettlement = svc
+	}
+}
+
 func (d driverApp) validateApp() error {
 	if d.Transactor == nil {
 		return errors.New("driver app need transactor")
@@ -119,6 +125,10 @@ func (d driverApp) validateApp() error {
 
 	if d.service.settlementAccount == nil {
 		return errors.New("driver app need settlement account service")
+	}
+
+	if d.service.driverSettlement == nil {
+		return errors.New("driver app need driver settlement service")
 	}
 
 	return nil

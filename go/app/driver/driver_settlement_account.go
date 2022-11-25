@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
@@ -141,4 +142,12 @@ func (d driverApp) UpdateDriverSettlementAccount(ctx context.Context,
 	}
 
 	return driverSettlementAccount, nil
+}
+
+func (d driverApp) GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverExpectedSettlement, error) {
+	return d.service.driverSettlement.GetExpectedDriverSettlement(ctx, driverId)
+}
+
+func (d driverApp) ListDriverSettlementHistory(ctx context.Context, req request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error) {
+	return d.service.driverSettlement.ListDriverSettlementHistory(ctx, req)
 }

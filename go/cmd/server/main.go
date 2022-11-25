@@ -20,6 +20,7 @@ import (
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/driver"
 	"github.com/taco-labs/taco/go/app/driversession"
+	"github.com/taco-labs/taco/go/app/driversettlement"
 	"github.com/taco-labs/taco/go/app/outbox"
 	"github.com/taco-labs/taco/go/app/payment"
 	"github.com/taco-labs/taco/go/app/push"
@@ -98,6 +99,7 @@ func main() {
 	driverRepository := repository.NewDriverRepository()
 	driverLocationRepository := repository.NewDriverLocationRepository()
 	driverSettlementAccountRepository := repository.NewDriverSettlementAccountRepository()
+	driverSettlementRepository := repository.NewDriverSettlementRepository()
 	driverSessionRepository := repository.NewDriverSessionRepository()
 
 	eventRepository := repository.NewEventRepository()
@@ -301,6 +303,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	driverSettlementApp, err := driversettlement.NewDriverSettlementApp(
+		driversettlement.WithTransactor(transactor),
+		driversettlement.WithSettlementRepository(driverSettlementRepository),
+	)
+
 	userApp, err := user.NewUserApp(
 		user.WithTransactor(transactor),
 		user.WithUserRepository(userRepository),
@@ -330,6 +337,7 @@ func main() {
 		driver.WithTaxiCallService(taxicallApp),
 		driver.WithImageUrlService(cachedS3ImagePresignedUrlService),
 		driver.WithSettlementAccountService(settlementAccountService),
+		driver.WithDriverSettlementService(driverSettlementApp),
 	)
 	if err != nil {
 		fmt.Printf("Failed to setup driver app: %v\n", err)
@@ -344,6 +352,7 @@ func main() {
 	eventSubsriberStreamService.Add(pushApp)
 	eventSubsriberStreamService.Add(taxicallApp)
 	eventSubsriberStreamService.Add(paymentApp)
+	eventSubsriberStreamService.Add(driverSettlementApp)
 
 	eventSubsriberStreamService.Run(ctx)
 	defer eventSubsriberStreamService.Shutdown(ctx)

@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -35,6 +36,9 @@ type driverApp interface {
 	CancelTaxiCallRequest(context.Context, string) error
 	DriverToArrival(context.Context, string) error
 	DoneTaxiCallRequest(context.Context, request.DoneTaxiCallRequest) error
+
+	GetExpectedDriverSettlement(context.Context, string) (entity.DriverExpectedSettlement, error)
+	ListDriverSettlementHistory(context.Context, request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error)
 }
 
 func (d driverServer) SmsVerificationRequest(e echo.Context) error {
@@ -363,4 +367,36 @@ func (d driverServer) DoneTaxiCallRequest(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
+}
+
+func (d driverServer) GetExpectedDriverSetttlement(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+
+	resp, err := d.app.driver.GetExpectedDriverSettlement(ctx, driverId)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	return e.JSON(http.StatusOK, response.DriverExpectedSettlementToResponse(resp))
+}
+
+func (d driverServer) ListDriverSettlementHistory(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.ListDriverSettlementHistoryRequest{}
+
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	histories, pageToken, err := d.app.driver.ListDriverSettlementHistory(ctx, req)
+	if err != nil {
+		return server.ToResponse(err)
+	}
+
+	resp := response.ListDriverSettlementHistoryToResponse(histories, pageToken)
+
+	return e.JSON(http.StatusOK, resp)
 }

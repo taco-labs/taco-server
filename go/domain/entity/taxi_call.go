@@ -16,6 +16,10 @@ const (
 	PriceStep    = 1000
 )
 
+func CalculateDriverAdditionalPrice(additionalPrice int) int {
+	return additionalPrice * 7 / 10
+}
+
 type TaxiCallRequest struct {
 	bun.BaseModel `bun:"table:taxi_call_request"`
 
@@ -45,6 +49,14 @@ func (t TaxiCallRequest) TotalPrice() int {
 	return t.BasePrice + t.AdditionalPrice
 }
 
+func (t TaxiCallRequest) UserAdditionalPrice() int {
+	return t.AdditionalPrice
+}
+
+func (t TaxiCallRequest) DriverSettlementAdditonalPrice() int {
+	return CalculateDriverAdditionalPrice(t.AdditionalPrice)
+}
+
 // TODO (taekyeom) 취소 수수료 같은 로직을 나중에 고려해야 할듯
 func (t *TaxiCallRequest) UpdateState(transitionTime time.Time, nextState enum.TaxiCallState) error {
 	if !t.CurrentState.TryChangeState(nextState) {
@@ -65,6 +77,14 @@ type TaxiCallTicket struct {
 	Attempt           int       `bun:"attempt,pk"`
 	TicketId          string    `bun:"ticket_id"`
 	CreateTime        time.Time `bun:"create_time"`
+}
+
+func (t TaxiCallTicket) UserAdditionalPrice() int {
+	return t.AdditionalPrice
+}
+
+func (t TaxiCallTicket) DriverAdditionalPrice() int {
+	return CalculateDriverAdditionalPrice(t.AdditionalPrice)
 }
 
 func (t TaxiCallTicket) Step(maxPrice int, updateTime time.Time) (TaxiCallTicket, bool) {
@@ -142,12 +162,4 @@ func NewEmptyDriverTaxiCallContext(driverId string, canReceive bool, t time.Time
 		RejectedLastRequestTicket: true,
 		LastReceiveTime:           t,
 	}
-}
-
-type DriverTaxiCallSettlement struct {
-	bun.BaseModel `bun:"table:driver_taxi_call_settlement"`
-
-	TaxiCallRequestId  string    `bun:"taxi_call_request_id,pk"`
-	SettlementDone     bool      `bun:"settlement_done"`
-	SettlementDoneTime time.Time `bun:"settlement_done_time"`
 }

@@ -54,6 +54,11 @@ type driverTaxiCallInterface interface {
 	DriverCancelTaxiCallRequest(context.Context, string, string) error
 }
 
+type driverSettlementInterface interface {
+	GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverExpectedSettlement, error)
+	ListDriverSettlementHistory(ctx context.Context, req request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error)
+}
+
 type driverApp struct {
 	app.Transactor
 	repository struct {
@@ -69,7 +74,8 @@ type driverApp struct {
 		push              pushServiceInterface
 		taxiCall          driverTaxiCallInterface
 		imageUrl          service.ImageUrlService
-		settlementAccount service.SettlementAccountService
+		settlementAccount service.SettlementAccountService // TODO (taekyeom) settlement app으로 이동
+		driverSettlement  driverSettlementInterface
 	}
 }
 

@@ -241,13 +241,15 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 		ticketReceivedDriverContexts = slices.Filter(ticketReceivedDriverContexts, func(i entity.DriverTaxiCallContext) bool {
 			return i.DriverId != driverTaxiCallContext.DriverId
 		})
-		ticketReceivedDriverContexts = slices.Map(ticketReceivedDriverContexts, func(i entity.DriverTaxiCallContext) entity.DriverTaxiCallContext {
-			// 다시 수신 가능한 상태를 rejection으로 처리
-			i.RejectedLastRequestTicket = true
-			return i
-		})
-		if err := t.repository.taxiCallRequest.BulkUpsertDriverTaxiCallContext(ctx, i, ticketReceivedDriverContexts); err != nil {
-			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while bulk update driver contexts: %w", taxiCallRequest.Id, err)
+		if len(ticketReceivedDriverContexts) > 0 {
+			ticketReceivedDriverContexts = slices.Map(ticketReceivedDriverContexts, func(i entity.DriverTaxiCallContext) entity.DriverTaxiCallContext {
+				// 다시 수신 가능한 상태를 rejection으로 처리
+				i.RejectedLastRequestTicket = true
+				return i
+			})
+			if err := t.repository.taxiCallRequest.BulkUpsertDriverTaxiCallContext(ctx, i, ticketReceivedDriverContexts); err != nil {
+				return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while bulk update driver contexts: %w", taxiCallRequest.Id, err)
+			}
 		}
 
 		events = append(events, command.NewPushUserTaxiCallCommand(
@@ -292,7 +294,13 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, reciev
 			taxiCallRequest.PaymentSummary.PaymentId,
 			taxiCallRequest.Id,
 			"타코 이용 요금", // TODO (taekyeom) order name generation?
-			taxiCallRequest.AdditionalPrice,
+			taxiCallRequest.UserAdditionalPrice(),
+		))
+		events = append(events, command.NewDriverSettlementRequestCommand(
+			taxiCallRequest.DriverId.String,
+			taxiCallRequest.Id,
+			taxiCallRequest.DriverSettlementAdditonalPrice(),
+			taxiCallRequest.UpdateTime,
 		))
 		return nil
 	})
