@@ -39,7 +39,7 @@ func (s sessionMiddleware) Get() echo.MiddlewareFunc {
 		Validator: s.validateSession,
 		KeyLookup: fmt.Sprintf("header:%s,query:apiKey", echo.HeaderAuthorization),
 		ErrorHandler: func(err error, c echo.Context) error {
-			return server.ToResponse(err)
+			return server.ToResponse(c, err)
 		},
 	})
 }
@@ -89,7 +89,7 @@ func UserIdChecker(next echo.HandlerFunc) echo.HandlerFunc {
 		if requestUserId != "" {
 			userId := utils.GetUserId(ctx)
 			if requestUserId != userId {
-				return server.ToResponse(fmt.Errorf("unauthorized access to user resource:%w", value.ErrUnAuthorized))
+				return server.ToResponse(c, fmt.Errorf("unauthorized access to user resource:%w", value.ErrUnAuthorized))
 			}
 		}
 

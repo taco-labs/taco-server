@@ -42,7 +42,7 @@ func (s sessionMiddleware) Get() echo.MiddlewareFunc {
 		Skipper:   s.skipper,
 		Validator: s.validateSession,
 		ErrorHandler: func(err error, c echo.Context) error {
-			return server.ToResponse(err)
+			return server.ToResponse(c, err)
 		},
 	})
 }
@@ -95,7 +95,7 @@ func DriverIdChecker(next echo.HandlerFunc) echo.HandlerFunc {
 		if requestDriverId != "" {
 			driverId := utils.GetDriverId(ctx)
 			if requestDriverId != driverId {
-				return server.ToResponse(fmt.Errorf("unauthorized access to driver resource:%w", value.ErrUnAuthorized))
+				return server.ToResponse(c, fmt.Errorf("unauthorized access to driver resource:%w", value.ErrUnAuthorized))
 			}
 		}
 

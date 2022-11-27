@@ -48,7 +48,7 @@ func (u userServer) SmsVerificationRequest(e echo.Context) error {
 
 	smsVerification, err := u.app.user.SmsVerificationRequest(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.SmsVerificationRequestResponse{
@@ -76,7 +76,7 @@ func (u userServer) SmsSignin(e echo.Context) error {
 	}
 
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, resp)
@@ -95,7 +95,7 @@ func (u userServer) Signup(e echo.Context) error {
 	user, token, err := u.app.user.Signup(ctx, req)
 
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.UserSignupResponse{
@@ -111,7 +111,7 @@ func (u userServer) GetUser(e echo.Context) error {
 	userId := e.Param("userId")
 	user, err := u.app.user.GetUser(ctx, userId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 	return e.JSON(http.StatusOK, response.UserToResponse(user))
 }
@@ -127,7 +127,7 @@ func (u userServer) UpdateUser(e echo.Context) error {
 
 	user, err := u.app.user.UpdateUser(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, response.UserToResponse(user))
@@ -138,7 +138,7 @@ func (u userServer) ListUserPayment(e echo.Context) error {
 	userId := e.Param("userId")
 	userPayments, userDefaultPayment, err := u.app.user.ListUserPayment(ctx, userId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, response.ListUserPaymentResponse{
@@ -157,7 +157,7 @@ func (u userServer) RegisterUserPayment(e echo.Context) error {
 
 	cardPayment, err := u.app.user.RegisterUserPayment(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, response.UserPaymentToResponse(cardPayment))
@@ -169,7 +169,7 @@ func (u userServer) TryRecoverUserPayment(e echo.Context) error {
 	paymentId := e.Param("paymentId")
 	err := u.app.user.TryRecoverUserPayment(ctx, paymentId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -181,7 +181,7 @@ func (u userServer) DeleteUserPayment(e echo.Context) error {
 	paymentId := e.Param("paymentId")
 	err := u.app.user.DeleteUserPayment(ctx, paymentId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 	return e.JSON(http.StatusOK, response.DeleteUserPaymentResponse{
 		PaymentId: paymentId,
@@ -198,7 +198,7 @@ func (u userServer) UpdateDefaultPayment(e echo.Context) error {
 	}
 
 	if err := u.app.user.UpdateDefaultPayment(ctx, req); err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -214,7 +214,7 @@ func (u userServer) CreateTaxiCallRequest(e echo.Context) error {
 
 	taxiCallRequest, err := u.app.user.CreateTaxiCallRequest(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
@@ -228,7 +228,7 @@ func (u userServer) GetLatestTaxiCallRequest(e echo.Context) error {
 
 	taxiCallRequest, err := u.app.user.GetLatestTaxiCallRequest(ctx, userId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
@@ -240,7 +240,7 @@ func (u userServer) ListTags(e echo.Context) error {
 
 	tags, err := u.app.user.ListTags(ctx)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, tags)
@@ -261,7 +261,7 @@ func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 
 	taxiCallRequests, pageToken, err := u.app.user.ListTaxiCallRequest(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := slices.Map(taxiCallRequests, response.TaxiCallRequestToResponse)
@@ -278,7 +278,7 @@ func (u userServer) CancelTaxiCallRequest(e echo.Context) error {
 	taxiCallRequestId := e.Param("taxiCallRequestId")
 
 	if err := u.app.user.CancelTaxiCallRequest(ctx, taxiCallRequestId); err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -294,7 +294,7 @@ func (u userServer) SearchLocation(e echo.Context) error {
 
 	resp, err := u.app.user.SearchLocation(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, resp)
@@ -310,7 +310,7 @@ func (u userServer) GetAddress(e echo.Context) error {
 
 	resp, err := u.app.user.GetAddress(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, resp)

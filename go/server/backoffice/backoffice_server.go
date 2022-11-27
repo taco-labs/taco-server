@@ -17,7 +17,7 @@ func (b backofficeServer) GetDriver(e echo.Context) error {
 
 	driver, err := b.app.driver.GetDriver(ctx, driverId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverToResponse(driver)
@@ -32,7 +32,7 @@ func (b backofficeServer) DeleteDriver(e echo.Context) error {
 
 	err := b.app.driver.DeleteDriver(ctx, driverId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -45,7 +45,7 @@ func (b backofficeServer) ActivateDriver(e echo.Context) error {
 
 	err := b.app.driver.ActivateDriver(ctx, driverId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -56,7 +56,7 @@ func (b backofficeServer) GetUser(e echo.Context) error {
 	userId := e.Param("userId")
 	user, err := b.app.user.GetUser(ctx, userId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 	return e.JSON(http.StatusOK, response.UserToResponse(user))
 }
@@ -67,7 +67,7 @@ func (b backofficeServer) DeleteUser(e echo.Context) error {
 	userId := e.Param("userId")
 	err := b.app.user.DeleteUser(ctx, userId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -82,7 +82,7 @@ func (b backofficeServer) ForceAcceptTaxiCallRequest(e echo.Context) error {
 
 	err := b.app.driver.ForceAcceptTaxiCallRequest(ctx, driverId, taxiCallRequestId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -98,7 +98,7 @@ func (b backofficeServer) DriverToArrival(e echo.Context) error {
 
 	err := b.app.driver.DriverToArrival(ctx, taxiCallRequestId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -118,7 +118,7 @@ func (b backofficeServer) DoneTaxiCallRequest(e echo.Context) error {
 
 	err := b.app.driver.DoneTaxiCallRequest(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})

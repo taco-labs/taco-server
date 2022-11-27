@@ -52,7 +52,7 @@ func (d driverServer) SmsVerificationRequest(e echo.Context) error {
 
 	smsVerification, err := d.app.driver.SmsVerificationRequest(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.SmsVerificationRequestResponse{
@@ -75,7 +75,7 @@ func (d driverServer) SmsSignin(e echo.Context) error {
 	driver, token, err := d.app.driver.SmsSignin(ctx, req)
 
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverSignupResponse{
@@ -98,7 +98,7 @@ func (d driverServer) Signup(e echo.Context) error {
 	driver, token, err := d.app.driver.Signup(ctx, req)
 
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverSignupResponse{
@@ -116,7 +116,7 @@ func (d driverServer) GetDriver(e echo.Context) error {
 
 	driver, err := d.app.driver.GetDriver(ctx, driverId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverToResponse(driver)
@@ -135,7 +135,7 @@ func (d driverServer) UpdateDriver(e echo.Context) error {
 
 	driver, err := d.app.driver.UpdateDriver(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverToResponse(driver)
@@ -150,7 +150,7 @@ func (d driverServer) GetDriverImageUrls(e echo.Context) error {
 
 	downloadUrls, uploadUrls, err := d.app.driver.GetDriverImageUrls(ctx, driverId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverImageUrlResponse{
@@ -172,7 +172,7 @@ func (d driverServer) UpdateOnDuty(e echo.Context) error {
 
 	err := d.app.driver.UpdateOnDuty(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -189,7 +189,7 @@ func (d driverServer) UpdateDriverLocation(e echo.Context) error {
 
 	err := d.app.driver.UpdateDriverLocation(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -202,7 +202,7 @@ func (d driverServer) GetDriverSettlemtnAccount(e echo.Context) error {
 
 	account, err := d.app.driver.GetDriverSettlementAccount(ctx, driverId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverSettlemtnAccountToResponse(account)
@@ -221,7 +221,7 @@ func (d driverServer) RegisterDriverSettlementAccount(e echo.Context) error {
 
 	account, err := d.app.driver.RegisterDriverSettlementAccount(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverSettlemtnAccountToResponse(account)
@@ -240,7 +240,7 @@ func (d driverServer) UpdateDriverSettlemtnAccount(e echo.Context) error {
 
 	account, err := d.app.driver.UpdateDriverSettlementAccount(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverSettlemtnAccountToResponse(account)
@@ -254,7 +254,7 @@ func (d driverServer) ActivateDriver(e echo.Context) error {
 	driverId := e.Param("driverId")
 
 	if err := d.app.driver.ActivateDriver(ctx, driverId); err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return nil
@@ -267,7 +267,7 @@ func (d driverServer) GetLatestTaxiCallRequest(e echo.Context) error {
 
 	taxiCallRequest, err := d.app.driver.GetLatestTaxiCallRequest(ctx, userId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
@@ -289,7 +289,7 @@ func (d driverServer) ListTaxiCallRequest(e echo.Context) error {
 
 	taxiCallRequests, pageToken, err := d.app.driver.ListTaxiCallRequest(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := slices.Map(taxiCallRequests, response.TaxiCallRequestToResponse)
@@ -307,7 +307,7 @@ func (d driverServer) AcceptTaxiCallRequest(e echo.Context) error {
 
 	err := d.app.driver.AcceptTaxiCallRequest(ctx, ticketId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -320,7 +320,7 @@ func (d driverServer) RejectTaxiCallRequest(e echo.Context) error {
 
 	err := d.app.driver.RejectTaxiCallRequest(ctx, ticketId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -333,7 +333,7 @@ func (d driverServer) CancelTaxiCallRequest(e echo.Context) error {
 
 	err := d.app.driver.CancelTaxiCallRequest(ctx, taxiCallRequestId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -346,7 +346,7 @@ func (d driverServer) DriverToArrival(e echo.Context) error {
 
 	err := d.app.driver.DriverToArrival(ctx, taxiCallRequestId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -363,7 +363,7 @@ func (d driverServer) DoneTaxiCallRequest(e echo.Context) error {
 
 	err := d.app.driver.DoneTaxiCallRequest(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
@@ -376,7 +376,7 @@ func (d driverServer) GetExpectedDriverSetttlement(e echo.Context) error {
 
 	resp, err := d.app.driver.GetExpectedDriverSettlement(ctx, driverId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, response.DriverExpectedSettlementToResponse(resp))
@@ -393,7 +393,7 @@ func (d driverServer) ListDriverSettlementHistory(e echo.Context) error {
 
 	histories, pageToken, err := d.app.driver.ListDriverSettlementHistory(ctx, req)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	resp := response.ListDriverSettlementHistoryToResponse(histories, pageToken)

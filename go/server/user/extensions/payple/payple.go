@@ -51,7 +51,7 @@ func (p paypleExtension) RegistCardPayment(e echo.Context) error {
 
 	resp, err := p.app.userApp.GetCardRegistrationRequestParam(ctx, userId)
 	if err != nil {
-		return server.ToResponse(err)
+		return server.ToResponse(e, err)
 	}
 
 	params := map[string]interface{}{
@@ -87,7 +87,7 @@ func (p paypleExtension) RegisterCardPaymentResultCallback(e echo.Context) error
 	_, err := p.app.userApp.RegistrationCallback(ctx, req)
 	if err != nil {
 		// TODO (taekyeom) server logging?
-		// return server.ToResponse(err)
+		// return server.ToResponse(e, err)
 		return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_failure", p.domain))
 	}
 

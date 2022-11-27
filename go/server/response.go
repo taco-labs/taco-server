@@ -7,30 +7,33 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/utils"
+	"go.uber.org/zap"
 )
 
 // TODO (taekyeom) Do better error handler
-func ToResponse(err error) error {
+func ToResponse(e echo.Context, err error) error {
 	if err == nil {
 		return err
 	}
 
-	defer utils.Logger.Sync()
-	sugar := utils.Logger.Sugar()
+	ctx := e.Request().Context()
+	logger := utils.GetLogger(ctx)
 
 	tacoError := &value.TacoError{}
 	if !errors.As(err, tacoError) {
-		sugar.Errorw("Non taco error occurred",
-			"error", err.Error(),
+		logger.Error("Non taco error occurred",
+			zap.Error(err),
+			zap.String("path", e.Request().RequestURI),
 		)
 		return err
 	}
 
 	herr := echo.NewHTTPError(http.StatusInternalServerError)
-	sugar.Errorw("Taco error occurred",
-		"error", err.Error(),
-		"code", tacoError.ErrCode,
-		"message", tacoError.Message,
+	logger.Error("Taco error occurred",
+		zap.Error(err),
+		zap.String("code", string(tacoError.ErrCode)),
+		zap.String("message", tacoError.Message),
+		zap.String("path", e.Request().RequestURI),
 	)
 
 	switch tacoError.ErrCode {

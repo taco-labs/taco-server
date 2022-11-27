@@ -5,13 +5,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-var Logger *zap.Logger
-
 type loggerKey struct{}
-
-func init() {
-	Logger, _ = zap.NewProduction()
-}
 
 func GetLogger(ctx context.Context) *zap.Logger {
 	logger := ctx.Value(loggerKey{})
