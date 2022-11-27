@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/utils"
+	"go.uber.org/zap"
 )
 
 type SubscriberStream interface {
@@ -29,24 +31,23 @@ func (s EventSubscriptionStreamService) Run(ctx context.Context) {
 }
 
 func (s EventSubscriptionStreamService) loop(ctx context.Context) {
+	logger := utils.GetLogger(ctx)
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Println("shutting down EventSubscriberStream...")
 			s.shutdownCh <- struct{}{}
-			fmt.Println("shutting down EventSubscriberStream done...")
 			return
 		default:
-			err := s.consume(ctx)
+			err := s.consume(ctx, logger)
 			if err != nil && errors.Is(err, context.Canceled) {
-				// TODO (taekyeom) logging
-				fmt.Printf("[EventSubscriptionStreamService] error while consume event: %+v\n", err)
+				logger.Error("[EventSubscriptionStreamService] error while consume event", zap.Error(err))
 			}
 		}
 	}
 }
 
-func (s EventSubscriptionStreamService) consume(ctx context.Context) error {
+func (s EventSubscriptionStreamService) consume(ctx context.Context, logger *zap.Logger) error {
 	event, err := s.eventSub.GetMessage(ctx)
 	if err != nil {
 		return err
@@ -57,7 +58,7 @@ func (s EventSubscriptionStreamService) consume(ctx context.Context) error {
 			return s.workerPoolService.Submit(func() {
 				err := s.streams[idx].Process(ctx, event)
 				if err != nil {
-					fmt.Printf("[EventSubscriptionStreamService.consume] error while handle consumed message: %+v\n", err)
+					logger.Error("[EventSubscriptionStreamService.consume] error while handle consumed message", zap.Error(err))
 					if errors.Is(err, context.Canceled) {
 						return
 					}

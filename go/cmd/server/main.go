@@ -34,23 +34,17 @@ import (
 	userserver "github.com/taco-labs/taco/go/server/user"
 	paypleextension "github.com/taco-labs/taco/go/server/user/extensions/payple"
 	"github.com/taco-labs/taco/go/service"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/extra/bundebug"
+	"go.uber.org/zap"
 	"gocloud.dev/pubsub/awssnssqs"
 	firebasepubsub "gocloud.dev/pubsub/firebase"
-
-	_ "net/http/pprof"
 )
 
 func main() {
-	// pprof
-
-	go func() {
-		http.ListenAndServe(":8090", nil)
-	}()
-
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -60,10 +54,24 @@ func main() {
 		os.Exit(1)
 	}
 
+	var logger *zap.Logger
+	if config.Env == "prod" {
+		logger, err = zap.NewProduction()
+	} else {
+		logger, err = zap.NewDevelopment()
+	}
+	if err != nil {
+		fmt.Printf("Failed to initializae logger: %v\n", err)
+		os.Exit(1)
+	}
+	defer logger.Sync()
+	ctx = utils.SetLogger(ctx, logger)
+
 	// Initialize aws sdk v2 session
 	awsconf, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		fmt.Printf("Failed to load default aws config: %+v\n", err)
+		logger.Error("Failed to load default aws config", zap.Error(err))
+		os.Exit(1)
 	}
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&search_path=%s",
@@ -75,6 +83,7 @@ func main() {
 		config.Database.Schema,
 	)
 
+	// TODO (taekyeom) connection pool parameter?
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 
 	db := bun.NewDB(sqldb, pgdialect.New())
@@ -145,7 +154,7 @@ func main() {
 			config.SettlementAccountService.ApiSecret,
 		)
 	default:
-		fmt.Printf("Invalid settlement account service type: '%s'\n", config.SettlementAccountService.Type)
+		logger.Error(fmt.Sprintf("invalid settlement account service type '%s'", config.SettlementAccountService.Type))
 		os.Exit(1)
 	}
 
@@ -153,19 +162,19 @@ func main() {
 		ants.WithPreAlloc(config.EventStream.EventStreamWorkerPool.PreAlloc),
 	)
 	if err != nil {
-		fmt.Printf("Failed to instantiate event stream ant worker pool: %+v\n", err)
+		logger.Error("failed to instantiate event stream ant worker pool", zap.Error(err))
 		os.Exit(1)
 	}
 	eventStreamWorkerPool := service.NewAntWorkerPoolService(eventStreamAntWorkerPool)
 
 	firebaseApp, err := firebase.NewApp(ctx, nil)
 	if err != nil {
-		fmt.Printf("Failed to instantiate firebase: %+v\n", err)
+		logger.Error("failed to instantiate firebase", zap.Error(err))
 		os.Exit(1)
 	}
 	messagingClient, err := firebaseApp.Messaging(ctx)
 	if err != nil {
-		fmt.Printf("Failed to instantiate firebase cloud messaging client: %+v\n", err)
+		logger.Error("failed to instantiate firebase cloud messaging client", zap.Error(err))
 		os.Exit(1)
 	}
 	firebasepub := firebasepubsub.OpenFCMTopic(ctx, messagingClient, &firebasepubsub.TopicOptions{
@@ -204,7 +213,7 @@ func main() {
 		BufferItems: 64,
 	})
 	if err != nil {
-		fmt.Printf("Failed to setup download url ristreeto cache: %v\n", err)
+		logger.Error("failed to setup download url ristretto cache", zap.Error(err))
 		os.Exit(1)
 	}
 	downloadImageUrlCache := store.NewRistretto(downloadImageUrlRistrettoCache,
@@ -218,7 +227,7 @@ func main() {
 		BufferItems: 64,
 	})
 	if err != nil {
-		fmt.Printf("Failed to setup upload url ristreeto cache: %v\n", err)
+		logger.Error("failed to setup upload url ristretto cache", zap.Error(err))
 		os.Exit(1)
 	}
 	uploadImageUrlCache := store.NewRistretto(uploadImageUrlRistrettoCache,
@@ -244,7 +253,7 @@ func main() {
 		push.WithDriverGetterService(driverGetterDelegator),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup push app: %v\n", err)
+		logger.Error("failed to setup push app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -257,7 +266,7 @@ func main() {
 		taxicall.WithLocationService(locationService),
 	)
 	if err != nil {
-		fmt.Printf("Failed to start taxi call app: %v\n", err)
+		logger.Error("failed to setup taxi call app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -268,7 +277,7 @@ func main() {
 		payment.WithPaymentService(payplePaymentService),
 	)
 	if err != nil {
-		fmt.Printf("Failed to start user payment app: %v\n", err)
+		logger.Error("failed to setup user payment app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -281,7 +290,7 @@ func main() {
 		outbox.WithMaxMessages(config.EventStream.EventOutbox.MaxMessages),
 	)
 	if err != nil {
-		fmt.Printf("Failed to initialize notification outbox app: %+v\n", err)
+		logger.Error("failed to setup outbox app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -290,7 +299,7 @@ func main() {
 		usersession.WithUserSessionRepository(userSessionRepository),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup user session app: %v\n", err)
+		logger.Error("failed to setup user session app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -299,7 +308,7 @@ func main() {
 		driversession.WithDriverSessionRepository(driverSessionRepository),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup driver session app: %v\n", err)
+		logger.Error("failed to setup driver session app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -308,7 +317,7 @@ func main() {
 		driversettlement.WithSettlementRepository(driverSettlementRepository),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup driver settlement app: %v\n", err)
+		logger.Error("failed to setup driver settlement app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -325,7 +334,7 @@ func main() {
 		user.WithUserPaymentService(paymentApp),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup user app: %v\n", err)
+		logger.Error("failed to setup user app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -344,7 +353,7 @@ func main() {
 		driver.WithDriverSettlementService(driverSettlementApp),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup driver app: %v\n", err)
+		logger.Error("failed to setup driver app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -362,7 +371,7 @@ func main() {
 	defer eventSubsriberStreamService.Shutdown(ctx)
 
 	if err := outboxApp.Start(ctx); err != nil {
-		fmt.Printf("Failed to start outbox app: %+v\n", err)
+		logger.Error("failed to start outbox app", zap.Error(err))
 		os.Exit(1)
 	}
 	defer outboxApp.Shuwdown()
@@ -380,7 +389,7 @@ func main() {
 		paypleextension.WithDomain(config.PaymentService.RefererDomain),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup payple extension: %v\n", err)
+		logger.Error("failed to setup payple extension", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -394,7 +403,7 @@ func main() {
 		userserver.WithExtension(userServerPaypleExtension.Apply),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup user server: %v\n", err)
+		logger.Error("failed to setup user server", zap.Error(err))
 		os.Exit(1)
 	}
 	defer userServer.Stop(ctx)
@@ -407,7 +416,7 @@ func main() {
 		driverserver.WithMiddleware(driverserver.DriverIdChecker),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup driver server: %v\n", err)
+		logger.Error("failed to setup driver server", zap.Error(err))
 		os.Exit(1)
 	}
 	defer driverServer.Stop(ctx)
@@ -420,29 +429,26 @@ func main() {
 		backofficeserver.WithMiddleware(backofficeSessionMiddleware.Get()),
 	)
 	if err != nil {
-		fmt.Printf("Failed to setup backoffice server: %v\n", err)
+		logger.Error("failed to setup backoffice server", zap.Error(err))
 		os.Exit(1)
 	}
 	defer backofficeServer.Stop(ctx)
 
 	go func() {
 		if err := userServer.Run(ctx); err != nil && err != http.ErrServerClosed {
-			// TODO (taekyeom) fatal log
-			fmt.Printf("shutting down user server:\n%v", err)
+			logger.Fatal("shutting down user server", zap.Error(err))
 		}
 	}()
 
 	go func() {
 		if err := driverServer.Run(ctx); err != nil && err != http.ErrServerClosed {
-			// TODO (taekyeom) fatal log
-			fmt.Printf("shutting down driver server:\n%v", err)
+			logger.Fatal("shutting down driver server", zap.Error(err))
 		}
 	}()
 
 	go func() {
 		if err := backofficeServer.Run(ctx); err != nil && err != http.ErrServerClosed {
-			// TODO (taekyeom) fatal log
-			fmt.Printf("shutting down backoffice server:\n%v", err)
+			logger.Fatal("shutting down backoffice server", zap.Error(err))
 		}
 	}()
 

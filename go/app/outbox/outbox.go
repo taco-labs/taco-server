@@ -9,7 +9,9 @@ import (
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
+	"go.uber.org/zap"
 )
 
 type outboxApp struct {
@@ -40,11 +42,11 @@ func (o outboxApp) Shuwdown() error {
 
 func (o outboxApp) loop(ctx context.Context) error {
 	timer := time.NewTimer(0 * time.Second)
+	logger := utils.GetLogger(ctx)
 	for range timer.C {
 		err := o.sendBestAffort(ctx)
 		if err != nil {
-			// TODO (taekyeom) logging
-			fmt.Printf("app.outbox.loop: error from send messages: %+v\n", err)
+			logger.Error("app.outbox.app: error while sending message", zap.Error(err))
 		}
 		timer.Reset(o.conf.pollInterval)
 	}

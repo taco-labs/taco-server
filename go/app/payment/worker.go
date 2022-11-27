@@ -11,7 +11,9 @@ import (
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/service"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
+	"go.uber.org/zap"
 )
 
 func (p paymentApp) Accept(ctx context.Context, event entity.Event) bool {
@@ -55,7 +57,6 @@ func (p paymentApp) handleEvent(ctx context.Context, event entity.Event) error {
 	case command.EventUri_UserDeletePayment:
 		events, err = p.handleDeletePayment(ctx, event)
 	default:
-		// TODO(taekyeom) logging
 		err = fmt.Errorf("%w: [PaymentApp.Worker.Consume] Invalid EventUri '%v'", value.ErrInvalidOperation, event.EventUri)
 	}
 
@@ -76,6 +77,8 @@ func (p paymentApp) handleDeletePayment(ctx context.Context, ev entity.Event) ([
 }
 
 func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) (events []entity.Event, err error) {
+	logger := utils.GetLogger(ctx)
+
 	cmd := command.PaymentUserTransactionCommand{}
 	if err := json.Unmarshal(ev.Payload, &cmd); err != nil {
 		return []entity.Event{}, fmt.Errorf("app.payment.handleTransaction: failed to unmarshal transaction command: %w", err)
@@ -107,7 +110,9 @@ func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) (eve
 			return fmt.Errorf("app.payment.handleTransaction: error while get payment order: %w", err)
 		}
 		if userPaymentOrder.OrderId == cmd.OrderId {
-			// TODO (taekyeom) duplication order logging
+			logger.Warn("already processed order..",
+				zap.String("orderId", cmd.OrderId),
+			)
 			return nil
 		}
 
@@ -140,7 +145,9 @@ func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) (eve
 
 	transactionResult, err := p.service.payment.Transaction(ctx, userPayment, paymentTransaction)
 	if errors.Is(err, value.ErrPaymentDuplicatedOrder) && userPaymentOrder.OrderId != "" {
-		// TODO (taekyeom) duplication order logging
+		logger.Warn("already processed order..",
+			zap.String("orderId", cmd.OrderId),
+		)
 		return []entity.Event{}, nil
 	}
 	if err != nil && !errors.Is(err, value.ErrPaymentDuplicatedOrder) {
@@ -255,6 +262,8 @@ func (p paymentApp) handleRecovery(ctx context.Context, ev entity.Event) ([]enti
 
 	var events []entity.Event
 
+	logger := utils.GetLogger(ctx)
+
 	// Set payment as invalid
 	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		userPayment, err := p.repository.payment.GetUserPayment(ctx, i, cmd.PaymentId)
@@ -290,7 +299,9 @@ func (p paymentApp) handleRecovery(ctx context.Context, ev entity.Event) ([]enti
 			}
 			transactionResult, err := p.service.payment.Transaction(ctx, userPayment, paymentTransaction)
 			if errors.Is(err, value.ErrPaymentDuplicatedOrder) && userPaymentOrder.OrderId != "" {
-				// TODO (taekyeom) duplication order logging
+				logger.Warn("already processed order..",
+					zap.String("orderId", userPaymentOrder.OrderId),
+				)
 				continue
 			}
 			if err != nil && !errors.Is(err, value.ErrPaymentDuplicatedOrder) {

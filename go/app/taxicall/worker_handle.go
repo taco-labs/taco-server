@@ -15,6 +15,7 @@ import (
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
+	"go.uber.org/zap"
 )
 
 func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error {
@@ -38,6 +39,7 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 }
 
 func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCount int, cmd command.TaxiCallProcessMessage) error {
+	logger := utils.GetLogger(ctx)
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, cmd.TaxiCallRequestId)
 		if err != nil {
@@ -69,7 +71,12 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 
 		// Guard.. commands'state and request's current state must be same
 		if string(taxiCallRequest.CurrentState) != cmd.TaxiCallState {
-			// TODO (taekyeom) logging late message & add metric for anomaly
+			logger.Warn("late taxi call request message arrived",
+				zap.String("type", "taxicall"),
+				zap.String("method", "process"),
+				zap.Any("currentRequest", taxiCallRequest),
+				zap.Any("message", cmd),
+			)
 			return nil
 		}
 
@@ -84,9 +91,9 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 		case enum.TaxiCallState_DONE:
 			events, err = t.handleDone(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
 		case enum.TaxiCallState_USER_CANCELLED:
-			events, err = t.handleUserCancelld(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
+			events, err = t.handleUserCancelled(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
 		case enum.TaxiCallState_DRIVER_CANCELLED:
-			events, err = t.handleDriverCancelld(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
+			events, err = t.handleDriverCancelled(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
 		case enum.TaxiCallState_FAILED:
 			events, err = t.handleFailed(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
 		}
@@ -104,6 +111,7 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 }
 
 func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+	logger := utils.GetLogger(ctx)
 	events := []entity.Event{}
 	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		taxiCallTicket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
@@ -121,7 +129,13 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 		}
 
 		if eventTime.Before(taxiCallTicket.CreateTime) {
-			// TODO (taekyeom) logging late message
+			logger.Warn("event time is before than current ticket, may be late event arrived...",
+				zap.String("type", "taxicall"),
+				zap.String("method", "handleTaxiCallRequested"),
+				zap.Any("currentRequest", taxiCallRequest),
+				zap.Any("currentTicket", taxiCallTicket),
+				zap.Any("eventTime", eventTime),
+			)
 			return nil
 		}
 
@@ -146,7 +160,10 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while check taxi call ticket existance: %w", taxiCallRequest.Id, err)
 		}
 		if exists {
-			// TODO (taekyeom) duplication & late event logging
+			logger.Warn("duplicated event.. expected ticket already exists",
+				zap.String("type", "taxicall"),
+				zap.String("method", "handleTaxiCallRequested"),
+			)
 			return nil
 		}
 
@@ -274,8 +291,12 @@ func (t taxicallApp) handleDriverToArrival(ctx context.Context, eventTime time.T
 }
 
 func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
-	// TODO(taekyeom) logging
+	logger := utils.GetLogger(ctx)
 	if eventTime.Before(taxiCallRequest.UpdateTime) {
+		logger.Warn("duplicated command...",
+			zap.String("type", "taxicall"),
+			zap.String("method", "handleDone"),
+		)
 		return []entity.Event{}, nil
 	}
 
@@ -312,9 +333,13 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, reciev
 	return events, nil
 }
 
-func (t taxicallApp) handleUserCancelld(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
-	// TODO(taekyeom) logging
+func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+	logger := utils.GetLogger(ctx)
 	if eventTime.Before(taxiCallRequest.UpdateTime) {
+		logger.Warn("duplicated command...",
+			zap.String("type", "taxicall"),
+			zap.String("method", "handleUserCancelled"),
+		)
 		return []entity.Event{}, nil
 	}
 
@@ -343,9 +368,13 @@ func (t taxicallApp) handleUserCancelld(ctx context.Context, eventTime time.Time
 	return events, nil
 }
 
-func (t taxicallApp) handleDriverCancelld(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
-	// TODO(taekyeom) logging
+func (t taxicallApp) handleDriverCancelled(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+	logger := utils.GetLogger(ctx)
 	if eventTime.Before(taxiCallRequest.UpdateTime) {
+		logger.Warn("duplicated command...",
+			zap.String("type", "taxicall"),
+			zap.String("method", "handleDriverCancelled"),
+		)
 		return []entity.Event{}, nil
 	}
 
@@ -382,8 +411,12 @@ func (t taxicallApp) handleDriverCancelld(ctx context.Context, eventTime time.Ti
 }
 
 func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
-	// TODO(taekyeom) logging
+	logger := utils.GetLogger(ctx)
 	if eventTime.Before(taxiCallRequest.UpdateTime) {
+		logger.Warn("duplicated command...",
+			zap.String("type", "taxicall"),
+			zap.String("method", "handleFailed"),
+		)
 		return []entity.Event{}, nil
 	}
 

@@ -10,7 +10,9 @@ import (
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
+	"go.uber.org/zap"
 )
 
 func (d driversettlementApp) Accept(ctx context.Context, event entity.Event) bool {
@@ -35,6 +37,7 @@ func (d driversettlementApp) Process(ctx context.Context, event entity.Event) er
 
 func (d driversettlementApp) handleSettlementRequest(ctx context.Context, event entity.Event) error {
 	cmd := command.DriverSettlementRequestCommand{}
+	logger := utils.GetLogger(ctx)
 	err := json.Unmarshal(event.Payload, &cmd)
 	if err != nil {
 		return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while unmarshal command: %w", err)
@@ -46,7 +49,11 @@ func (d driversettlementApp) handleSettlementRequest(ctx context.Context, event 
 			return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while get settlement request: %w", err)
 		}
 		if settlementRequest.TaxiCallRequestId != "" {
-			// TODO (taekyeom) duplication warning logging...
+			logger.Warn("duplicated message",
+				zap.Any("cmd", cmd),
+				zap.String("type", "settlement"),
+				zap.String("method", "handleSettlementRequest"),
+			)
 			return nil
 		}
 
@@ -69,6 +76,7 @@ func (d driversettlementApp) handleSettlementRequest(ctx context.Context, event 
 
 func (d driversettlementApp) handleSettlementDone(ctx context.Context, event entity.Event) error {
 	cmd := command.DriverSettlementDoneCommand{}
+	logger := utils.GetLogger(ctx)
 	err := json.Unmarshal(event.Payload, &cmd)
 	if err != nil {
 		return fmt.Errorf("app.driversettlementApp.handleSettlementDone: error while unmarshal command: %w", err)
@@ -80,7 +88,11 @@ func (d driversettlementApp) handleSettlementDone(ctx context.Context, event ent
 			return fmt.Errorf("app.driversettlementApp.handleSettlementDone: error while get settlement history: %w", err)
 		}
 		if settlementHistory.DriverId != "" {
-			// TODO (taekyeom) duplication warning logging...
+			logger.Warn("duplicated message",
+				zap.Any("cmd", cmd),
+				zap.String("type", "settlement"),
+				zap.String("method", "handleSettlementDone"),
+			)
 			return nil
 		}
 
