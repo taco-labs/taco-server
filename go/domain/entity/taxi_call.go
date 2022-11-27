@@ -40,6 +40,7 @@ type TaxiCallRequest struct {
 	RequestMinAdditionalPrice int                  `bun:"request_min_additional_price"`
 	RequestMaxAdditionalPrice int                  `bun:"request_max_additional_price"`
 	BasePrice                 int                  `bun:"base_price"`
+	TollFee                   int                  `bun:"toll_fee"`
 	AdditionalPrice           int                  `bun:"additional_price"`
 	CurrentState              enum.TaxiCallState   `bun:"taxi_call_state"`
 	CreateTime                time.Time            `bun:"create_time"`
@@ -47,7 +48,7 @@ type TaxiCallRequest struct {
 }
 
 func (t TaxiCallRequest) TotalPrice() int {
-	return t.BasePrice + t.AdditionalPrice
+	return t.BasePrice + t.TollFee + t.AdditionalPrice
 }
 
 func (t TaxiCallRequest) UserAdditionalPrice() int {

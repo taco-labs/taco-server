@@ -24,12 +24,13 @@ type TaxiCallRequestResponse struct {
 	Departure                 value.Location         `json:"departure"`
 	Arrival                   value.Location         `json:"arrival"`
 	Tags                      []string               `json:"tags"`
-	UserTags                  string                 `json:"userTag"`
+	UserTag                   string                 `json:"userTag"`
 	Payment                   PaymentSummaryResponse `json:"payment"`
 	RequestBasePrice          int                    `json:"requestBasePrice"`
 	RequestMinAdditionalPrice int                    `json:"requestMinAdditionalPrice"`
 	RequestMaxAdditionalPrice int                    `json:"requestMaxAdditionalPrice"`
 	BasePrice                 int                    `json:"basePrice"`
+	TollFee                   int                    `json:"tollFee"`
 	AdditionalPrice           int                    `json:"additionalPrice"`
 	CurrentState              string                 `json:"currentState"`
 	CreateTime                time.Time              `json:"createTime"`
@@ -66,12 +67,13 @@ func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallR
 		Departure:                 taxiCallRequest.Departure,
 		Arrival:                   taxiCallRequest.Arrival,
 		Tags:                      taxiCallRequest.Tags,
-		UserTags:                  taxiCallRequest.UserTag,
+		UserTag:                   taxiCallRequest.UserTag,
 		Payment:                   PaymentSummaryToResponse(taxiCallRequest.PaymentSummary),
 		RequestBasePrice:          taxiCallRequest.RequestBasePrice,
 		RequestMinAdditionalPrice: taxiCallRequest.RequestMinAdditionalPrice,
 		RequestMaxAdditionalPrice: taxiCallRequest.RequestMaxAdditionalPrice,
 		BasePrice:                 taxiCallRequest.BasePrice,
+		TollFee:                   taxiCallRequest.TollFee,
 		AdditionalPrice:           taxiCallRequest.AdditionalPrice,
 		CurrentState:              string(taxiCallRequest.CurrentState),
 		CreateTime:                taxiCallRequest.CreateTime,

@@ -40,4 +40,5 @@ type ListDriverTaxiCallRequest struct {
 type DoneTaxiCallRequest struct {
 	TaxiCallRequestId string `param:"taxiCallRequestId"`
 	BasePrice         int    `json:"basePrice"`
+	TollFee           int    `json:"tollFee"`
 }

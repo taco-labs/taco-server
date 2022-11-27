@@ -342,6 +342,7 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 		}
 
 		taxiCallRequest.BasePrice = req.BasePrice
+		taxiCallRequest.TollFee = req.TollFee
 		taxiCallRequest.UpdateTime = requestTime
 
 		if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {

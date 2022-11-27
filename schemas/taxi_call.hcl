@@ -83,6 +83,11 @@ table "taxi_call_request" {
     null = true
   }
 
+  column "toll_fee" {
+    type = int
+    null = true
+  }
+
   column "additional_price" {
     type = int
     null = true
