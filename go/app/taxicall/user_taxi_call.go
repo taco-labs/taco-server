@@ -174,6 +174,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 			},
 			TagIds:                    req.TagIds,
 			Tags:                      tags,
+			UserTag:                   req.UserTag,
 			RequestBasePrice:          route.Price,
 			RequestMinAdditionalPrice: 0,                  // TODO(taekyeom) To be paramterized
 			RequestMaxAdditionalPrice: maxAdditionalPrice, // TODO(taekyeom) To be paramterized
@@ -204,6 +205,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 			},
 			TagIds:                    req.TagIds,
 			Tags:                      tags,
+			UserTag:                   req.UserTag,
 			PaymentSummary:            userPayment.ToSummary(),
 			RequestBasePrice:          route.Price,
 			RequestMinAdditionalPrice: req.MinAdditionalPrice,

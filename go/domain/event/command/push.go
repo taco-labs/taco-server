@@ -85,6 +85,12 @@ func NewPushDriverTaxiCallCommand(
 	taxiCallRequest entity.TaxiCallRequest,
 	taxiCallTicket entity.TaxiCallTicket,
 	driverTaxiCallContext entity.DriverTaxiCallContext) entity.Event {
+
+	tags := taxiCallRequest.Tags
+	if taxiCallRequest.UserTag != "" {
+		tags = append(tags, taxiCallRequest.UserTag)
+	}
+
 	cmd := PushDriverTaxiCallCommand{
 		DriverId:          driverId,
 		Attempt:           taxiCallTicket.Attempt,
@@ -97,7 +103,7 @@ func NewPushDriverTaxiCallCommand(
 		AdditionalPrice:   taxiCallTicket.DriverAdditionalPrice(),
 		Departure:         taxiCallRequest.Departure,
 		Arrival:           taxiCallRequest.Arrival,
-		Tags:              taxiCallRequest.Tags,
+		Tags:              tags,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)

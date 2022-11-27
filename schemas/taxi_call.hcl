@@ -45,6 +45,11 @@ table "taxi_call_request" {
     null = false
   }
 
+  column "user_tag" {
+    type = varchar(10)
+    null = false
+  }
+
   column "taxi_call_state" {
     type = enum.taxi_call_state
     null = false

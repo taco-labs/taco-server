@@ -24,6 +24,10 @@ func (u userApp) GetLatestTaxiCallRequest(ctx context.Context, userId string) (e
 }
 
 func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error) {
+	if err := req.Validate(); err != nil {
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while validation: %w", err)
+	}
+
 	userId := utils.GetUserId(ctx)
 
 	userPayment, err := u.service.userPayment.GetUserPayment(ctx, userId, req.PaymentId)

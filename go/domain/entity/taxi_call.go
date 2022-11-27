@@ -34,6 +34,7 @@ type TaxiCallRequest struct {
 	Departure                 value.Location       `bun:"departure,type:jsonb"`
 	Arrival                   value.Location       `bun:"arrival,type:jsonb"`
 	TagIds                    []int                `bun:"tag_ids,array"`
+	UserTag                   string               `bun:"user_tag"`
 	PaymentSummary            value.PaymentSummary `bun:"payment_summary,type:jsonb"`
 	RequestBasePrice          int                  `bun:"request_base_price"`
 	RequestMinAdditionalPrice int                  `bun:"request_min_additional_price"`

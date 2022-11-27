@@ -1,6 +1,8 @@
 package request
 
 import (
+	"unicode/utf8"
+
 	"github.com/taco-labs/taco/go/domain/value"
 )
 
@@ -12,10 +14,14 @@ type CreateTaxiCallRequest struct {
 	MinAdditionalPrice int         `json:"minAdditionalPrice"`
 	MaxAdditionalPrice int         `json:"maxAdditionalPrice"`
 	TagIds             []int       `json:"tagIds"`
+	UserTag            string      `json:"userTag"`
 }
 
 // TODO (taekyeom) validation
 func (c CreateTaxiCallRequest) Validate() error {
+	if utf8.RuneCountInString(c.UserTag) > 10 {
+		return value.NewTacoError(value.ERR_INVALID, "요청사항은 10자 이내이어야 합니다.")
+	}
 	return nil
 }
 
