@@ -2,9 +2,12 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/uptrace/bun"
 )
 
@@ -21,9 +24,11 @@ func (u userSessionRepository) GetSession(ctx context.Context, db bun.IDB, sessi
 
 	err := db.NewSelect().Model(&userSession).WherePK().Scan(ctx)
 
-	// TODO (taekyeom) error handling
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.UserSession{}, value.ErrNotFound
+	}
 	if err != nil {
-		return entity.UserSession{}, err
+		return entity.UserSession{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return userSession, nil
@@ -34,19 +39,16 @@ func (u userSessionRepository) DeleteSessionByUserId(ctx context.Context, db bun
 
 	res, err := db.NewDelete().Model(&userSession).Where("user_id = ?", userId).Exec(ctx)
 
-	// TODO(taekyeom) Error handling
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
-	// TODO(taekyeom) Error handling
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		// TODO(taekyeom) Error handling
-		return errors.New("invalid update")
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
@@ -61,13 +63,11 @@ func (u userSessionRepository) CreateSession(ctx context.Context, db bun.IDB, us
 	}
 
 	rowsAffected, err := res.RowsAffected()
-	// TODO(taekyeom) Error handling
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 	if rowsAffected != 1 {
-		// TODO(taekyeom) Error handling
-		return errors.New("invalid update")
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil
