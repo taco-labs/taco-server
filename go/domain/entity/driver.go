@@ -55,6 +55,11 @@ type DriverSettlementAccount struct {
 	UpdateTime    time.Time `bun:"update_time"`
 }
 
+func (d DriverSettlementAccount) RedactedAccountNumber() string {
+	lastAccountNumber := d.AccountNumber[len(d.AccountNumber)-4:]
+	return fmt.Sprintf("****%s", lastAccountNumber)
+}
+
 type DriverLocation struct {
 	Location   value.Point
 	DriverId   string

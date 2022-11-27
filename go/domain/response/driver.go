@@ -71,7 +71,7 @@ func DriverSettlemtnAccountToResponse(account entity.DriverSettlementAccount) Dr
 	return DriverSettlemtnAccountResponse{
 		DriverId:      account.DriverId,
 		Bank:          account.Bank,
-		AccountNumber: account.AccountNumber,
+		AccountNumber: account.RedactedAccountNumber(),
 		CreateTime:    account.CreateTime,
 		UpdateTime:    account.UpdateTime,
 	}
