@@ -5,11 +5,13 @@ import (
 )
 
 type CreateTaxiCallRequest struct {
-	Dryrun    bool        `json:"dryrun"`
-	Departure value.Point `json:"departure"`
-	Arrival   value.Point `json:"arrival"`
-	PaymentId string      `json:"paymentId"`
-	TagIds    []int       `json:"tagIds"`
+	Dryrun             bool        `json:"dryrun"`
+	Departure          value.Point `json:"departure"`
+	Arrival            value.Point `json:"arrival"`
+	PaymentId          string      `json:"paymentId"`
+	MinAdditionalPrice int         `json:"minAdditionalPrice"`
+	MaxAdditionalPrice int         `json:"maxAdditionalPrice"`
+	TagIds             []int       `json:"tagIds"`
 }
 
 // TODO (taekyeom) validation

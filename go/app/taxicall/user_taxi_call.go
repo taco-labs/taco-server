@@ -153,6 +153,13 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 	}
 
 	if req.Dryrun {
+		// TODO (taekyeom) additional price 계산을 위한 별도 모듈로 빼야 함
+		var maxAdditionalPrice int
+		if route.Price < 10000 {
+			maxAdditionalPrice = route.Price
+		} else {
+			maxAdditionalPrice = 10000
+		}
 		taxiCallRequest := entity.TaxiCallRequest{
 			Dryrun: req.Dryrun,
 			UserId: userId,
@@ -168,8 +175,8 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 			TagIds:                    req.TagIds,
 			Tags:                      tags,
 			RequestBasePrice:          route.Price,
-			RequestMinAdditionalPrice: 0,                           // TODO(taekyeom) To be paramterized
-			RequestMaxAdditionalPrice: (route.Price / 1000) * 1000, // TODO(taekyeom) To be paramterized
+			RequestMinAdditionalPrice: 0,                  // TODO(taekyeom) To be paramterized
+			RequestMaxAdditionalPrice: maxAdditionalPrice, // TODO(taekyeom) To be paramterized
 			CurrentState:              enum.TaxiCallState_DRYRUN,
 			CreateTime:                requestTime,
 			UpdateTime:                requestTime,
@@ -199,8 +206,8 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 			Tags:                      tags,
 			PaymentSummary:            userPayment.ToSummary(),
 			RequestBasePrice:          route.Price,
-			RequestMinAdditionalPrice: 0,           // TODO(taekyeom) To be paramterized
-			RequestMaxAdditionalPrice: route.Price, // TODO(taekyeom) To be paramterized
+			RequestMinAdditionalPrice: req.MinAdditionalPrice,
+			RequestMaxAdditionalPrice: req.MaxAdditionalPrice,
 			CurrentState:              enum.TaxiCallState_Requested,
 			CreateTime:                requestTime,
 			UpdateTime:                requestTime,
