@@ -3,8 +3,9 @@ package server
 import (
 	"time"
 
-	"github.com/taco-labs/taco/go/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/taco-labs/taco/go/utils"
+	"go.uber.org/zap"
 )
 
 var (
@@ -40,4 +41,26 @@ func (r requestTimeMiddleware) Process(next echo.HandlerFunc) echo.HandlerFunc {
 
 func newRequestTimeMiddleware(timer timer) requestTimeMiddleware {
 	return requestTimeMiddleware{timer}
+}
+
+type loggerMiddleware struct {
+	logger *zap.Logger
+}
+
+func (r loggerMiddleware) Process(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
+		ctx = utils.SetLogger(ctx, r.logger)
+
+		r := c.Request().WithContext(ctx)
+		c.SetRequest(r)
+		return next(c)
+	}
+}
+
+func NewLoggerMiddleware(logger *zap.Logger) loggerMiddleware {
+	return loggerMiddleware{
+		logger: logger,
+	}
 }

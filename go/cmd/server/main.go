@@ -29,6 +29,7 @@ import (
 	"github.com/taco-labs/taco/go/app/usersession"
 	"github.com/taco-labs/taco/go/config"
 	"github.com/taco-labs/taco/go/repository"
+	"github.com/taco-labs/taco/go/server"
 	backofficeserver "github.com/taco-labs/taco/go/server/backoffice"
 	driverserver "github.com/taco-labs/taco/go/server/driver"
 	userserver "github.com/taco-labs/taco/go/server/user"
@@ -377,6 +378,8 @@ func main() {
 	defer outboxApp.Shuwdown()
 
 	// Init middlewares
+	loggerMiddleware := server.NewLoggerMiddleware(logger)
+
 	userSessionMiddleware := userserver.NewSessionMiddleware(userSessionApp)
 
 	driverSessionMiddleware := driverserver.NewSessionMiddleware(driverSessionApp)
@@ -398,6 +401,7 @@ func main() {
 		userserver.WithEndpoint("0.0.0.0"),
 		userserver.WithPort(18881),
 		userserver.WithUserApp(userApp),
+		userserver.WithMiddleware(loggerMiddleware.Process),
 		userserver.WithMiddleware(userSessionMiddleware.Get()),
 		userserver.WithMiddleware(userserver.UserIdChecker),
 		userserver.WithExtension(userServerPaypleExtension.Apply),
@@ -412,6 +416,7 @@ func main() {
 		driverserver.WithEndpoint("0.0.0.0"),
 		driverserver.WithPort(18882),
 		driverserver.WithDriverApp(driverApp),
+		driverserver.WithMiddleware(loggerMiddleware.Process),
 		driverserver.WithMiddleware(driverSessionMiddleware.Get()),
 		driverserver.WithMiddleware(driverserver.DriverIdChecker),
 	)
