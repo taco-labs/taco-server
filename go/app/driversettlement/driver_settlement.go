@@ -47,8 +47,12 @@ func (d driversettlementApp) ListDriverSettlementHistory(ctx context.Context, re
 	var settlementHistories []entity.DriverSettlementHistory
 	var pageToken time.Time
 
+	if err := req.Validate(); err != nil {
+		return []entity.DriverSettlementHistory{}, time.Time{}, fmt.Errorf("app.driversettlementApp.ListDriverSettlementHistory: error while validate request: %w", err)
+	}
+
 	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		histories, newToken, err := d.repository.settlement.ListDriverSettlementHistory(ctx, i, req.DriverId, req.PageToken, req.Count)
+		histories, newToken, err := d.repository.settlement.ListDriverSettlementHistory(ctx, i, req.DriverId, req.ToPageTokenTime(), req.Count)
 		if err != nil {
 			return fmt.Errorf("app.driversettlementApp.ListDriverSettlementHistory: error while list driver setttlement history: %w", err)
 		}

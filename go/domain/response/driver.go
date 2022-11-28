@@ -1,6 +1,7 @@
 package response
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -113,13 +114,13 @@ func DriverSettlementHistoryToResponse(settlementHistory entity.DriverSettlement
 }
 
 type ListDriverSettlementHistoryResponse struct {
-	PageToken time.Time                         `json:"pageToken"`
+	PageToken string                            `json:"pageToken"`
 	Histories []DriverSettlementHistoryResponse `json:"histories"`
 }
 
 func ListDriverSettlementHistoryToResponse(settlementHistories []entity.DriverSettlementHistory, pageToken time.Time) ListDriverSettlementHistoryResponse {
 	return ListDriverSettlementHistoryResponse{
-		PageToken: pageToken,
+		PageToken: url.QueryEscape(pageToken.Format(time.RFC3339Nano)),
 		Histories: slices.Map(settlementHistories, DriverSettlementHistoryToResponse),
 	}
 }
