@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/taco-labs/taco/go/domain/entity"
-	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 )
 
@@ -162,10 +161,6 @@ func (p payplePaymentService) Transaction(ctx context.Context, userPayment entit
 		OrderName:  payment.OrderName,
 		ReceiptUrl: transactionResp.ReceiptUrl,
 	}, nil
-}
-
-func (p payplePaymentService) RegisterCard(context.Context, string, request.UserPaymentRegisterRequest) (value.CardPaymentInfo, error) {
-	return value.CardPaymentInfo{}, value.ErrUnsupported
 }
 
 func (p payplePaymentService) DeleteCard(ctx context.Context, billingKey string) error {

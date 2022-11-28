@@ -5,13 +5,11 @@ import (
 	"errors"
 
 	"github.com/taco-labs/taco/go/domain/entity"
-	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 )
 
 type PaymentService interface {
 	GetCardRegistrationRequestParam(context.Context, int, entity.User) (value.PaymentRegistrationRequestParam, error)
-	RegisterCard(context.Context, string, request.UserPaymentRegisterRequest) (value.CardPaymentInfo, error)
 	DeleteCard(context.Context, string) error
 	Transaction(context.Context, entity.UserPayment, value.Payment) (value.PaymentResult, error) // TODO(taekyeom) 결제 기록 별도 보관 필요
 	CancelTransaction(context.Context, value.PaymentCancel) error

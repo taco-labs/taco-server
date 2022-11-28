@@ -40,12 +40,10 @@ func (u *userServer) initController() error {
 	userGroup.GET("/:userId", u.GetUser)
 	userGroup.PUT("/:userId", u.UpdateUser)
 	userGroup.GET("/:userId/payment", u.ListUserPayment)
-	userGroup.POST("/:userId/payment/:paymentId/default", u.UpdateDefaultPayment)
 	userGroup.GET("/:userId/taxicall_latest", u.GetLatestTaxiCallRequest)
 	userGroup.GET("/:userId/taxicall", u.ListTaxiCallRequest)
 
 	paymentGroup := u.echo.Group("/payment")
-	paymentGroup.POST("", u.RegisterUserPayment)
 	paymentGroup.DELETE("/:paymentId", u.DeleteUserPayment)
 	paymentGroup.PUT("/:paymentId/recovery", u.TryRecoverUserPayment)
 

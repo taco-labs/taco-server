@@ -25,10 +25,6 @@ type PaymentRepository interface {
 	BatchDeleteUserPayment(context.Context, bun.IDB, string) ([]entity.UserPayment, error)
 	UpdateUserPayment(context.Context, bun.IDB, entity.UserPayment) error
 
-	// Default payment entity
-	GetDefaultPaymentByUserId(context.Context, bun.IDB, string) (entity.UserDefaultPayment, error)
-	UpsertDefaultPayment(context.Context, bun.IDB, entity.UserDefaultPayment) error
-
 	// Payment order
 	GetPaymentOrder(context.Context, bun.IDB, string) (entity.UserPaymentOrder, error)
 	CreatePaymentOrder(context.Context, bun.IDB, entity.UserPaymentOrder) error
@@ -95,16 +91,12 @@ func (u userPaymentRepository) DeleteUserPaymentRegistrationRequest(ctx context.
 }
 
 func (u userPaymentRepository) GetUserPayment(ctx context.Context, db bun.IDB, paymentId string) (entity.UserPayment, error) {
-	defaultPaymentSubq := db.NewSelect().Model(&entity.UserDefaultPayment{}).Where("payment_id = ?", paymentId)
-
 	userPayment := entity.UserPayment{
 		Id: paymentId,
 	}
 
 	err := db.NewSelect().
 		Model(&userPayment).
-		ColumnExpr("user_payment.*").
-		ColumnExpr("exists(select 1 from (?) s where s.payment_id = user_payment.id) as default_payment", defaultPaymentSubq).
 		WherePK().Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
@@ -120,12 +112,8 @@ func (u userPaymentRepository) GetUserPayment(ctx context.Context, db bun.IDB, p
 func (u userPaymentRepository) ListUserPayment(ctx context.Context, db bun.IDB, userId string) ([]entity.UserPayment, error) {
 	var payments []entity.UserPayment
 
-	defaultPaymentSubq := db.NewSelect().Model(&entity.UserDefaultPayment{UserId: userId}).WherePK()
-
 	err := db.NewSelect().
 		Model(&payments).
-		ColumnExpr("user_payment.*").
-		ColumnExpr("exists(select 1 from (?) s where s.payment_id = user_payment.id) as default_payment", defaultPaymentSubq).
 		Where("user_id = ?", userId).Scan(ctx)
 
 	if err != nil {
@@ -201,37 +189,6 @@ func (u userPaymentRepository) UpdateUserPayment(ctx context.Context, db bun.IDB
 	}
 	if rowsAffected != 1 {
 		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
-	}
-
-	return nil
-}
-
-func (u userPaymentRepository) GetDefaultPaymentByUserId(ctx context.Context, db bun.IDB, userId string) (entity.UserDefaultPayment, error) {
-	userDefaultPayment := entity.UserDefaultPayment{
-		UserId: userId,
-	}
-
-	err := db.NewSelect().Model(&userDefaultPayment).WherePK().Scan(ctx)
-
-	if errors.Is(sql.ErrNoRows, err) {
-		return entity.UserDefaultPayment{}, value.ErrNotFound
-	}
-	if err != nil {
-		return entity.UserDefaultPayment{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
-	}
-
-	return userDefaultPayment, nil
-}
-
-func (u userPaymentRepository) UpsertDefaultPayment(ctx context.Context, db bun.IDB, userDefaultPayment entity.UserDefaultPayment) error {
-	_, err := db.NewInsert().
-		Model(&userDefaultPayment).
-		On("CONFLICT (user_id) DO UPDATE").
-		Set("payment_id = EXCLUDED.payment_id").
-		Exec(ctx)
-
-	if err != nil {
-		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return nil

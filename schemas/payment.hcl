@@ -26,16 +26,6 @@ table "user_payment" {
     null = false
   }
 
-  column "card_expiration_year" {
-    type = char(2)
-    null =false
-  }
-
-  column "card_expiration_month" {
-    type = char(2)
-    null = false
-  }
-
   column "invalid" {
     type = boolean
     null = false

@@ -21,11 +21,9 @@ type UserApp interface {
 	GetUser(context.Context, string) (entity.User, error)
 	UpdateUser(context.Context, request.UserUpdateRequest) (entity.User, error)
 
-	ListUserPayment(context.Context, string) ([]entity.UserPayment, entity.UserDefaultPayment, error)
-	RegisterUserPayment(context.Context, request.UserPaymentRegisterRequest) (entity.UserPayment, error)
+	ListUserPayment(context.Context, string) ([]entity.UserPayment, error)
 	TryRecoverUserPayment(context.Context, string) error
 	DeleteUserPayment(context.Context, string) error
-	UpdateDefaultPayment(context.Context, request.DefaultPaymentUpdateRequest) error
 
 	ListTags(context.Context) ([]value.Tag, error)
 	ListTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
@@ -136,31 +134,14 @@ func (u userServer) UpdateUser(e echo.Context) error {
 func (u userServer) ListUserPayment(e echo.Context) error {
 	ctx := e.Request().Context()
 	userId := e.Param("userId")
-	userPayments, userDefaultPayment, err := u.app.user.ListUserPayment(ctx, userId)
+	userPayments, err := u.app.user.ListUserPayment(ctx, userId)
 	if err != nil {
 		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, response.ListUserPaymentResponse{
-		DefaultPaymentId: userDefaultPayment.PaymentId,
-		Payments:         slices.Map(userPayments, response.UserPaymentToResponse),
+		Payments: slices.Map(userPayments, response.UserPaymentToResponse),
 	})
-}
-
-func (u userServer) RegisterUserPayment(e echo.Context) error {
-	ctx := e.Request().Context()
-
-	req := request.UserPaymentRegisterRequest{}
-	if err := e.Bind(&req); err != nil {
-		return err
-	}
-
-	cardPayment, err := u.app.user.RegisterUserPayment(ctx, req)
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
-
-	return e.JSON(http.StatusOK, response.UserPaymentToResponse(cardPayment))
 }
 
 func (u userServer) TryRecoverUserPayment(e echo.Context) error {
@@ -186,22 +167,6 @@ func (u userServer) DeleteUserPayment(e echo.Context) error {
 	return e.JSON(http.StatusOK, response.DeleteUserPaymentResponse{
 		PaymentId: paymentId,
 	})
-}
-
-func (u userServer) UpdateDefaultPayment(e echo.Context) error {
-	ctx := e.Request().Context()
-
-	req := request.DefaultPaymentUpdateRequest{}
-
-	if err := e.Bind(&req); err != nil {
-		return err
-	}
-
-	if err := u.app.user.UpdateDefaultPayment(ctx, req); err != nil {
-		return server.ToResponse(e, err)
-	}
-
-	return e.JSON(http.StatusOK, struct{}{})
 }
 
 func (u userServer) CreateTaxiCallRequest(e echo.Context) error {

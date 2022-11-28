@@ -46,9 +46,8 @@ type UserPaymentResponse struct {
 	Name                string    `json:"name"`
 	CardCompany         string    `json:"cardCompany"`
 	RedactedCardNumber  string    `json:"redactedCardNumber"`
-	CardExpirationYear  string    `json:"cardExpirationYear"`
-	CardExpirationMonth string    `json:"cardExpirationMonth"`
-	DefaultPayment      bool      `json:"defaultPayment"`
+	Invalid             bool      `json:"invalid"`
+	InvalidErrorMessage string    `json:"InvalidErrorMessage"`
 	CreateTime          time.Time `json:"createTime"`
 }
 
@@ -59,16 +58,14 @@ func UserPaymentToResponse(userPayment entity.UserPayment) UserPaymentResponse {
 		Name:                userPayment.Name,
 		CardCompany:         userPayment.CardCompany,
 		RedactedCardNumber:  userPayment.RedactedCardNumber,
-		CardExpirationYear:  userPayment.CardExpirationYear,
-		CardExpirationMonth: userPayment.CardExpirationMonth,
-		DefaultPayment:      userPayment.DefaultPayment,
+		Invalid:             userPayment.Invalid,
+		InvalidErrorMessage: userPayment.InvalidErrorMessage,
 		CreateTime:          userPayment.CreateTime,
 	}
 }
 
 type ListUserPaymentResponse struct {
-	DefaultPaymentId string                `json:"defaultPaymentId"`
-	Payments         []UserPaymentResponse `json:"payments"`
+	Payments []UserPaymentResponse `json:"payments"`
 }
 
 type DeleteUserPaymentResponse struct {
