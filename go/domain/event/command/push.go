@@ -116,7 +116,7 @@ func NewPushDriverTaxiCallCommand(
 	}
 }
 
-func NewRawMessageCommand(accountId, messageTitle, messageBody, category string, data map[string]string) entity.Event {
+func NewRawMessageCommand(accountId, category, messageTitle, messageBody string, data map[string]string) entity.Event {
 	cmd := PushRawCommand{
 		AccountId:    accountId,
 		Category:     category,
