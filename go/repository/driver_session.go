@@ -15,6 +15,7 @@ type DriverSessionRepository interface {
 	GetById(context.Context, bun.IDB, string) (entity.DriverSession, error)
 	ActivateByDriverId(context.Context, bun.IDB, string) error
 	Create(context.Context, bun.IDB, entity.DriverSession) error
+	Update(context.Context, bun.IDB, entity.DriverSession) error
 	DeleteByDriverId(context.Context, bun.IDB, string) error
 }
 
@@ -62,6 +63,24 @@ func (d driverSessionRepository) ActivateByDriverId(ctx context.Context, db bun.
 
 func (d driverSessionRepository) Create(ctx context.Context, db bun.IDB, driverSession entity.DriverSession) error {
 	res, err := db.NewInsert().Model(&driverSession).Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (d driverSessionRepository) Update(ctx context.Context, db bun.IDB, driverSession entity.DriverSession) error {
+	res, err := db.NewUpdate().Model(&driverSession).WherePK().Exec(ctx)
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)

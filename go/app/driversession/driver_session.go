@@ -54,6 +54,15 @@ func (d driverSessionApp) Create(ctx context.Context, session entity.DriverSessi
 	})
 }
 
+func (d driverSessionApp) Update(ctx context.Context, session entity.DriverSession) error {
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := d.repository.session.Update(ctx, i, session); err != nil {
+			return fmt.Errorf("app.DriverSession.Update: error while create driver session:\n%w", err)
+		}
+		return nil
+	})
+}
+
 func (d driverSessionApp) ActivateByDriverId(ctx context.Context, driverId string) error {
 	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		if err := d.repository.session.ActivateByDriverId(ctx, i, driverId); err != nil {

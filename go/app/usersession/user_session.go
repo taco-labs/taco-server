@@ -22,9 +22,9 @@ func (u userSessionApp) GetSession(ctx context.Context, sessionId string) (entit
 	var err error
 
 	err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		userSession, err = u.repository.session.GetSession(ctx, i, sessionId)
+		userSession, err = u.repository.session.GetById(ctx, i, sessionId)
 		if err != nil {
-			return fmt.Errorf("app.UserSession.GetSession: error while get session:\n %w", err)
+			return fmt.Errorf("app.UserSession.GetSession: error while get session: %w", err)
 		}
 		return nil
 	})
@@ -38,8 +38,8 @@ func (u userSessionApp) GetSession(ctx context.Context, sessionId string) (entit
 
 func (u userSessionApp) RevokeSessionByUserId(ctx context.Context, userId string) error {
 	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		if err := u.repository.session.DeleteSessionByUserId(ctx, i, userId); err != nil {
-			return fmt.Errorf("app.UserSession.DeleteSessionByUserId: error while delete session:\n %w", err)
+		if err := u.repository.session.DeleteByUserId(ctx, i, userId); err != nil {
+			return fmt.Errorf("app.UserSession.DeleteSessionByUserId: error while delete session: %w", err)
 		}
 		return nil
 	})
@@ -47,8 +47,18 @@ func (u userSessionApp) RevokeSessionByUserId(ctx context.Context, userId string
 
 func (u userSessionApp) CreateSession(ctx context.Context, session entity.UserSession) error {
 	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		if err := u.repository.session.CreateSession(ctx, i, session); err != nil {
-			return fmt.Errorf("app.UserSession.CreateSession: error while create session:\n %w", err)
+		if err := u.repository.session.Create(ctx, i, session); err != nil {
+			return fmt.Errorf("app.UserSession.CreateSession: error while create session: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (u userSessionApp) UpdateSession(ctx context.Context, session entity.UserSession) error {
+	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := u.repository.session.Update(ctx, i, session); err != nil {
+			return fmt.Errorf("app.UserSession.UpdateSession: error while update session: %w", err)
 		}
 
 		return nil

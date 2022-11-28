@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -27,6 +28,7 @@ var skipSet = map[string]struct{}{
 
 type userSessionApp interface {
 	GetSession(context.Context, string) (entity.UserSession, error)
+	UpdateSession(context.Context, entity.UserSession) error
 }
 
 type sessionMiddleware struct {
@@ -64,6 +66,14 @@ func (s sessionMiddleware) validateSession(key string, c echo.Context) (bool, er
 
 	if session.ExpireTime.Before(currentTime) {
 		return false, value.ErrSessionExpired
+	}
+
+	// If we need to extend expiration time, update it
+	if session.ExpireTime.Sub(currentTime) < (time.Hour*24)*7 {
+		session.ExpireTime = currentTime.AddDate(0, 1, 0)
+		if err := s.sessionApp.UpdateSession(ctx, session); err != nil {
+			return false, err
+		}
 	}
 
 	// Set userId key
