@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
@@ -210,6 +211,21 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 		events = append(events, taxiCallCmd)
 		events = append(events, userCmd)
 		events = append(events, driverCmds...)
+
+		// logging distribution
+		for _, driverContext := range driverTaxiCallContexts {
+			analytics.WriteAnalyticsLog(ctx, eventTime, analytics.LogType_DriverTaxiCallTicketDistribution, analytics.DriverTaxicallTicketDistributionPayload{
+				DriverId:                  driverContext.DriverId,
+				RequestUserId:             taxiCallRequest.UserId,
+				TaxiCallRequestId:         taxiCallRequest.Id,
+				TaxiCallRequestTicketId:   taxiCallTicket.TicketId,
+				TicketAttempt:             taxiCallTicket.Attempt,
+				RequestBasePrice:          taxiCallRequest.RequestBasePrice,
+				AdditionalPrice:           taxiCallTicket.AdditionalPrice,
+				DriverLocation:            driverContext.Location,
+				TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
+			})
+		}
 
 		return nil
 	})

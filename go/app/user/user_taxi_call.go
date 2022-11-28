@@ -35,10 +35,20 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while get user payment:\n%w", err)
 	}
 
-	return u.service.taxiCall.CreateTaxiCallRequest(ctx, userId, userPayment, req)
+	taxiCallRequest, err := u.service.taxiCall.CreateTaxiCallRequest(ctx, userId, userPayment, req)
+	if err != nil {
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while create taxi call request:%w", err)
+	}
+
+	return taxiCallRequest, nil
 }
 
 func (u userApp) CancelTaxiCallRequest(ctx context.Context, taxiCallId string) error {
 	userId := utils.GetUserId(ctx)
-	return u.service.taxiCall.UserCancelTaxiCallRequest(ctx, userId, taxiCallId)
+	err := u.service.taxiCall.UserCancelTaxiCallRequest(ctx, userId, taxiCallId)
+	if err != nil {
+		return fmt.Errorf("app.user.CancelTaxiCallRequest: error while cancel taxi call request:%w", err)
+	}
+
+	return nil
 }

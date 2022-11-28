@@ -9,6 +9,7 @@ import (
 	// "time"
 
 	"github.com/taco-labs/taco/go/app"
+	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
@@ -273,6 +274,10 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 		UploadUrls:   uploadUrls,
 	}
 
+	analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverSignup, analytics.DriverSignupPayload{
+		DriverId: newDriver.Id,
+	})
+
 	return newDriver, driverSession.Id, nil
 }
 
@@ -387,14 +392,26 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 		}
 
 		if req.OnDuty {
-			return d.service.taxiCall.ActivateDriverContext(ctx, req.DriverId)
+			err = d.service.taxiCall.ActivateDriverContext(ctx, req.DriverId)
 		} else {
-			return d.service.taxiCall.DeactivateDriverContext(ctx, req.DriverId)
+			err = d.service.taxiCall.DeactivateDriverContext(ctx, req.DriverId)
 		}
+
+		if err != nil {
+			return err
+		}
+
+		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverOnDuty, analytics.DriverOnDutyPayload{
+			DriverId: driver.Id,
+			OnDuty:   driver.OnDuty,
+		})
+
+		return nil
 	})
 }
 
 func (d driverApp) UpdateDriverLocation(ctx context.Context, req request.DriverLocationUpdateRequest) error {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
 	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driver, err := d.repository.driver.FindById(ctx, i, req.DriverId)
 
@@ -405,7 +422,21 @@ func (d driverApp) UpdateDriverLocation(ctx context.Context, req request.DriverL
 			return fmt.Errorf("app.Driver.UpdateDriverLocation: driver is not on duty: %w", value.ErrInvalidOperation)
 		}
 
-		return d.service.taxiCall.UpdateDriverLocation(ctx, req)
+		err = d.service.taxiCall.UpdateDriverLocation(ctx, req)
+
+		if err != nil {
+			return err
+		}
+
+		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverLocation, analytics.DriverLocationPayload{
+			DriverId: req.DriverId,
+			Point: value.Point{
+				Latitude:  req.Latitude,
+				Longitude: req.Longitude,
+			},
+		})
+
+		return nil
 	})
 }
 

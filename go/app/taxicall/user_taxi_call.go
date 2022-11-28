@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
@@ -237,6 +238,21 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 		return entity.TaxiCallRequest{}, err
 	}
 
+	analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_UserTaxiCallRequest, analytics.UserTaxiCallRequestPayload{
+		UserId:                    taxiCallRequest.UserId,
+		Id:                        taxiCallRequest.Id,
+		Departure:                 taxiCallRequest.Departure,
+		Arrival:                   taxiCallRequest.Arrival,
+		ETA:                       taxiCallRequest.Route.ETA,
+		Distance:                  taxiCallRequest.Route.Distance,
+		Tags:                      taxiCallRequest.Tags,
+		UserTag:                   taxiCallRequest.UserTag,
+		PaymentSummary:            taxiCallRequest.PaymentSummary,
+		RequestBasePrice:          taxiCallRequest.RequestBasePrice,
+		RequestMinAdditionalPrice: taxiCallRequest.RequestMinAdditionalPrice,
+		RequestMaxAdditionalPrice: taxiCallRequest.RequestMaxAdditionalPrice,
+	})
+
 	return taxiCallRequest, nil
 }
 
@@ -271,6 +287,12 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
+
+		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_UserCancelTaxiCallRequest, analytics.UserCancelTaxiCallRequestPayload{
+			UserId:     taxiCallRequest.UserId,
+			Id:         taxiCallRequest.Id,
+			CreateTime: taxiCallRequest.CreateTime,
+		})
 
 		return nil
 	})

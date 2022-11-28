@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
@@ -171,12 +172,12 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while upsert taxi call context: %w", value.ErrInvalidOperation)
 		}
 
-		ticket, err := t.repository.taxiCallRequest.GetTicketById(ctx, i, driverTaxiCallContext.LastReceivedRequestTicket)
+		receivedTicket, err := t.repository.taxiCallRequest.GetTicketById(ctx, i, driverTaxiCallContext.LastReceivedRequestTicket)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get taxi call ticket:%w", err)
 		}
 
-		taxiCallRequest, err = t.repository.taxiCallRequest.GetById(ctx, i, ticket.TaxiCallRequestId)
+		taxiCallRequest, err = t.repository.taxiCallRequest.GetById(ctx, i, receivedTicket.TaxiCallRequestId)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get taxi call request:%w", err)
 		}
@@ -184,8 +185,8 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: already expired taxi call request:%w", value.ErrAlreadyExpiredCallRequest)
 		}
 
-		// TODO(taekyeom) ticket과 현재 ticket이 다른 경우, 돈을 더 받는것도 괜찮을까?
-		ticket, err = t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
+		// TODO(taekyeom) actualTicket과 현재 actualTicket이 다른 경우, 돈을 더 받는것도 괜찮을까?
+		actualTicket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get latest taxi call ticket:%w", err)
 		}
@@ -194,7 +195,7 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: invalid state change:%w", err)
 		}
 
-		taxiCallRequest.AdditionalPrice = ticket.AdditionalPrice
+		taxiCallRequest.AdditionalPrice = actualTicket.AdditionalPrice
 		taxiCallRequest.DriverId = sql.NullString{
 			Valid:  true,
 			String: driverId,
@@ -214,6 +215,21 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
 
+		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiCallTicketAccept, analytics.DriverTaxiCallTicketAcceptPayload{
+			DriverId:                        driverTaxiCallContext.DriverId,
+			RequestUserId:                   taxiCallRequest.UserId,
+			TaxiCallRequestId:               taxiCallRequest.Id,
+			ReceivedTaxiCallRequestTicketId: receivedTicket.TicketId,
+			ReceivedTicketAttempt:           receivedTicket.Attempt,
+			ActualTaxiCallRequestTicketId:   actualTicket.TicketId,
+			ActualTicketAttempt:             actualTicket.Attempt,
+			RequestBasePrice:                taxiCallRequest.RequestBasePrice,
+			AdditionalPrice:                 taxiCallRequest.AdditionalPrice,
+			DriverLocation:                  driverTaxiCallContext.Location,
+			ReceiveTime:                     driverTaxiCallContext.LastReceiveTime,
+			TaxiCallRequestCreateTime:       taxiCallRequest.CreateTime,
+		})
+
 		return nil
 	})
 
@@ -225,6 +241,8 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 }
 
 func (t taxicallApp) RejectTaxiCallRequest(ctx context.Context, driverId string, ticketId string) error {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// TODO(taeykeom) Do we need check on duty & last call request?
 		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
@@ -239,6 +257,29 @@ func (t taxicallApp) RejectTaxiCallRequest(ctx context.Context, driverId string,
 		if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
 			return fmt.Errorf("app.taxiCall.RejectTaxiCallRequest: error while upsert taxi call context: %w", value.ErrInvalidOperation)
 		}
+
+		taxiCallTicket, err := t.repository.taxiCallRequest.GetTicketById(ctx, i, ticketId)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.RejectTaxiCallRequest: error while get ticket by id: %w", err)
+		}
+
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, taxiCallTicket.TaxiCallRequestId)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.RejectTaxiCallRequest: error while get taxi call request by id: %w", err)
+		}
+
+		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiCallTicketReject, analytics.DriverTaxiCallTicketRejectPayload{
+			DriverId:                  driverTaxiCallContext.DriverId,
+			RequestUserId:             taxiCallRequest.UserId,
+			TaxiCallRequestId:         taxiCallRequest.Id,
+			TaxiCallRequestTicketId:   taxiCallTicket.TicketId,
+			TicketAttempt:             taxiCallTicket.Attempt,
+			RequestBasePrice:          taxiCallRequest.RequestBasePrice,
+			AdditionalPrice:           taxiCallRequest.AdditionalPrice,
+			DriverLocation:            driverTaxiCallContext.Location,
+			ReceiveTime:               driverTaxiCallContext.LastReceiveTime,
+			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
+		})
 
 		return nil
 	})
@@ -256,6 +297,8 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 		if taxiCallRequest.DriverId.String != driverId {
 			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: Invalid request:%w", value.ErrUnAuthorized)
 		}
+
+		taxiCallRequestAcceptTime := taxiCallRequest.UpdateTime
 
 		if err = taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_DRIVER_CANCELLED); err != nil {
 			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: error while cancel taxi call:%w", err)
@@ -287,6 +330,15 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
 
+		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiCallCancel, analytics.DriverTaxiCancelPayload{
+			DriverId:                  taxiCallRequest.DriverId.String,
+			RequestUserId:             taxiCallRequest.UserId,
+			TaxiCallRequestId:         taxiCallRequest.Id,
+			DriverLocation:            driverTaxiCallContext.Location,
+			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
+			AcceptTime:                taxiCallRequestAcceptTime,
+		})
+
 		return nil
 	})
 }
@@ -300,9 +352,16 @@ func (d taxicallApp) DriverToArrival(ctx context.Context, driverId string, callR
 			return fmt.Errorf("app.taxiCall.DriverToArrival: error while get taxi call request: %w", err)
 		}
 
+		driverLocation, err := d.repository.driverLocation.GetByDriverId(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.DriverToArrival: error while get driver location: %w", err)
+		}
+
 		if taxiCallRequest.DriverId.String != driverId {
 			return fmt.Errorf("app.taxiCall.DriverToArrival: unauthorized access: %w", value.ErrUnAuthorized)
 		}
+
+		taxiCallRequestAcceptTime := taxiCallRequest.UpdateTime
 
 		if err := taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_DRIVER_TO_ARRIVAL); err != nil {
 			return fmt.Errorf("app.taxiCall.DriverToArrival: invalid state change: %w", err)
@@ -311,6 +370,15 @@ func (d taxicallApp) DriverToArrival(ctx context.Context, driverId string, callR
 		if err := d.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxiCall.DriverToArrival: error while update taxi call request: %w", err)
 		}
+
+		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiToArrival, analytics.DriverTaxiToArrivalPayload{
+			DriverId:                  taxiCallRequest.DriverId.String,
+			RequestUserId:             taxiCallRequest.UserId,
+			TaxiCallRequestId:         taxiCallRequest.Id,
+			DriverLocation:            driverLocation.Location,
+			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
+			AcceptTime:                taxiCallRequestAcceptTime,
+		})
 
 		return nil
 	})
@@ -337,10 +405,11 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: forbidden access: %w", value.ErrUnAuthorized)
 		}
 
+		taxiCallRequestToArrivalTime := taxiCallRequest.UpdateTime
+
 		if err := taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_DONE); err != nil {
 			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: invalid state change:%w", err)
 		}
-
 		taxiCallRequest.BasePrice = req.BasePrice
 		taxiCallRequest.TollFee = req.TollFee
 		taxiCallRequest.UpdateTime = requestTime
@@ -359,14 +428,6 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while upsert taxi call context: %w", err)
 		}
 
-		// taxiCallSettlement := entity.DriverTaxiCallSettlement{
-		// 	TaxiCallRequestId: taxiCallRequest.Id,
-		// 	SettlementDone:    false,
-		// }
-		// if err := t.repository.taxiCallRequest.CreateDriverTaxiCallSettlement(ctx, i, taxiCallSettlement); err != nil {
-		// 	return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while create taxi call settlement: %w", err)
-		// }
-
 		processMessage := command.NewTaxiCallProgressCommand(
 			taxiCallRequest.Id,
 			taxiCallRequest.CurrentState,
@@ -377,6 +438,18 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
 			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
+
+		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiDone, analytics.DriverTaxiDonePaylod{
+			DriverId:                  taxiCallRequest.DriverId.String,
+			RequestUserId:             taxiCallRequest.UserId,
+			TaxiCallRequestId:         taxiCallRequest.Id,
+			BasePrice:                 req.BasePrice,
+			RequestBasePrice:          taxiCallRequest.RequestBasePrice,
+			AdditionalPrice:           taxiCallRequest.AdditionalPrice,
+			DriverLocation:            driverTaxiCallContext.Location,
+			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
+			ToArrivalTime:             taxiCallRequestToArrivalTime,
+		})
 
 		return nil
 	})

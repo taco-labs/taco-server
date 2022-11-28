@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/taco-labs/taco/go/app"
+	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
@@ -221,6 +222,10 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 	if err != nil {
 		return entity.User{}, "", err
 	}
+
+	analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_UserSignup, analytics.UserSignupPayload{
+		UserId: newUser.Id,
+	})
 
 	return newUser, userSession.Id, nil
 }

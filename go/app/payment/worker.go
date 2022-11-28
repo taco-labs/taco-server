@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
@@ -185,6 +186,14 @@ func (p paymentApp) handleTransaction(ctx context.Context, ev entity.Event) (eve
 	if err != nil {
 		return []entity.Event{}, err
 	}
+
+	analytics.WriteAnalyticsLog(ctx, ev.CreateTime, analytics.LogType_UserPaymentDone, analytics.UserPaymentDonePayload{
+		UserId:         userPaymentOrder.UserId,
+		OrderId:        userPaymentOrder.OrderId,
+		OrderName:      userPaymentOrder.OrderName,
+		Amount:         userPaymentOrder.Amount,
+		PaymentSummary: userPaymentOrder.PaymentSummary,
+	})
 
 	return []entity.Event{}, nil
 }
