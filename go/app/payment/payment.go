@@ -15,6 +15,7 @@ import (
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
+	"go.uber.org/zap"
 )
 
 type paymentApp struct {
@@ -63,8 +64,10 @@ func (u paymentApp) GetCardRegistrationRequestParam(ctx context.Context, user en
 
 func (u paymentApp) RegistrationCallback(ctx context.Context, req request.PaymentRegistrationCallbackRequest) (entity.UserPayment, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
+	logger := utils.GetLogger(ctx)
 
 	var userPayment entity.UserPayment
+	var paymentRegistrationRequest entity.UserPaymentRegistrationRequest
 
 	err := u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		registrationRequest, err := u.repository.payment.GetUserPaymentRegistrationRequest(ctx, i, req.RequestId)
@@ -75,6 +78,8 @@ func (u paymentApp) RegistrationCallback(ctx context.Context, req request.Paymen
 		if err != nil {
 			return fmt.Errorf("app.payment.RegistrationCallback: error while get payment registration request")
 		}
+
+		paymentRegistrationRequest = registrationRequest
 
 		userPayment = entity.UserPayment{
 			Id:                 registrationRequest.PaymentId,
@@ -109,7 +114,20 @@ func (u paymentApp) RegistrationCallback(ctx context.Context, req request.Paymen
 		return nil
 	})
 
-	if err != nil {
+	if err != nil && paymentRegistrationRequest.PaymentId != "" {
+		u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+			cmd := command.NewPaymentUserPaymentDeleteCommand(
+				paymentRegistrationRequest.UserId,
+				paymentRegistrationRequest.PaymentId,
+				req.BillingKey,
+			)
+			if err := u.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+				logger.Error("app.payment.RegistrationCallback: error while publish card delete command when card registration failed",
+					zap.Error(err),
+				)
+			}
+			return nil
+		})
 		return entity.UserPayment{}, err
 	}
 
