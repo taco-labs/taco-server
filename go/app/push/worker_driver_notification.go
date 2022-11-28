@@ -44,7 +44,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"requestBasePrice":             fmt.Sprint(cmd.RequestBasePrice),
 		"additionalPrice":              fmt.Sprint(cmd.AdditionalPrice),
 		"toDepartureDistance":          fmt.Sprint(routeBetweenDeparture.Distance),
-		"toDepartureETA":               fmt.Sprint(routeBetweenDeparture.ETA),
+		"toDepartureETA":               fmt.Sprint(routeBetweenDeparture.ETA.Nanoseconds()),
 		"departureLatitude":            fmt.Sprint(cmd.Departure.Point.Latitude),
 		"departureLongitude":           fmt.Sprint(cmd.Departure.Point.Longitude),
 		"departureAddressRegionDepth1": cmd.Departure.Address.RegionDepth1,
