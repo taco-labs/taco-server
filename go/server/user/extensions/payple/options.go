@@ -16,6 +16,12 @@ func WithPayplePaymentApp(app userApp) paypleExtensionOption {
 	}
 }
 
+func WithEnv(env string) paypleExtensionOption {
+	return func(pe *paypleExtension) {
+		pe.env = env
+	}
+}
+
 func (p paypleExtension) validate() error {
 	if p.renderer == nil {
 		return errors.New("payple extension need renderer")
@@ -27,6 +33,10 @@ func (p paypleExtension) validate() error {
 
 	if p.domain == "" {
 		return errors.New("payple extension need domain")
+	}
+
+	if p.env == "" {
+		return errors.New("payple extension need execution environment")
 	}
 
 	return nil

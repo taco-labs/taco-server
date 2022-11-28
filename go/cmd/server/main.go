@@ -390,6 +390,7 @@ func main() {
 	userServerPaypleExtension, err := paypleextension.NewPaypleExtension(
 		paypleextension.WithPayplePaymentApp(userApp),
 		paypleextension.WithDomain(config.PaymentService.RefererDomain),
+		paypleextension.WithEnv(config.Env),
 	)
 	if err != nil {
 		logger.Error("failed to setup payple extension", zap.Error(err))

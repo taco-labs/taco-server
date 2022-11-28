@@ -23,6 +23,7 @@ type paypleExtension struct {
 	}
 	domain   string
 	renderer *paypleTemplate
+	env      string
 }
 
 type userApp interface {
@@ -60,6 +61,7 @@ func (p paypleExtension) RegistCardPayment(e echo.Context) error {
 		"resultUrl": fmt.Sprintf("%s/payment/payple/result_callback", p.domain),
 		"userPhone": resp.UserPhone,
 		"requestId": resp.RequestId,
+		"env":       p.env,
 	}
 
 	return e.Render(http.StatusOK, "payple_register.html", params)

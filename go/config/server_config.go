@@ -7,7 +7,7 @@ import (
 )
 
 type ServerConfig struct {
-	Env                      string `env:"TACO_ENV"`
+	Env                      string `env:"TACO_ENV,default=dev"`
 	Log                      LogConfig
 	Database                 DatabaseConfig
 	SmsSender                SmsSenderConfig
