@@ -14,6 +14,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/server"
 	"github.com/taco-labs/taco/go/utils"
+	"go.uber.org/zap"
 )
 
 type paypleExtension struct {
@@ -30,14 +31,13 @@ type userApp interface {
 }
 
 type paypleResultRequest struct {
-	Result        string `form:"PCD_PAY_RST"`
-	Code          string `form:"PCD_PAY_CODE"`
-	Message       string `form:"PCD_PAY_MSG"`
-	RequestId     string `form:"PCD_PAYER_NO"`
-	ResultMessage string `form:"PCD_PAY_CODE"`
-	BillingKey    string `form:"PCD_PAYER_ID"`
-	CardCompany   string `form:"PCD_PAY_CARDNAME"`
-	CardNumber    string `form:"PCD_PAY_CARDNUM"`
+	Result      string `form:"PCD_PAY_RST"`
+	Code        string `form:"PCD_PAY_CODE"`
+	Message     string `form:"PCD_PAY_MSG"`
+	RequestId   string `form:"PCD_PAYER_NO"`
+	BillingKey  string `form:"PCD_PAYER_ID"`
+	CardCompany string `form:"PCD_PAY_CARDNAME"`
+	CardNumber  string `form:"PCD_PAY_CARDNUM"`
 }
 
 func (p paypleResultRequest) Success() bool {
@@ -67,12 +67,18 @@ func (p paypleExtension) RegistCardPayment(e echo.Context) error {
 
 func (p paypleExtension) RegisterCardPaymentResultCallback(e echo.Context) error {
 	ctx := e.Request().Context()
+	logger := utils.GetLogger(ctx)
 
 	body := paypleResultRequest{}
 	if err := e.Bind(&body); err != nil {
+		logger.Error("server.user.extension.payple: Error while parse payple result request", zap.Error(err))
 		return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_failure", p.domain))
 	}
 	if !body.Success() {
+		logger.Error("server.user.extension.payple: Error from payple card registration result",
+			zap.String("errCode", body.Code),
+			zap.String("errMessage", body.Message),
+		)
 		return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_failure", p.domain))
 	}
 
@@ -86,8 +92,7 @@ func (p paypleExtension) RegisterCardPaymentResultCallback(e echo.Context) error
 
 	_, err := p.app.userApp.RegistrationCallback(ctx, req)
 	if err != nil {
-		// TODO (taekyeom) server logging?
-		// return server.ToResponse(e, err)
+		logger.Error("server.user.extension.payple: Error while registering card", zap.Error(err))
 		return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_failure", p.domain))
 	}
 
