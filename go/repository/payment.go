@@ -124,7 +124,7 @@ func (u userPaymentRepository) ListUserPayment(ctx context.Context, db bun.IDB, 
 }
 
 func (u userPaymentRepository) CreateUserPayment(ctx context.Context, db bun.IDB, userPayment entity.UserPayment) error {
-	res, err := db.NewInsert().Model(&userPayment).ExcludeColumn("default_payment").Exec(ctx)
+	res, err := db.NewInsert().Model(&userPayment).Exec(ctx)
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
@@ -177,7 +177,7 @@ func (u userPaymentRepository) BatchDeleteUserPayment(ctx context.Context, db bu
 }
 
 func (u userPaymentRepository) UpdateUserPayment(ctx context.Context, db bun.IDB, userPayment entity.UserPayment) error {
-	res, err := db.NewUpdate().Model(&userPayment).ExcludeColumn("default_payment").WherePK().Exec(ctx)
+	res, err := db.NewUpdate().Model(&userPayment).WherePK().Exec(ctx)
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
