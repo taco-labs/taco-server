@@ -61,27 +61,42 @@ func (t taxicallApp) ListUserTaxiCallRequest(ctx context.Context, req request.Li
 	return taxiCallRequests, pageToken, nil
 }
 
-func (t taxicallApp) LatestUserTaxiCallRequest(ctx context.Context, userId string) (entity.TaxiCallRequest, error) {
-	var latestTaxiCallRequest entity.TaxiCallRequest
+func (t taxicallApp) LatestUserTaxiCallRequest(ctx context.Context, userId string) (entity.UserLatestTaxiCallRequest, error) {
+	var latestTaxiCallRequest entity.UserLatestTaxiCallRequest
 	var err error
 
 	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		latestTaxiCallRequest, err = t.repository.taxiCallRequest.GetLatestByUserId(ctx, i, userId)
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetLatestByUserId(ctx, i, userId)
 		if err != nil {
 			return fmt.Errorf("app.taxCall.LatestUserTaxiCallRequest: error while get latest taxi call:\n%w", err)
 		}
 
-		tags, err := slices.MapErr(latestTaxiCallRequest.TagIds, value.GetTagById)
+		tags, err := slices.MapErr(taxiCallRequest.TagIds, value.GetTagById)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.LatestUserTaxiCallRequest: error while get tags: %w", err)
 		}
-		latestTaxiCallRequest.Tags = tags
+		taxiCallRequest.Tags = tags
+
+		var driver entity.Driver
+		if taxiCallRequest.DriverId.Valid {
+			driver, err = t.service.driverGetter.GetDriver(ctx, taxiCallRequest.DriverId.String)
+			if err != nil {
+				return fmt.Errorf("app.taxiCall.LatestUserTaxiCallRequest: error while get driver: %w", err)
+			}
+		} else {
+			driver = entity.Driver{}
+		}
+
+		latestTaxiCallRequest = entity.UserLatestTaxiCallRequest{
+			TaxiCallRequest: taxiCallRequest,
+			DriverPhone:     driver.Phone,
+		}
 
 		return nil
 	})
 
 	if err != nil {
-		return entity.TaxiCallRequest{}, err
+		return entity.UserLatestTaxiCallRequest{}, err
 	}
 
 	return latestTaxiCallRequest, nil

@@ -20,6 +20,16 @@ func CalculateDriverAdditionalPrice(additionalPrice int) int {
 	return additionalPrice * 7 / 10
 }
 
+type DriverLatestTaxiCallRequest struct {
+	TaxiCallRequest
+	UserPhone string
+}
+
+type UserLatestTaxiCallRequest struct {
+	TaxiCallRequest
+	DriverPhone string
+}
+
 type TaxiCallRequest struct {
 	bun.BaseModel `bun:"table:taxi_call_request"`
 

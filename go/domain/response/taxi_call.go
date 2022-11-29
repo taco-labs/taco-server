@@ -90,3 +90,27 @@ func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallR
 
 	return resp
 }
+
+type UserLatestTaxiCallRequestResponse struct {
+	TaxiCallRequestResponse
+	DriverPhone string `json:"driverPhone"`
+}
+
+func UserLatestTaxiCallRequestToResponse(userLatestTaxiCallRequest entity.UserLatestTaxiCallRequest) UserLatestTaxiCallRequestResponse {
+	return UserLatestTaxiCallRequestResponse{
+		TaxiCallRequestResponse: TaxiCallRequestToResponse(userLatestTaxiCallRequest.TaxiCallRequest),
+		DriverPhone:             userLatestTaxiCallRequest.DriverPhone,
+	}
+}
+
+type DriverLatestTaxiCallRequestResponse struct {
+	TaxiCallRequestResponse
+	UserPhone string `json:"driverPhone"`
+}
+
+func DriverLatestTaxiCallRequestToResponse(driverLatestTaxiCallRequest entity.DriverLatestTaxiCallRequest) DriverLatestTaxiCallRequestResponse {
+	return DriverLatestTaxiCallRequestResponse{
+		TaxiCallRequestResponse: TaxiCallRequestToResponse(driverLatestTaxiCallRequest.TaxiCallRequest),
+		UserPhone:               driverLatestTaxiCallRequest.UserPhone,
+	}
+}

@@ -19,7 +19,7 @@ func (u userApp) ListTaxiCallRequest(ctx context.Context, req request.ListUserTa
 	return u.service.taxiCall.ListUserTaxiCallRequest(ctx, req)
 }
 
-func (u userApp) GetLatestTaxiCallRequest(ctx context.Context, userId string) (entity.TaxiCallRequest, error) {
+func (u userApp) GetLatestTaxiCallRequest(ctx context.Context, userId string) (entity.UserLatestTaxiCallRequest, error) {
 	return u.service.taxiCall.LatestUserTaxiCallRequest(ctx, userId)
 }
 

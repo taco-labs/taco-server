@@ -46,6 +46,18 @@ func WithLocationService(svc service.LocationService) taxicallAppOption {
 	}
 }
 
+func WithUserGetterService(svc userGetterInterface) taxicallAppOption {
+	return func(ta *taxicallApp) {
+		ta.service.userGetter = svc
+	}
+}
+
+func WithDriverGetterService(svc driverGetterInterface) taxicallAppOption {
+	return func(ta *taxicallApp) {
+		ta.service.driverGetter = svc
+	}
+}
+
 func (t taxicallApp) validateApp() error {
 	if t.Transactor == nil {
 		return errors.New("taxi call app needs transactor ")
@@ -69,6 +81,14 @@ func (t taxicallApp) validateApp() error {
 
 	if t.service.location == nil {
 		return errors.New("taxi call app needs location service")
+	}
+
+	if t.service.userGetter == nil {
+		return errors.New("taxi call push app need user getter")
+	}
+
+	if t.service.driverGetter == nil {
+		return errors.New("taxi call push app need driver getter")
 	}
 
 	return nil

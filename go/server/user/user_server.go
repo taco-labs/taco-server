@@ -27,7 +27,7 @@ type UserApp interface {
 
 	ListTags(context.Context) ([]value.Tag, error)
 	ListTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
-	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
+	GetLatestTaxiCallRequest(context.Context, string) (entity.UserLatestTaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	CancelTaxiCallRequest(context.Context, string) error
 
@@ -196,7 +196,7 @@ func (u userServer) GetLatestTaxiCallRequest(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
+	resp := response.UserLatestTaxiCallRequestToResponse(taxiCallRequest)
 	return e.JSON(http.StatusOK, resp)
 }
 

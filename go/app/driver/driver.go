@@ -46,7 +46,7 @@ type driverTaxiCallInterface interface {
 	DeactivateDriverContext(ctx context.Context, driverId string) error
 	UpdateDriverLocation(ctx context.Context, req request.DriverLocationUpdateRequest) error
 	ListDriverTaxiCallRequest(ctx context.Context, req request.ListDriverTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
-	LatestDriverTaxiCallRequest(ctx context.Context, driverId string) (entity.TaxiCallRequest, error)
+	LatestDriverTaxiCallRequest(ctx context.Context, driverId string) (entity.DriverLatestTaxiCallRequest, error)
 	ForceAcceptTaxiCallRequest(ctx context.Context, driverId, callRequestId string) error
 	AcceptTaxiCallRequest(ctx context.Context, driverId string, ticketId string) error
 	RejectTaxiCallRequest(ctx context.Context, driverId string, ticketId string) error

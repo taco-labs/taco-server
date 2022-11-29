@@ -33,7 +33,7 @@ type pushServiceInterface interface {
 type taxiCallInterface interface {
 	ListTags(context.Context) ([]value.Tag, error)
 	ListUserTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
-	LatestUserTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
+	LatestUserTaxiCallRequest(context.Context, string) (entity.UserLatestTaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, string, entity.UserPayment, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	UserCancelTaxiCallRequest(context.Context, string, string) error
 }

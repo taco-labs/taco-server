@@ -12,7 +12,7 @@ func (d driverApp) ListTaxiCallRequest(ctx context.Context, req request.ListDriv
 	return d.service.taxiCall.ListDriverTaxiCallRequest(ctx, req)
 }
 
-func (d driverApp) GetLatestTaxiCallRequest(ctx context.Context, driverId string) (entity.TaxiCallRequest, error) {
+func (d driverApp) GetLatestTaxiCallRequest(ctx context.Context, driverId string) (entity.DriverLatestTaxiCallRequest, error) {
 	return d.service.taxiCall.LatestDriverTaxiCallRequest(ctx, driverId)
 }
 

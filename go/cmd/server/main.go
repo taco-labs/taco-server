@@ -265,6 +265,8 @@ func main() {
 		taxicall.WithEventRepository(eventRepository),
 		taxicall.WithRouteServie(mapRouteService),
 		taxicall.WithLocationService(locationService),
+		taxicall.WithUserGetterService(userGetterDelegator),
+		taxicall.WithDriverGetterService(driverGetterDelegator),
 	)
 	if err != nil {
 		logger.Error("failed to setup taxi call app", zap.Error(err))
@@ -432,6 +434,7 @@ func main() {
 		backofficeserver.WithPort(18883),
 		backofficeserver.WithDriverApp(driverApp),
 		backofficeserver.WithUserApp(userApp),
+		backofficeserver.WithMiddleware(loggerMiddleware.Process),
 		backofficeserver.WithMiddleware(backofficeSessionMiddleware.Get()),
 	)
 	if err != nil {

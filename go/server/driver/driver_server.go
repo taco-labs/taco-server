@@ -30,7 +30,7 @@ type driverApp interface {
 		request.DriverSettlementAccountUpdateRequest) (entity.DriverSettlementAccount, error)
 	ActivateDriver(context.Context, string) error
 	ListTaxiCallRequest(context.Context, request.ListDriverTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
-	GetLatestTaxiCallRequest(context.Context, string) (entity.TaxiCallRequest, error)
+	GetLatestTaxiCallRequest(context.Context, string) (entity.DriverLatestTaxiCallRequest, error)
 	AcceptTaxiCallRequest(context.Context, string) error
 	RejectTaxiCallRequest(context.Context, string) error
 	CancelTaxiCallRequest(context.Context, string) error
@@ -270,7 +270,7 @@ func (d driverServer) GetLatestTaxiCallRequest(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
+	resp := response.DriverLatestTaxiCallRequestToResponse(taxiCallRequest)
 	return e.JSON(http.StatusOK, resp)
 }
 
