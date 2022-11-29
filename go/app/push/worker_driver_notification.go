@@ -22,7 +22,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 	var routeBetweenDeparture value.Route
 
 	group.Go(func() error {
-		r, err := t.service.route.GetRoute(gCtx, cmd.DriverLocation, cmd.Departure.Point)
+		r, err := t.service.route.GetRoute(gCtx, cmd.Departure.Point, cmd.Arrival.Point)
 		if err != nil {
 			return fmt.Errorf("service.TaxiCallPush.handleDriverTaxiCallRequestTicketDistribution: error while get route between driver departure and arrival: %w", err)
 		}
