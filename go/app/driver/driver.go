@@ -198,7 +198,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 		}
 
 		if !smsVerification.Verified {
-			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrUnAuthorized)
+			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrInvalidOperation)
 		}
 
 		_, supportedRegion := value.SupportedServiceRegions[req.ServiceRegion]
@@ -381,7 +381,7 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 		}
 
 		if driver.OnDuty == req.OnDuty {
-			return nil
+			return fmt.Errorf("app.Driver.UpdateOnDuty: requested on duty parameter is same as current state: %w", value.ErrInvalidOperation)
 		}
 
 		driver.OnDuty = req.OnDuty

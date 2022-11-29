@@ -10,6 +10,7 @@ const (
 	ERR_UNAUTHENTICATED      ErrCode = "ERR_UNAUTHENTICATED"
 	ERR_UNAUTHORIZED         ErrCode = "ERR_UNAUTHORIZED"
 	ERR_SESSION_EXPIRED      ErrCode = "ERR_SESSION_EXPIRED"
+	ERR_NOT_YET_ACTIVATED    ErrCode = "ERR_NOT_YET_ACTIVATED"
 	ERR_DB_INTERNAL          ErrCode = "ERR_DB_INTERNAL"
 	ERR_NOTFOUND             ErrCode = "ERR_NOT_FOUND"
 	ERR_EXTERNAL             ErrCode = "ERR_EXTERNAL"
@@ -75,7 +76,7 @@ var (
 
 	ErrUnsupportedServiceRegion = TacoError{ERR_UNSUPPORTED, "unsupported region"}
 
-	ErrNotYetActivated = TacoError{ERR_UNAUTHORIZED, "not yet activated account"}
+	ErrNotYetActivated = TacoError{ERR_NOT_YET_ACTIVATED, "not yet activated account"}
 
 	ErrInternal = TacoError{ERR_INTERNAL, "internal error"}
 

@@ -68,7 +68,7 @@ func (d driverApp) RegisterDriverSettlementAccount(ctx context.Context,
 
 	if !authorizedAccount {
 		// TODO (taekyeom) 별도 error code 부여 필요
-		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: bank account name is different: %w", value.ErrUnAuthorized)
+		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: bank account name is different: %w", value.ErrInvalidOperation)
 	}
 
 	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
