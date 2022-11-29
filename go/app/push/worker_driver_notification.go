@@ -86,6 +86,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"userId":                       cmd.UserId,
 		"userPhone":                    user.Phone,
 		"tags":                         strings.Join(cmd.Tags, ","),
+		"userTag":                      cmd.UserTag,
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil

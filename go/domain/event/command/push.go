@@ -42,6 +42,7 @@ type PushDriverTaxiCallCommand struct {
 	Departure         value.Location `json:"departureAddress,omitempty"`
 	Arrival           value.Location `json:"arrivalAddress,omitempty"`
 	Tags              []string       `json:"tags"`
+	UserTag           string         `json:"userTag"`
 	Attempt           int            `json:"attempt"`
 }
 
@@ -86,11 +87,6 @@ func NewPushDriverTaxiCallCommand(
 	taxiCallTicket entity.TaxiCallTicket,
 	driverTaxiCallContext entity.DriverTaxiCallContext) entity.Event {
 
-	tags := taxiCallRequest.Tags
-	if taxiCallRequest.UserTag != "" {
-		tags = append(tags, taxiCallRequest.UserTag)
-	}
-
 	cmd := PushDriverTaxiCallCommand{
 		DriverId:          driverId,
 		Attempt:           taxiCallTicket.Attempt,
@@ -103,7 +99,8 @@ func NewPushDriverTaxiCallCommand(
 		AdditionalPrice:   taxiCallTicket.DriverAdditionalPrice(),
 		Departure:         taxiCallRequest.Departure,
 		Arrival:           taxiCallRequest.Arrival,
-		Tags:              tags,
+		Tags:              taxiCallRequest.Tags,
+		UserTag:           taxiCallRequest.UserTag,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)
