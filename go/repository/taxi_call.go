@@ -90,11 +90,11 @@ func (t taxiCallRepository) GetTicketById(ctx context.Context, db bun.IDB, ticke
 	return resp, nil
 }
 
-func (t taxiCallRepository) GetLatestTicketByRequestId(ctx context.Context, db bun.IDB, requestId string) (entity.TaxiCallTicket, error) {
+func (t taxiCallRepository) GetLatestTicketByRequestId(ctx context.Context, db bun.IDB, taxiCallRequestId string) (entity.TaxiCallTicket, error) {
 	resp := entity.TaxiCallTicket{}
 
 	err := db.NewSelect().Model(&resp).
-		Where("taxi_call_request_id = ?", requestId).
+		Where("taxi_call_request_id = ?", taxiCallRequestId).
 		Order("create_time DESC").
 		Limit(1).
 		Scan(ctx)
@@ -137,8 +137,8 @@ func (t taxiCallRepository) TicketExists(ctx context.Context, db bun.IDB, ticket
 	return exists, nil
 }
 
-func (t taxiCallRepository) DeleteTicketByRequestId(ctx context.Context, db bun.IDB, requestId string) error {
-	_, err := db.NewDelete().Model((*entity.TaxiCallTicket)(nil)).Where("taxi_call_request_id = ?", requestId).Exec(ctx)
+func (t taxiCallRepository) DeleteTicketByRequestId(ctx context.Context, db bun.IDB, taxiCallRequestId string) error {
+	_, err := db.NewDelete().Model((*entity.TaxiCallTicket)(nil)).Where("taxi_call_request_id = ?", taxiCallRequestId).Exec(ctx)
 
 	if err != nil {
 		return fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
