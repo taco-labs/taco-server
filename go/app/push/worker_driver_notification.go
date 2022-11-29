@@ -10,19 +10,41 @@ import (
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/uptrace/bun"
+	"golang.org/x/sync/errgroup"
 )
 
 func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushDriverTaxiCallCommand) (value.Notification, error) {
 
-	routeBetweenDeparture, err := t.service.route.GetRoute(ctx, cmd.DriverLocation, cmd.Departure.Point)
-	if err != nil {
-		return value.Notification{},
-			fmt.Errorf("service.TaxiCallPush.handleDriverTaxiCallRequestTicketDistribution: error while get route between driver location and departure: %w", err)
+	group, gCtx := errgroup.WithContext(ctx)
+
+	var route value.Route
+	var routeBetweenDeparture value.Route
+
+	group.Go(func() error {
+		r, err := t.service.route.GetRoute(gCtx, cmd.DriverLocation, cmd.Departure.Point)
+		if err != nil {
+			return fmt.Errorf("service.TaxiCallPush.handleDriverTaxiCallRequestTicketDistribution: error while get route between driver departure and arrival: %w", err)
+		}
+		route = r
+		return nil
+	})
+
+	group.Go(func() error {
+		r, err := t.service.route.GetRoute(gCtx, cmd.DriverLocation, cmd.Departure.Point)
+		if err != nil {
+			return fmt.Errorf("service.TaxiCallPush.handleDriverTaxiCallRequestTicketDistribution: error while get route between driver location and departure: %w", err)
+		}
+		routeBetweenDeparture = r
+		return nil
+	})
+
+	if err := group.Wait(); err != nil {
+		return value.Notification{}, err
 	}
 
 	var user entity.User
-	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		u, err := t.service.userGetter.GetUser(ctx, cmd.UserId)
 		if err != nil {
 			return fmt.Errorf("service.TaxiCallPush.handleDriverTaxiCallRequestTicketDistribution: error while get user: %w", err)
@@ -43,6 +65,8 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"taxiCallTicketId":             cmd.TaxiCallTicketId,
 		"requestBasePrice":             fmt.Sprint(cmd.RequestBasePrice),
 		"additionalPrice":              fmt.Sprint(cmd.AdditionalPrice),
+		"toArrivalDistance":            fmt.Sprint(route.Distance),
+		"toArrivalETA":                 fmt.Sprint(route.ETA.Nanoseconds()),
 		"toDepartureDistance":          fmt.Sprint(routeBetweenDeparture.Distance),
 		"toDepartureETA":               fmt.Sprint(routeBetweenDeparture.ETA.Nanoseconds()),
 		"departureLatitude":            fmt.Sprint(cmd.Departure.Point.Latitude),
