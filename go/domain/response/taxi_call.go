@@ -105,7 +105,7 @@ func UserLatestTaxiCallRequestToResponse(userLatestTaxiCallRequest entity.UserLa
 
 type DriverLatestTaxiCallRequestResponse struct {
 	TaxiCallRequestResponse
-	UserPhone string `json:"driverPhone"`
+	UserPhone string `json:"userPhone"`
 }
 
 func DriverLatestTaxiCallRequestToResponse(driverLatestTaxiCallRequest entity.DriverLatestTaxiCallRequest) DriverLatestTaxiCallRequestResponse {
