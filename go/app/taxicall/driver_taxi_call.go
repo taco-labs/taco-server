@@ -13,6 +13,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
+	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
 )
 
@@ -97,6 +98,19 @@ func (t taxicallApp) ListDriverTaxiCallRequest(ctx context.Context, req request.
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.ListDriverTaxiCallRequest: error while get taxi call requests:\n%w", err)
 		}
+
+		err := slices.ForeachErrRef(taxiCallRequests, func(i *entity.TaxiCallRequest) error {
+			tags, err := slices.MapErr(i.TagIds, value.GetTagById)
+			if err != nil {
+				return err
+			}
+			i.Tags = tags
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.ListDriverTaxiCallRequest: error while get tags: %w", err)
+		}
+
 		return nil
 	})
 
@@ -116,6 +130,13 @@ func (t taxicallApp) LatestDriverTaxiCallRequest(ctx context.Context, driverId s
 		if err != nil {
 			return fmt.Errorf("app.driver.LatestDriverTaxiCallRequest: error while get latest taxi call:\n%w", err)
 		}
+
+		tags, err := slices.MapErr(latestTaxiCallRequest.TagIds, value.GetTagById)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.rLatestDriverTaxiCallRequest: error while get tags: %w", err)
+		}
+
+		latestTaxiCallRequest.Tags = tags
 		return nil
 	})
 

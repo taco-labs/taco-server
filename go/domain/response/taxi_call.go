@@ -20,7 +20,7 @@ type TaxiCallRequestResponse struct {
 	Path                      []value.Point          `json:"path"`
 	Id                        string                 `json:"id"`
 	UserId                    string                 `json:"userId"`
-	DriverId                  *string                `json:"driverId"`
+	DriverId                  string                 `json:"driverId"`
 	Departure                 value.Location         `json:"departure"`
 	Arrival                   value.Location         `json:"arrival"`
 	Tags                      []string               `json:"tags"`
@@ -51,18 +51,18 @@ func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummar
 }
 
 func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallRequestResponse {
-	return TaxiCallRequestResponse{
+	resp := TaxiCallRequestResponse{
 		Dryrun:   taxiCallRequest.Dryrun,
 		Distance: taxiCallRequest.Route.Distance,
 		ETA:      taxiCallRequest.Route.ETA,
 		Path:     taxiCallRequest.Route.Path,
 		Id:       taxiCallRequest.Id,
 		UserId:   taxiCallRequest.UserId,
-		DriverId: func() *string {
+		DriverId: func() string {
 			if taxiCallRequest.DriverId.Valid {
-				return &taxiCallRequest.DriverId.String
+				return taxiCallRequest.DriverId.String
 			}
-			return nil
+			return ""
 		}(),
 		Departure:                 taxiCallRequest.Departure,
 		Arrival:                   taxiCallRequest.Arrival,
@@ -79,4 +79,14 @@ func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallR
 		CreateTime:                taxiCallRequest.CreateTime,
 		UpdateTime:                taxiCallRequest.UpdateTime,
 	}
+
+	// TODO (taekyeom) sanitization must be performed in entity area..
+	if resp.Tags == nil {
+		resp.Tags = []string{}
+	}
+	if resp.Path == nil {
+		resp.Path = []value.Point{}
+	}
+
+	return resp
 }

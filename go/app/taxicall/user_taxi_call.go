@@ -68,12 +68,12 @@ func (t taxicallApp) LatestUserTaxiCallRequest(ctx context.Context, userId strin
 	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		latestTaxiCallRequest, err = t.repository.taxiCallRequest.GetLatestByUserId(ctx, i, userId)
 		if err != nil {
-			return fmt.Errorf("app.taxCall.GetLatestTaxiCall: error while get latest taxi call:\n%w", err)
+			return fmt.Errorf("app.taxCall.LatestUserTaxiCallRequest: error while get latest taxi call:\n%w", err)
 		}
 
 		tags, err := slices.MapErr(latestTaxiCallRequest.TagIds, value.GetTagById)
 		if err != nil {
-			return fmt.Errorf("app.taxiCall.GetLatestTaxiCall: error while get tags: %w", err)
+			return fmt.Errorf("app.taxiCall.LatestUserTaxiCallRequest: error while get tags: %w", err)
 		}
 		latestTaxiCallRequest.Tags = tags
 
