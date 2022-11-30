@@ -48,6 +48,9 @@ func (p paypleSettlementAccountService) AuthorizeSettlementAccount(ctx context.C
 	}
 
 	authorizeResp := resp.Result().(*paypleSettlementAccountAuthorizeResponse)
+	if authorizeResp.UnAuthorized() {
+		return false, fmt.Errorf("%w: Invalid settlement account", value.ErrInvalidOperation)
+	}
 	if !authorizeResp.Success() {
 		return false, fmt.Errorf("%w: error from payple transaction: messge: [%s]%s", value.ErrExternal, authorizeResp.Result, authorizeResp.Message)
 	}
@@ -120,6 +123,10 @@ type paypleSettlementAccountAuthorizeResponse struct {
 
 func (p paypleSettlementAccountAuthorizeResponse) Success() bool {
 	return p.Result == "A0000" && p.Message == "처리 성공"
+}
+
+func (p paypleSettlementAccountAuthorizeResponse) UnAuthorized() bool {
+	return p.Result == "N0198"
 }
 
 func NewPaypleSettlemtnAccountService(serviceEndpoint, customerId, customerKey string) *paypleSettlementAccountService {
