@@ -114,6 +114,10 @@ func (d driverApp) UpdateDriverSettlementAccount(ctx context.Context,
 		return entity.DriverSettlementAccount{}, err
 	}
 
+	driverSettlementAccount.Bank = req.Bank
+	driverSettlementAccount.AccountNumber = req.AccountNumber
+	driverSettlementAccount.UpdateTime = requestTime
+
 	authorizedAccount, err := d.service.settlementAccount.AuthorizeSettlementAccount(
 		ctx, driver, driverSettlementAccount,
 	)
@@ -127,10 +131,6 @@ func (d driverApp) UpdateDriverSettlementAccount(ctx context.Context,
 	}
 
 	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		driverSettlementAccount.Bank = req.Bank
-		driverSettlementAccount.AccountNumber = req.AccountNumber
-		driverSettlementAccount.UpdateTime = requestTime
-
 		if err := d.repository.settlementAccount.Update(ctx, i, driverSettlementAccount); err != nil {
 			return fmt.Errorf("app.Driver.UpdateDriverSettlementAccount: error while update settlement account:%w", err)
 		}
