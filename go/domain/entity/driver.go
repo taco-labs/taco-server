@@ -30,6 +30,7 @@ type DriverDto struct {
 	UserUniqueKey              string          `bun:"user_unique_key"`
 	DriverLicenseId            string          `bun:"driver_license_id"`
 	CompanyRegistrationNumber  string          `bun:"company_registration_number"`
+	CompanyName                string          `bun:"company_name"`
 	ServiceRegion              string          `bun:"service_region"`
 	CarNumber                  string          `bun:"car_number"`
 	DriverLicenseImageUploaded bool            `bun:"driver_license_image_uploaded"`

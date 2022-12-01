@@ -86,6 +86,11 @@ table "driver" {
     null = false
   }
 
+  column "company_name" {
+    type = text
+    null = false
+  }
+
   column "driver_license_image_uploaded" {
     type = boolean
     null = false

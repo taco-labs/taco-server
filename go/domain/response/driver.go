@@ -23,6 +23,7 @@ type DriverResponse struct {
 	OnDuty                     bool                  `json:"onDuty"`
 	DriverLicenseId            string                `json:"driverLicenseId"`
 	CompanyRegistrationNumber  string                `json:"companyRegistrationNumber"`
+	CompanyName                string                `json:"companyName"`
 	CarNumber                  string                `json:"carNumber"`
 	ServiceRegion              string                `json:"serviceRegion"`
 	DriverLicenseImageUploaded bool                  `json:"driverLicenseImageUploaded"`
@@ -49,6 +50,7 @@ func DriverToResponse(driver entity.Driver) DriverResponse {
 		CarNumber:                  driver.CarNumber,
 		ServiceRegion:              driver.ServiceRegion,
 		CompanyRegistrationNumber:  driver.CompanyRegistrationNumber,
+		CompanyName:                driver.CompanyName,
 		AppOs:                      string(driver.AppOs),
 		AppVersion:                 driver.AppVersion,
 		Active:                     driver.Active,

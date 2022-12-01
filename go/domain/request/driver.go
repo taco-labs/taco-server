@@ -14,6 +14,7 @@ type DriverSignupRequest struct {
 	DriverLicenseId           string `json:"driverLicenseId"`
 	SmsVerificationStateKey   string `json:"smsVerificationStateKey"`
 	CompanyRegistrationNumber string `json:"CompanyRegistrationNumber"`
+	CompanyName               string `json:"companyName"`
 	CarNumber                 string `json:"CarNumber"`
 	ServiceRegion             string `json:"serviceRegion"`
 }
