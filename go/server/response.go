@@ -33,7 +33,10 @@ func ToResponse(e echo.Context, err error) error {
 		zap.Error(err),
 		zap.String("code", string(tacoError.ErrCode)),
 		zap.String("message", tacoError.Message),
-		zap.String("path", e.Request().RequestURI),
+		zap.String("path", e.Path()),
+		zap.String("uri", e.Request().RequestURI),
+		zap.String("method", e.Request().Method),
+		zap.Any("query", e.QueryParams()),
 	)
 
 	switch tacoError.ErrCode {
