@@ -144,7 +144,7 @@ func (d driverApp) UpdateDriverSettlementAccount(ctx context.Context,
 	return driverSettlementAccount, nil
 }
 
-func (d driverApp) GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverExpectedSettlement, error) {
+func (d driverApp) GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverTotalSettlement, error) {
 	return d.service.driverSettlement.GetExpectedDriverSettlement(ctx, driverId)
 }
 

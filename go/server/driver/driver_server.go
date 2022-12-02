@@ -37,7 +37,7 @@ type driverApp interface {
 	DriverToArrival(context.Context, string) error
 	DoneTaxiCallRequest(context.Context, request.DoneTaxiCallRequest) error
 
-	GetExpectedDriverSettlement(context.Context, string) (entity.DriverExpectedSettlement, error)
+	GetExpectedDriverSettlement(context.Context, string) (entity.DriverTotalSettlement, error)
 	ListDriverSettlementHistory(context.Context, request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error)
 }
 
@@ -399,4 +399,8 @@ func (d driverServer) ListDriverSettlementHistory(e echo.Context) error {
 	resp := response.ListDriverSettlementHistoryToResponse(histories, pageToken)
 
 	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) RequestDriverSettlement(e echo.Context) error {
+	return e.JSON(http.StatusOK, struct{}{})
 }

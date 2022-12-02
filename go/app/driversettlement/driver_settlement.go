@@ -22,17 +22,17 @@ type driversettlementApp struct {
 	}
 }
 
-func (d driversettlementApp) GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverExpectedSettlement, error) {
-	var expectedSettlement entity.DriverExpectedSettlement
+func (d driversettlementApp) GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverTotalSettlement, error) {
+	var expectedSettlement entity.DriverTotalSettlement
 	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		es, err := d.repository.settlement.GetDriverExpectedSettlement(ctx, i, driverId)
+		es, err := d.repository.settlement.GetDriverTotalSettlement(ctx, i, driverId)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.driversettlementApp.GetExpectedDriverSetttlement: error while select expected settlement: %w", err)
 		}
 		if errors.Is(err, value.ErrNotFound) {
-			expectedSettlement = entity.DriverExpectedSettlement{
-				DriverId:       driverId,
-				ExpectedAmount: 0,
+			expectedSettlement = entity.DriverTotalSettlement{
+				DriverId:    driverId,
+				TotalAmount: 0,
 			}
 		}
 		expectedSettlement = es

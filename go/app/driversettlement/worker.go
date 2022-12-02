@@ -66,8 +66,8 @@ func (d driversettlementApp) handleSettlementRequest(ctx context.Context, event 
 		if err := d.repository.settlement.CreateDriverSettlementRequest(ctx, i, settlementRequest); err != nil {
 			return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while create settlement request: %w", err)
 		}
-		if err := d.repository.settlement.UpdateExpectedDriverSettlement(ctx, i, cmd.DriverId, cmd.Amount); err != nil {
-			return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while update expected settlement amount: %w", err)
+		if err := d.repository.settlement.UpdateTotalDriverSettlement(ctx, i, cmd.DriverId, cmd.Amount); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while update total settlement amount: %w", err)
 		}
 
 		return nil
@@ -107,7 +107,7 @@ func (d driversettlementApp) handleSettlementDone(ctx context.Context, event ent
 			return fmt.Errorf("app.driversettlementApp.handleSettlementDone: error while create settlement history: %w", err)
 		}
 		// TODO (taekyeom) 정산 완료된 request entity 처리 필요
-		if err := d.repository.settlement.UpdateExpectedDriverSettlement(ctx, i, cmd.DriverId, -cmd.Amount); err != nil {
+		if err := d.repository.settlement.UpdateTotalDriverSettlement(ctx, i, cmd.DriverId, -cmd.Amount); err != nil {
 			return fmt.Errorf("app.driversettlementApp.handleSettlementDone: error while update expected settlement amount: %w", err)
 		}
 

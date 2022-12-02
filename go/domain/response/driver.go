@@ -86,14 +86,16 @@ type DriverImageUrlResponse struct {
 }
 
 type DriverExpectedSettlementResponse struct {
-	DriverId       string `json:"driverId"`
-	ExpectedAmount int    `json:"expectedAmount"`
+	DriverId          string `json:"driverId"`
+	TotalAmount       int    `json:"totalAmount"`
+	RequestableAmount int    `json:"requestableAmount"`
 }
 
-func DriverExpectedSettlementToResponse(expectedSettlement entity.DriverExpectedSettlement) DriverExpectedSettlementResponse {
+func DriverExpectedSettlementToResponse(expectedSettlement entity.DriverTotalSettlement) DriverExpectedSettlementResponse {
 	return DriverExpectedSettlementResponse{
-		DriverId:       expectedSettlement.DriverId,
-		ExpectedAmount: expectedSettlement.ExpectedAmount,
+		DriverId:          expectedSettlement.DriverId,
+		TotalAmount:       expectedSettlement.TotalAmount,
+		RequestableAmount: 0, // TODO (taekyeom) 정산 요청 가능 금액 기능 추가시 변경
 	}
 }
 

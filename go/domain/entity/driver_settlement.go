@@ -15,11 +15,11 @@ type DriverSettlementRequest struct {
 	CreateTime        time.Time `bun:"create_time"` // TODO (taekyeom) 타이밍 이슈가 없으려면 해당 시각이 결제 완료 시각과 일치해야 함
 }
 
-type DriverExpectedSettlement struct {
-	bun.BaseModel `bun:"table:driver_expected_settlement"`
+type DriverTotalSettlement struct {
+	bun.BaseModel `bun:"table:driver_total_settlement"`
 
-	DriverId       string `bun:"driver_id,pk"`
-	ExpectedAmount int    `bun:"expected_amount"`
+	DriverId    string `bun:"driver_id,pk"`
+	TotalAmount int    `bun:"total_amount"`
 }
 
 type DriverSettlementHistory struct {

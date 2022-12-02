@@ -16,8 +16,8 @@ type DriverSettlementRepository interface {
 	GetDriverSettlementRequest(context.Context, bun.IDB, string) (entity.DriverSettlementRequest, error)
 	CreateDriverSettlementRequest(context.Context, bun.IDB, entity.DriverSettlementRequest) error
 
-	GetDriverExpectedSettlement(context.Context, bun.IDB, string) (entity.DriverExpectedSettlement, error)
-	UpdateExpectedDriverSettlement(context.Context, bun.IDB, string, int) error
+	GetDriverTotalSettlement(context.Context, bun.IDB, string) (entity.DriverTotalSettlement, error)
+	UpdateTotalDriverSettlement(context.Context, bun.IDB, string, int) error
 
 	GetDriverSettlementHistory(context.Context, bun.IDB, string, time.Time, time.Time) (entity.DriverSettlementHistory, error)
 	ListDriverSettlementHistory(context.Context, bun.IDB, string, time.Time, int) ([]entity.DriverSettlementHistory, time.Time, error)
@@ -61,32 +61,32 @@ func (d driverSettlementRepository) CreateDriverSettlementRequest(ctx context.Co
 	return nil
 }
 
-func (d driverSettlementRepository) GetDriverExpectedSettlement(ctx context.Context, db bun.IDB, driverId string) (entity.DriverExpectedSettlement, error) {
-	resp := entity.DriverExpectedSettlement{
+func (d driverSettlementRepository) GetDriverTotalSettlement(ctx context.Context, db bun.IDB, driverId string) (entity.DriverTotalSettlement, error) {
+	resp := entity.DriverTotalSettlement{
 		DriverId: driverId,
 	}
 
 	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return entity.DriverExpectedSettlement{}, value.ErrNotFound
+		return entity.DriverTotalSettlement{}, value.ErrNotFound
 	}
 	if err != nil {
-		return entity.DriverExpectedSettlement{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+		return entity.DriverTotalSettlement{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return resp, nil
 }
 
-func (d driverSettlementRepository) UpdateExpectedDriverSettlement(ctx context.Context, db bun.IDB, driverId string, amount int) error {
+func (d driverSettlementRepository) UpdateTotalDriverSettlement(ctx context.Context, db bun.IDB, driverId string, amount int) error {
 	upsertStatement := db.NewInsert().
-		Model(&entity.DriverExpectedSettlement{DriverId: driverId, ExpectedAmount: amount}).
+		Model(&entity.DriverTotalSettlement{DriverId: driverId, TotalAmount: amount}).
 		On("CONFLICT (driver_id) DO UPDATE")
 
 	if amount > 0 {
-		upsertStatement = upsertStatement.Set("expected_amount = driver_expected_settlement.expected_amount + EXCLUDED.expected_amount")
+		upsertStatement = upsertStatement.Set("total_amount = driver_total_settlement.total_amount + EXCLUDED.total_amount")
 	} else {
-		upsertStatement = upsertStatement.Set("expected_amount = driver_expected_settlement.expected_amount - EXCLUDED.expected_amount")
+		upsertStatement = upsertStatement.Set("total_amount = driver_total_settlement.total_amount - EXCLUDED.total_amount")
 	}
 
 	_, err := upsertStatement.Exec(ctx)

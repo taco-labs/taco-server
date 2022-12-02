@@ -48,6 +48,7 @@ func (d *driverServer) initController() error {
 	driverGroup.PUT("/:driverId/settlement_account", d.UpdateDriverSettlemtnAccount)
 	driverGroup.GET("/:driverId/expected_settlement", d.GetExpectedDriverSetttlement)
 	driverGroup.GET("/:driverId/settlement", d.ListDriverSettlementHistory)
+	driverGroup.POST("/:driverId/settlement_request", d.RequestDriverSettlement)
 	driverGroup.GET("/:driverId/taxicall_latest", d.GetLatestTaxiCallRequest)
 	driverGroup.GET("/:driverId/taxicall", d.ListTaxiCallRequest)
 

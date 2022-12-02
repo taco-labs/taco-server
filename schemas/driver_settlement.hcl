@@ -42,7 +42,7 @@ table "driver_settlement_request" {
   }
 }
 
-table "driver_expected_settlement" {
+table "driver_total_settlement" {
   schema = schema.taco
 
   column "driver_id" {
@@ -50,7 +50,7 @@ table "driver_expected_settlement" {
     null = false
   }
 
-  column "expected_amount" {
+  column "total_amount" {
     type = int
     null = false
   }
