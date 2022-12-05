@@ -379,7 +379,7 @@ func (d driverServer) GetExpectedDriverSetttlement(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	return e.JSON(http.StatusOK, response.DriverExpectedSettlementToResponse(resp))
+	return e.JSON(http.StatusOK, response.DriverTotalSettlementToResponse(resp))
 }
 
 func (d driverServer) ListDriverSettlementHistory(e echo.Context) error {

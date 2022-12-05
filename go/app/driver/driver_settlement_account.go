@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -44,6 +45,15 @@ func (d driverApp) RegisterDriverSettlementAccount(ctx context.Context,
 		driver = entity.Driver{
 			DriverDto: dr,
 		}
+
+		driverSettlementAccount, err := d.repository.settlementAccount.GetByDriverId(ctx, i, req.DriverId)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: error while find driver settlement account: %w", err)
+		}
+		if driverSettlementAccount.DriverId != "" {
+			return fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: settlement account already exists: %w", value.ErrAlreadyExists)
+		}
+
 		return nil
 	})
 
@@ -51,24 +61,23 @@ func (d driverApp) RegisterDriverSettlementAccount(ctx context.Context,
 		return entity.DriverSettlementAccount{}, err
 	}
 
-	driverSettlementAccount := entity.DriverSettlementAccount{
-		DriverId:      req.DriverId,
-		Bank:          req.Bank,
-		AccountNumber: req.AccountNumber,
-		CreateTime:    requestTime,
-		UpdateTime:    requestTime,
-	}
-
-	authorizedAccount, err := d.service.settlementAccount.AuthorizeSettlementAccount(
-		ctx, driver, driverSettlementAccount,
-	)
+	settlementAccount, err := d.service.settlementAccount.GetSettlementAccount(ctx, driver, req.Bank, req.AccountNumber)
 	if err != nil {
-		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: error while authorize settlement account: %w", err)
+		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: error while get settlement account: %w", err)
 	}
 
-	if !authorizedAccount {
+	if settlementAccount.AccountHolderName != driver.FullName() {
 		// TODO (taekyeom) 별도 error code 부여 필요
 		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: bank account name is different: %w", value.ErrInvalidOperation)
+	}
+
+	driverSettlementAccount := entity.DriverSettlementAccount{
+		DriverId:          driver.Id,
+		Bank:              settlementAccount.BankCode,
+		AccountNumber:     settlementAccount.AccountNumber,
+		BankTransactionId: settlementAccount.BankTransactionId,
+		CreateTime:        requestTime,
+		UpdateTime:        requestTime,
 	}
 
 	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
@@ -114,21 +123,20 @@ func (d driverApp) UpdateDriverSettlementAccount(ctx context.Context,
 		return entity.DriverSettlementAccount{}, err
 	}
 
-	driverSettlementAccount.Bank = req.Bank
-	driverSettlementAccount.AccountNumber = req.AccountNumber
-	driverSettlementAccount.UpdateTime = requestTime
-
-	authorizedAccount, err := d.service.settlementAccount.AuthorizeSettlementAccount(
-		ctx, driver, driverSettlementAccount,
-	)
+	settlementAccount, err := d.service.settlementAccount.GetSettlementAccount(ctx, driver, req.Bank, req.AccountNumber)
 	if err != nil {
-		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.UpdateDriverSettlementAccount: error while authorize settlement account: %w", err)
+		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: error while get settlement account: %w", err)
 	}
 
-	if !authorizedAccount {
+	if settlementAccount.AccountHolderName != driver.FullName() {
 		// TODO (taekyeom) 별도 error code 부여 필요
-		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.UpdateDriverSettlementAccount: bank account name is different: %w", value.ErrUnAuthorized)
+		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: bank account name is different: %w", value.ErrInvalidOperation)
 	}
+
+	driverSettlementAccount.Bank = settlementAccount.BankCode
+	driverSettlementAccount.AccountNumber = settlementAccount.AccountNumber
+	driverSettlementAccount.BankTransactionId = settlementAccount.BankTransactionId
+	driverSettlementAccount.UpdateTime = requestTime
 
 	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		if err := d.repository.settlementAccount.Update(ctx, i, driverSettlementAccount); err != nil {

@@ -147,7 +147,11 @@ func main() {
 	var settlementAccountService service.SettlementAccountService
 	switch config.SettlementAccountService.Type {
 	case "mock":
-		settlementAccountService = service.NewMockSettlementAccountService()
+		settlementAccountService = service.NewMockSettlementAccountService(
+			config.SettlementAccountService.Endpoint,
+			config.SettlementAccountService.ApiKey,
+			config.SettlementAccountService.ApiSecret,
+		)
 	case "payple":
 		settlementAccountService = service.NewPaypleSettlemtnAccountService(
 			config.SettlementAccountService.Endpoint,

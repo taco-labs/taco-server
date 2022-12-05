@@ -160,6 +160,12 @@ table "driver_settlement_account" {
     comment = "계좌번호"
   }
 
+  column "bank_transaction_id" {
+    type = text
+    null = false
+    comment = "정산 이체 transaction id"
+  }
+
   column "create_time" {
     type = timestamp
     null = false

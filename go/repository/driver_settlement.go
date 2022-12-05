@@ -22,6 +22,8 @@ type DriverSettlementRepository interface {
 	GetDriverSettlementHistory(context.Context, bun.IDB, string, time.Time, time.Time) (entity.DriverSettlementHistory, error)
 	ListDriverSettlementHistory(context.Context, bun.IDB, string, time.Time, int) ([]entity.DriverSettlementHistory, time.Time, error)
 	CreateDriverSettlementHistory(context.Context, bun.IDB, entity.DriverSettlementHistory) error
+
+	AggregateDriverRequestableSettlement(context.Context, bun.IDB, string, time.Time) (int, error)
 }
 
 type driverSettlementRepository struct{}
@@ -157,6 +159,22 @@ func (d driverSettlementRepository) CreateDriverSettlementHistory(ctx context.Co
 	}
 
 	return nil
+}
+
+func (d driverSettlementRepository) AggregateDriverRequestableSettlement(ctx context.Context, db bun.IDB, driverId string, requestTime time.Time) (int, error) {
+	var amount int
+	test := db.NewSelect().Model(&entity.DriverSettlementRequest{}).
+		Where("create_time < ?", requestTime).
+		Where("driver_id = ?", driverId).
+		ColumnExpr("sum(amount)")
+
+	err := test.Scan(ctx, &amount)
+
+	if err != nil {
+		return 0, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	return amount, nil
 }
 
 func NewDriverSettlementRepository() *driverSettlementRepository {

@@ -11,6 +11,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/repository"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
 )
 
@@ -22,8 +23,23 @@ type driversettlementApp struct {
 	}
 }
 
+// TODO (taekyeom) To be parameterized
+func getRequestableTime(t time.Time) time.Time {
+	loc, _ := time.LoadLocation("Asia/Seoul")
+
+	timeInLocation := t.In(loc)
+
+	return time.Date(timeInLocation.Year(), timeInLocation.Month(), timeInLocation.Day(), 0, 0, 0, 0, timeInLocation.Location()).
+		AddDate(0, 0, -14).In(time.UTC)
+}
+
 func (d driversettlementApp) GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverTotalSettlement, error) {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	settlementRequestableTime := getRequestableTime(requestTime)
+
 	var expectedSettlement entity.DriverTotalSettlement
+
 	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		es, err := d.repository.settlement.GetDriverTotalSettlement(ctx, i, driverId)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
@@ -34,11 +50,22 @@ func (d driversettlementApp) GetExpectedDriverSettlement(ctx context.Context, dr
 				DriverId:    driverId,
 				TotalAmount: 0,
 			}
+			return nil
 		}
 		expectedSettlement = es
 
+		requestableAmount, err := d.repository.settlement.AggregateDriverRequestableSettlement(ctx, i, driverId, settlementRequestableTime)
+		if err != nil {
+			return fmt.Errorf("app.driversettlementApp.GetExpectedDriverSetttlement: error while aggregate requestable settlement: %w", err)
+		}
+		expectedSettlement.RequestableAmount = requestableAmount
+
 		return nil
 	})
+
+	if err != nil {
+		return entity.DriverTotalSettlement{}, err
+	}
 
 	return expectedSettlement, err
 }

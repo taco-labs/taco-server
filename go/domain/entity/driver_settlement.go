@@ -18,8 +18,9 @@ type DriverSettlementRequest struct {
 type DriverTotalSettlement struct {
 	bun.BaseModel `bun:"table:driver_total_settlement"`
 
-	DriverId    string `bun:"driver_id,pk"`
-	TotalAmount int    `bun:"total_amount"`
+	DriverId          string `bun:"driver_id,pk"`
+	TotalAmount       int    `bun:"total_amount"`
+	RequestableAmount int    `bun:"-"`
 }
 
 type DriverSettlementHistory struct {

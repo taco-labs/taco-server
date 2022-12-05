@@ -10,7 +10,7 @@ import (
 )
 
 type SettlementAccountService interface {
-	AuthorizeSettlementAccount(context.Context, entity.Driver, entity.DriverSettlementAccount) (bool, error)
+	GetSettlementAccount(context.Context, entity.Driver, string, string) (value.SettlementAccount, error)
 }
 
 type paypleSettlementAccountService struct {
@@ -19,20 +19,20 @@ type paypleSettlementAccountService struct {
 	customerKey string
 }
 
-func (p paypleSettlementAccountService) AuthorizeSettlementAccount(ctx context.Context, driver entity.Driver,
-	settlementAccount entity.DriverSettlementAccount) (bool, error) {
+func (p paypleSettlementAccountService) GetSettlementAccount(ctx context.Context, driver entity.Driver,
+	bankCode, bankAccountNumber string) (value.SettlementAccount, error) {
 	authResp, err := p.partnerAuthnetication()
 
 	if err != nil {
-		return false, err
+		return value.SettlementAccount{}, err
 	}
 
 	request := paypleSettlementAccountAuthorizeRequest{
 		CustomerId:            p.customerId,
 		CustomerKey:           p.customerKey,
 		SubId:                 driver.Id,
-		BankCode:              settlementAccount.Bank,
-		AccountNum:            settlementAccount.AccountNumber,
+		BankCode:              bankCode,
+		AccountNum:            bankAccountNumber,
 		AccountHolderInfoType: "0", // TODO (taekyeom) 법인계좌 지원할 때 하드코드 제거 필요
 		AccountholderInfo:     driver.BirthDay,
 	}
@@ -44,18 +44,25 @@ func (p paypleSettlementAccountService) AuthorizeSettlementAccount(ctx context.C
 		Post("inquiry/real_name")
 
 	if err != nil {
-		return false, fmt.Errorf("%w: error from back account authorization: %v", value.ErrExternal, err)
+		return value.SettlementAccount{}, fmt.Errorf("%w: error from back account authorization: %v", value.ErrExternal, err)
 	}
 
 	authorizeResp := resp.Result().(*paypleSettlementAccountAuthorizeResponse)
 	if authorizeResp.UnAuthorized() {
-		return false, fmt.Errorf("%w: Invalid settlement account", value.ErrInvalidOperation)
+		return value.SettlementAccount{}, fmt.Errorf("%w: Invalid settlement account", value.ErrInvalidOperation)
 	}
 	if !authorizeResp.Success() {
-		return false, fmt.Errorf("%w: error from payple transaction: messge: [%s]%s", value.ErrExternal, authorizeResp.Result, authorizeResp.Message)
+		return value.SettlementAccount{}, fmt.Errorf("%w: error from payple transaction: messge: [%s]%s", value.ErrExternal, authorizeResp.Result, authorizeResp.Message)
 	}
 
-	return authorizeResp.AccountHolderName == driver.FullName(), nil
+	settlementAccount := value.SettlementAccount{
+		BankCode:          bankCode,
+		AccountNumber:     bankAccountNumber,
+		AccountHolderName: authorizeResp.AccountHolderName,
+		BankTransactionId: authorizeResp.BankTransactionId,
+	}
+
+	return settlementAccount, nil
 }
 
 func (p paypleSettlementAccountService) partnerAuthnetication() (*paypleSettlementAccountAuthResponse, error) {
@@ -118,6 +125,7 @@ type paypleSettlementAccountAuthorizeResponse struct {
 	Message           string `json:"message"`
 	CustomerId        string `json:"cst_id"`
 	SubId             string `json:"sub_id"`
+	BankTransactionId string `json:"bank_tran_id"`
 	AccountHolderName string `json:"account_holder_name"`
 }
 
@@ -144,12 +152,24 @@ func NewPaypleSettlemtnAccountService(serviceEndpoint, customerId, customerKey s
 	}
 }
 
-type mockSettlementAccountService struct{}
-
-func (m mockSettlementAccountService) AuthorizeSettlementAccount(context.Context, entity.Driver, entity.DriverSettlementAccount) (bool, error) {
-	return true, nil
+type mockSettlementAccountService struct {
+	inner *paypleSettlementAccountService
 }
 
-func NewMockSettlementAccountService() *mockSettlementAccountService {
-	return &mockSettlementAccountService{}
+func (m mockSettlementAccountService) GetSettlementAccount(ctx context.Context, driver entity.Driver,
+	bankCode, bankAccountNumber string) (value.SettlementAccount, error) {
+	settlementAccount, err := m.inner.GetSettlementAccount(ctx, driver, bankCode, bankAccountNumber)
+	if err != nil {
+		return value.SettlementAccount{}, err
+	}
+
+	settlementAccount.AccountHolderName = driver.FullName()
+
+	return settlementAccount, nil
+}
+
+func NewMockSettlementAccountService(serviceEndpoint, customerId, customerKey string) *mockSettlementAccountService {
+	return &mockSettlementAccountService{
+		inner: NewPaypleSettlemtnAccountService(serviceEndpoint, customerId, customerKey),
+	}
 }

@@ -49,11 +49,12 @@ func (d DriverDto) FullName() string {
 type DriverSettlementAccount struct {
 	bun.BaseModel `bun:"table:driver_settlement_account"`
 
-	DriverId      string    `bun:"driver_id,pk"`
-	Bank          string    `bun:"bank"` // TODO(taekyeom) maybe enum?
-	AccountNumber string    `bun:"account_number"`
-	CreateTime    time.Time `bun:"create_time"`
-	UpdateTime    time.Time `bun:"update_time"`
+	DriverId          string    `bun:"driver_id,pk"`
+	Bank              string    `bun:"bank"` // TODO(taekyeom) maybe enum?
+	AccountNumber     string    `bun:"account_number"`
+	BankTransactionId string    `bun:"bank_transaction_id"`
+	CreateTime        time.Time `bun:"create_time"`
+	UpdateTime        time.Time `bun:"update_time"`
 }
 
 func (d DriverSettlementAccount) RedactedAccountNumber() string {
