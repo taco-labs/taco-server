@@ -11,6 +11,8 @@ import (
 
 type SettlementAccountService interface {
 	GetSettlementAccount(context.Context, entity.Driver, string, string) (value.SettlementAccount, error)
+	TransferRequest(context.Context, value.SettlementTransferRequest) (value.SettlementTransfer, error)
+	TransferExecution(context.Context, value.SettlementTransfer) error
 }
 
 type paypleSettlementAccountService struct {
@@ -63,6 +65,74 @@ func (p paypleSettlementAccountService) GetSettlementAccount(ctx context.Context
 	}
 
 	return settlementAccount, nil
+}
+
+func (p paypleSettlementAccountService) TransferRequest(ctx context.Context, req value.SettlementTransferRequest) (value.SettlementTransfer, error) {
+	authResp, err := p.partnerAuthnetication()
+
+	if err != nil {
+		return value.SettlementTransfer{}, err
+	}
+
+	request := paypleSettlementTransferRequest{
+		CustomerId:        p.customerId,
+		CustomerKey:       p.customerKey,
+		SubId:             req.DriverId,
+		DistinctKey:       req.TransferKey,
+		BankTransactionId: req.BankTransactionId,
+		TransactionAmount: req.Amount,
+		PrintMessage:      req.Message,
+	}
+
+	resp, err := p.client.R().
+		SetAuthScheme(authResp.TokenType).SetAuthToken(authResp.AccessToken).
+		SetBody(request).
+		SetResult(&paypleSettlementTransferResponse{}).
+		Post("transfer/request")
+
+	if err != nil {
+		return value.SettlementTransfer{}, fmt.Errorf("%w: error from settlement transfer: %v", value.ErrExternal, err)
+	}
+
+	transferResp := resp.Result().(*paypleSettlementTransferResponse)
+	if !transferResp.Success() {
+		return value.SettlementTransfer{}, fmt.Errorf("%w: error from payple transfer: messge: [%s]%s", value.ErrExternal, transferResp.Result, transferResp.Message)
+	}
+
+	return value.SettlementTransfer{ExecutionKey: transferResp.GroupKey}, nil
+}
+
+func (p paypleSettlementAccountService) TransferExecution(ctx context.Context, req value.SettlementTransfer) error {
+	authResp, err := p.partnerAuthnetication()
+
+	if err != nil {
+		return err
+	}
+
+	request := paypleSettlementTransferExeuctionRequest{
+		CustomerId:        p.customerId,
+		CustomerKey:       p.customerKey,
+		GroupKey:          req.ExecutionKey,
+		BankTransactionId: "ALL",
+		ExecutionType:     "NOW",
+	}
+
+	resp, err := p.client.R().
+		SetAuthScheme(authResp.TokenType).SetAuthToken(authResp.AccessToken).
+		SetBody(request).
+		SetResult(&paypleSettlementTransferExeuctionResponse{}).
+		Post("transfer/execute")
+
+	if err != nil {
+		return fmt.Errorf("%w: error from settlement transfer execution: %v", value.ErrExternal, err)
+	}
+
+	transferExecutionResp := resp.Result().(*paypleSettlementTransferExeuctionResponse)
+	if !transferExecutionResp.Success() {
+		return fmt.Errorf("%w: error from payple transfer: messge: [%s]%s", value.ErrExternal, transferExecutionResp.Result, transferExecutionResp.Message)
+	}
+
+	return nil
 }
 
 func (p paypleSettlementAccountService) partnerAuthnetication() (*paypleSettlementAccountAuthResponse, error) {
@@ -125,7 +195,7 @@ type paypleSettlementAccountAuthorizeResponse struct {
 	Message           string `json:"message"`
 	CustomerId        string `json:"cst_id"`
 	SubId             string `json:"sub_id"`
-	BankTransactionId string `json:"bank_tran_id"`
+	BankTransactionId string `json:"billing_tran_id"`
 	AccountHolderName string `json:"account_holder_name"`
 }
 
@@ -135,6 +205,52 @@ func (p paypleSettlementAccountAuthorizeResponse) Success() bool {
 
 func (p paypleSettlementAccountAuthorizeResponse) UnAuthorized() bool {
 	return p.Result == "N0198"
+}
+
+type paypleSettlementTransferRequest struct {
+	CustomerId        string `json:"cst_id"`
+	CustomerKey       string `json:"custKey"`
+	SubId             string `json:"sub_id"`
+	DistinctKey       string `json:"distinct_key"`
+	BankTransactionId string `json:"billing_tran_id"`
+	TransactionAmount int    `json:"tran_amt"`
+	PrintMessage      string `json:"print_content"`
+}
+
+type paypleSettlementTransferResponse struct {
+	Result            string `json:"result"`
+	Message           string `json:"message"`
+	CustomerId        string `json:"cst_id"`
+	CustomerKey       string `json:"custKey"`
+	SubId             string `json:"sub_id"`
+	GroupKey          string `json:"group_key"`
+	DistinctKey       string `json:"distinct_key"`
+	BankTransactionId string `json:"billing_tran_id"`
+	TransactionAmount int    `json:"tran_amt"`
+	PrintMessage      string `json:"print_content"`
+}
+
+func (p paypleSettlementTransferResponse) Success() bool {
+	return p.Result == "A0000" && p.Message == "처리 성공"
+}
+
+type paypleSettlementTransferExeuctionRequest struct {
+	CustomerId        string `json:"cst_id"`
+	CustomerKey       string `json:"custKey"`
+	GroupKey          string `json:"group_key"`
+	BankTransactionId string `json:"billing_tran_id"`
+	ExecutionType     string `json:"execute_type"`
+}
+
+type paypleSettlementTransferExeuctionResponse struct {
+	Result      string `json:"result"`
+	Message     string `json:"message"`
+	CustomerId  string `json:"cst_id"`
+	CustomerKey string `json:"custKey"`
+}
+
+func (p paypleSettlementTransferExeuctionResponse) Success() bool {
+	return p.Result == "A0000" && p.Message == "처리 성공"
 }
 
 func NewPaypleSettlemtnAccountService(serviceEndpoint, customerId, customerKey string) *paypleSettlementAccountService {
@@ -166,6 +282,14 @@ func (m mockSettlementAccountService) GetSettlementAccount(ctx context.Context, 
 	settlementAccount.AccountHolderName = driver.FullName()
 
 	return settlementAccount, nil
+}
+
+func (m mockSettlementAccountService) TransferRequest(ctx context.Context, req value.SettlementTransferRequest) (value.SettlementTransfer, error) {
+	return m.inner.TransferRequest(ctx, req)
+}
+
+func (m mockSettlementAccountService) TransferExecution(ctx context.Context, req value.SettlementTransfer) error {
+	return m.inner.TransferExecution(ctx, req)
 }
 
 func NewMockSettlementAccountService(serviceEndpoint, customerId, customerKey string) *mockSettlementAccountService {
