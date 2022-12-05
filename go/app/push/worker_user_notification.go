@@ -9,6 +9,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/uptrace/bun"
+	"golang.org/x/sync/errgroup"
 )
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestProgress(ctx context.Context, fcmToken string,
@@ -39,10 +40,33 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		return value.Notification{}, err
 	}
 
-	routeBetweenDeparture, err := t.service.route.GetRoute(ctx, cmd.DriverLocation, cmd.Departure.Point)
-	if err != nil {
+	group, gCtx := errgroup.WithContext(ctx)
+
+	var routeBetweenDeparture, routeBetweenArrival value.Route
+
+	group.Go(func() error {
+		r, err := t.service.route.GetRoute(gCtx, cmd.DriverLocation, cmd.Departure.Point)
+		if err != nil {
+			return fmt.Errorf("app.push.handleUserTaxiCallRequestAccepted: error while get route between driver location and departure: %w", err)
+		}
+		routeBetweenDeparture = r
+
+		return nil
+	})
+
+	group.Go(func() error {
+		r, err := t.service.route.GetRoute(gCtx, cmd.Departure.Point, cmd.Arrival.Point)
+		if err != nil {
+			return fmt.Errorf("app.push.handleUserTaxiCallRequestAccepted: error while get route between deprature and arrival: %w", err)
+		}
+		routeBetweenArrival = r
+
+		return nil
+	})
+
+	if err := group.Wait(); err != nil {
 		return value.Notification{},
-			fmt.Errorf("app.push.handleUserTaxiCallRequestAccepted: error while get route between driver location and departure: %w", err)
+			fmt.Errorf("app.push.handleUserTaxiCallRequestAccepted: error while get route: %w", err)
 	}
 
 	messageTitle := fmt.Sprintf("배차 완료 (약 %d분)", int(routeBetweenDeparture.ETA.Minutes()))
@@ -58,6 +82,8 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		"additionalPrice":       fmt.Sprint(cmd.AdditionalPrice),
 		"toDepartureDistance":   fmt.Sprint(routeBetweenDeparture.Distance),
 		"whenDriverToDeparture": fmt.Sprint(time.Now().Add(routeBetweenDeparture.ETA)),
+		"toArrivalDistance":     fmt.Sprint(routeBetweenArrival.Distance),
+		"toArrivalETA":          fmt.Sprint(routeBetweenArrival.ETA.Nanoseconds()),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
