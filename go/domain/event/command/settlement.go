@@ -10,9 +10,12 @@ import (
 )
 
 var (
-	EventUri_DriverSettlementPrefix  = "Settlement/"
-	EventUri_DriverSettlementRequest = fmt.Sprintf("%sRequest", EventUri_DriverSettlementPrefix)
-	EventUri_DriverSettlementDone    = fmt.Sprintf("%sDone", EventUri_DriverSettlementPrefix)
+	EventUri_DriverSettlementPrefix            = "Settlement/"
+	EventUri_DriverSettlementRequest           = fmt.Sprintf("%sRequest", EventUri_DriverSettlementPrefix)
+	EventUri_DriverSettlementTransferRequest   = fmt.Sprintf("%sTransferRequest", EventUri_DriverSettlementPrefix)
+	EventUri_DriverSettlementTransferExecution = fmt.Sprintf("%sTransferExecution", EventUri_DriverSettlementPrefix)
+	EventUri_DriverSettlementTransferSuccess   = fmt.Sprintf("%sTransferSuccess", EventUri_DriverSettlementPrefix)
+	EventUri_DriverSettlementTransferFail      = fmt.Sprintf("%sTransferFail", EventUri_DriverSettlementPrefix)
 )
 
 type DriverSettlementRequestCommand struct {
@@ -22,11 +25,21 @@ type DriverSettlementRequestCommand struct {
 	RequestTime       time.Time `json:"doneTime"`
 }
 
-type DriverSettlementDoneCommand struct {
-	DriverId              string    `json:"driverId"`
-	Amount                int       `json:"amount"`
-	SettlementPeriodStart time.Time `json:"settlement_period_start"`
-	SettlementPeriodEnd   time.Time `json:"settlement_period_end"`
+type DriverSettlementTransferRequestCommand struct {
+	DriverId string `json:"driverId"`
+}
+
+type DriverSettlementTransferExecutionCommand struct {
+	DriverId string `json:"driverId"`
+}
+
+type DriverSettlementTransferSuccessCommand struct {
+	DriverId string `json:"driverId"`
+}
+
+type DriverSettlementTransferFailCommand struct {
+	DriverId       string `json:"driverId"`
+	FailureMessage string `json:"failureMessage"`
 }
 
 func NewDriverSettlementRequestCommand(driverId, taxiCallRequestId string, amount int, requestTime time.Time) entity.Event {
@@ -47,19 +60,58 @@ func NewDriverSettlementRequestCommand(driverId, taxiCallRequestId string, amoun
 	}
 }
 
-func NewDriverSettlementDoneCommand(driverId string, periodStart, periodEnd time.Time, amount int) entity.Event {
-	cmd := DriverSettlementDoneCommand{
-		DriverId:              driverId,
-		Amount:                amount,
-		SettlementPeriodStart: periodStart,
-		SettlementPeriodEnd:   periodEnd,
+func NewDriverSettlementTransferRequestCommand(driverId string) entity.Event {
+	cmd := DriverSettlementTransferRequestCommand{driverId}
+
+	cmdJson, _ := json.Marshal(cmd)
+
+	return entity.Event{
+		MessageId:    utils.MustNewUUID(),
+		EventUri:     EventUri_DriverSettlementTransferRequest,
+		DelaySeconds: 0,
+		Payload:      cmdJson,
+	}
+}
+
+func NewDriverSettlementTransferExecutionCommand(driverId string) entity.Event {
+	cmd := DriverSettlementTransferExecutionCommand{driverId}
+
+	cmdJson, _ := json.Marshal(cmd)
+
+	return entity.Event{
+		MessageId:    utils.MustNewUUID(),
+		EventUri:     EventUri_DriverSettlementTransferExecution,
+		DelaySeconds: 0,
+		Payload:      cmdJson,
+	}
+}
+
+func NewDriverSettlementTransferSuccessCommand(driverId string) entity.Event {
+	cmd := DriverSettlementTransferSuccessCommand{
+		DriverId: driverId,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)
 
 	return entity.Event{
 		MessageId:    utils.MustNewUUID(),
-		EventUri:     EventUri_DriverSettlementDone,
+		EventUri:     EventUri_DriverSettlementTransferSuccess,
+		DelaySeconds: 0,
+		Payload:      cmdJson,
+	}
+}
+
+func NewDriverSettlementTransferFailCommand(driverId string, failureMessage string) entity.Event {
+	cmd := DriverSettlementTransferFailCommand{
+		DriverId:       driverId,
+		FailureMessage: failureMessage,
+	}
+
+	cmdJson, _ := json.Marshal(cmd)
+
+	return entity.Event{
+		MessageId:    utils.MustNewUUID(),
+		EventUri:     EventUri_DriverSettlementTransferFail,
 		DelaySeconds: 0,
 		Payload:      cmdJson,
 	}

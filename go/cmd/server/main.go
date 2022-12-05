@@ -32,8 +32,9 @@ import (
 	"github.com/taco-labs/taco/go/server"
 	backofficeserver "github.com/taco-labs/taco/go/server/backoffice"
 	driverserver "github.com/taco-labs/taco/go/server/driver"
+	driverpaypleextension "github.com/taco-labs/taco/go/server/driver/extensions/payple"
 	userserver "github.com/taco-labs/taco/go/server/user"
-	paypleextension "github.com/taco-labs/taco/go/server/user/extensions/payple"
+	userpaypleextension "github.com/taco-labs/taco/go/server/user/extensions/payple"
 	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
@@ -151,6 +152,7 @@ func main() {
 			config.SettlementAccountService.Endpoint,
 			config.SettlementAccountService.ApiKey,
 			config.SettlementAccountService.ApiSecret,
+			config.SettlementAccountService.WebhookUrl,
 		)
 	case "payple":
 		settlementAccountService = service.NewPaypleSettlemtnAccountService(
@@ -322,6 +324,8 @@ func main() {
 	driverSettlementApp, err := driversettlement.NewDriverSettlementApp(
 		driversettlement.WithTransactor(transactor),
 		driversettlement.WithSettlementRepository(driverSettlementRepository),
+		driversettlement.WithEventRepository(eventRepository),
+		driversettlement.WithSettlementAccountService(settlementAccountService),
 	)
 	if err != nil {
 		logger.Error("failed to setup driver settlement app", zap.Error(err))
@@ -393,13 +397,21 @@ func main() {
 	backofficeSessionMiddleware := backofficeserver.NewSessionMiddleware(config.Backoffice.Secret)
 
 	// Init server extensions
-	userServerPaypleExtension, err := paypleextension.NewPaypleExtension(
-		paypleextension.WithPayplePaymentApp(userApp),
-		paypleextension.WithDomain(config.PaymentService.RefererDomain),
-		paypleextension.WithEnv(config.Env),
+	userServerPaypleExtension, err := userpaypleextension.NewPaypleExtension(
+		userpaypleextension.WithPayplePaymentApp(userApp),
+		userpaypleextension.WithDomain(config.PaymentService.RefererDomain),
+		userpaypleextension.WithEnv(config.Env),
 	)
 	if err != nil {
-		logger.Error("failed to setup payple extension", zap.Error(err))
+		logger.Error("failed to setup user payple extension", zap.Error(err))
+		os.Exit(1)
+	}
+
+	driverServerPaypleExtension, err := driverpaypleextension.NewPaypleExtension(
+		driverpaypleextension.WithDriverSEttlementApp(driverSettlementApp),
+	)
+	if err != nil {
+		logger.Error("failed to setup driver payple extension", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -426,6 +438,7 @@ func main() {
 		driverserver.WithMiddleware(loggerMiddleware.Process),
 		driverserver.WithMiddleware(driverSessionMiddleware.Get()),
 		driverserver.WithMiddleware(driverserver.DriverIdChecker),
+		driverserver.WithExtension(driverServerPaypleExtension.Apply),
 	)
 	if err != nil {
 		logger.Error("failed to setup driver server", zap.Error(err))

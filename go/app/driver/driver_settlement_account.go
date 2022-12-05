@@ -159,3 +159,26 @@ func (d driverApp) GetExpectedDriverSettlement(ctx context.Context, driverId str
 func (d driverApp) ListDriverSettlementHistory(ctx context.Context, req request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error) {
 	return d.service.driverSettlement.ListDriverSettlementHistory(ctx, req)
 }
+
+func (d driverApp) RequestSettlementTransfer(ctx context.Context, driverId string) (int, error) {
+	var expectedTransferAmount int
+	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverSettlementAccount, err := d.repository.settlementAccount.GetByDriverId(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.driverApp.RequestSettlementTransfer: error while get driver settlement account: %w", err)
+		}
+
+		expectedTransferAmount, err = d.service.driverSettlement.RequestSettlementTransfer(ctx, driverSettlementAccount)
+		if err != nil {
+			return fmt.Errorf("app.driverApp.RequestSettlementTransfer: error from settlement app: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return expectedTransferAmount, nil
+}

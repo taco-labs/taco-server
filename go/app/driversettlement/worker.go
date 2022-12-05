@@ -10,6 +10,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
 	"go.uber.org/zap"
@@ -28,8 +29,16 @@ func (d driversettlementApp) Process(ctx context.Context, event entity.Event) er
 		switch event.EventUri {
 		case command.EventUri_DriverSettlementRequest:
 			err = d.handleSettlementRequest(ctx, event)
-		case command.EventUri_DriverSettlementDone:
-			err = d.handleSettlementDone(ctx, event)
+		case command.EventUri_DriverSettlementTransferRequest:
+			err = d.handleSettlementTransferRequest(ctx, event)
+		case command.EventUri_DriverSettlementTransferExecution:
+			err = d.handleSettlementTransferExecution(ctx, event)
+		case command.EventUri_DriverSettlementTransferSuccess:
+			err = d.handleSettlementTransferSuccess(ctx, event)
+		case command.EventUri_DriverSettlementTransferFail:
+			err = d.handleSettlementTransferFail(ctx, event)
+		default:
+			return fmt.Errorf("Invalid event uri '%s': %w", event.EventUri, value.ErrInvalidOperation)
 		}
 		return err
 	}
@@ -74,43 +83,200 @@ func (d driversettlementApp) handleSettlementRequest(ctx context.Context, event 
 	})
 }
 
-func (d driversettlementApp) handleSettlementDone(ctx context.Context, event entity.Event) error {
-	cmd := command.DriverSettlementDoneCommand{}
-	logger := utils.GetLogger(ctx)
+func (d driversettlementApp) handleSettlementTransferRequest(ctx context.Context, event entity.Event) error {
+	cmd := command.DriverSettlementTransferRequestCommand{}
 	err := json.Unmarshal(event.Payload, &cmd)
 	if err != nil {
-		return fmt.Errorf("app.driversettlementApp.handleSettlementDone: error while unmarshal command: %w", err)
+		return fmt.Errorf("app.driversettlementApp.handleSettlementTransferRequest: error while unmarshal command: %w", err)
 	}
 
-	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		settlementHistory, err := d.repository.settlement.GetDriverSettlementHistory(ctx, i, cmd.DriverId, cmd.SettlementPeriodStart, cmd.SettlementPeriodEnd)
-		if err != nil && !errors.Is(err, value.ErrNotFound) {
-			return fmt.Errorf("app.driversettlementApp.handleSettlementDone: error while get settlement history: %w", err)
+	var inflightRequest entity.DriverInflightSettlementTransfer
+
+	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		req, err := d.repository.settlement.GetInflightSettlementTransferByDriverId(ctx, i, cmd.DriverId)
+		if errors.Is(err, value.ErrNotFound) {
+			return nil
 		}
-		if settlementHistory.DriverId != "" {
-			logger.Warn("duplicated message",
-				zap.Any("cmd", cmd),
-				zap.String("type", "settlement"),
-				zap.String("method", "handleSettlementDone"),
-			)
+		if err != nil && errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferRequest: error while get inflight transfer: %w", err)
+		}
+
+		if req.State != enum.SettlementTransferProcessState_Received {
 			return nil
 		}
 
-		settlementHistory = entity.DriverSettlementHistory{
-			DriverId:              cmd.DriverId,
-			SettlementPeriodStart: cmd.SettlementPeriodStart,
-			SettlementPeriodEnd:   cmd.SettlementPeriodEnd,
-			CreateTime:            event.CreateTime,
-			Amount:                cmd.Amount,
-		}
-		if err := d.repository.settlement.CreateDriverSettlementHistory(ctx, i, settlementHistory); err != nil {
-			return fmt.Errorf("app.driversettlementApp.handleSettlementDone: error while create settlement history: %w", err)
-		}
-		// TODO (taekyeom) 정산 완료된 request entity 처리 필요
-		if err := d.repository.settlement.UpdateTotalDriverSettlement(ctx, i, cmd.DriverId, -cmd.Amount); err != nil {
-			return fmt.Errorf("app.driversettlementApp.handleSettlementDone: error while update expected settlement amount: %w", err)
+		inflightRequest = req
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	settlementTransferRequest := value.SettlementTransferRequest{
+		DriverId:          inflightRequest.DriverId,
+		TransferKey:       inflightRequest.TransferId,
+		BankTransactionId: inflightRequest.BankTransactionId,
+		Amount:            inflightRequest.Amount,
+		Message:           inflightRequest.Message,
+	}
+
+	transferRequest, err := d.service.settlementAccount.TransferRequest(ctx, settlementTransferRequest)
+	// TODO (taekyeom) already exist error handle
+	if err != nil {
+		return fmt.Errorf("app.driversettlementApp.handleSettlementTransferRequest: error while request transfer: %w", err)
+	}
+
+	// TODO (taekyeom) 현재 shutdown logic 은 중간에 context done 발생하면 중단 될 위험이 있음... gracefull하게 변경 필요
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		inflightRequest.State = enum.SettlementTransferProcessState_REQUESTED
+		inflightRequest.ExecutionKey = transferRequest.ExecutionKey
+		inflightRequest.UpdateTime = event.CreateTime
+
+		if err := d.repository.settlement.UpdateInflightSettlementTransfer(ctx, i, inflightRequest); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferRequest: error while update inflight request: %w", err)
 		}
 
+		cmd := command.NewDriverSettlementTransferExecutionCommand(inflightRequest.DriverId)
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferRequest: error while create command: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (d driversettlementApp) handleSettlementTransferExecution(ctx context.Context, event entity.Event) error {
+	cmd := command.DriverSettlementTransferExecutionCommand{}
+	err := json.Unmarshal(event.Payload, &cmd)
+	if err != nil {
+		return fmt.Errorf("app.driversettlementApp.handleSettlementTransferExecution: error while unmarshal command: %w", err)
+	}
+
+	var inflightRequest entity.DriverInflightSettlementTransfer
+
+	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		req, err := d.repository.settlement.GetInflightSettlementTransferByDriverId(ctx, i, cmd.DriverId)
+		if errors.Is(err, value.ErrNotFound) {
+			return nil
+		}
+		if err != nil && errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferExecution: error while get inflight transfer: %w", err)
+		}
+
+		if req.State != enum.SettlementTransferProcessState_REQUESTED {
+			return nil
+		}
+
+		inflightRequest = req
+
+		return nil
+	})
+
+	settlementTransferExecution := value.SettlementTransfer{ExecutionKey: inflightRequest.ExecutionKey}
+	if err := d.service.settlementAccount.TransferExecution(ctx, settlementTransferExecution); err != nil {
+		return fmt.Errorf("app.driversettlementApp.handleSettlementTransferExecution: error while execute transfer: %w", err)
+	}
+
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		inflightRequest.State = enum.SettlementTransferProcessState_EXECUTED
+		inflightRequest.UpdateTime = event.CreateTime
+
+		if err := d.repository.settlement.UpdateInflightSettlementTransfer(ctx, i, inflightRequest); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferExecution: error while update inflight request: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (d driversettlementApp) handleSettlementTransferSuccess(ctx context.Context, event entity.Event) error {
+	cmd := command.DriverSettlementTransferSuccessCommand{}
+	err := json.Unmarshal(event.Payload, &cmd)
+	if err != nil {
+		return fmt.Errorf("app.driversettlementApp.handleSettlementTransferSuccess: error while unmarshal command: %w", err)
+	}
+
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		inflightRequest, err := d.repository.settlement.GetInflightSettlementTransferByDriverId(ctx, i, cmd.DriverId)
+		if errors.Is(err, value.ErrNotFound) {
+			return nil
+		}
+		if err != nil && errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferSuccess: error while get inflight transfer: %w", err)
+		}
+
+		if inflightRequest.State != enum.SettlementTransferProcessState_EXECUTED {
+			return nil
+		}
+
+		// 1. Subtract total settlement
+		if err := d.repository.settlement.UpdateTotalDriverSettlement(ctx, i, inflightRequest.DriverId, -inflightRequest.Amount); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferSuccess: error while update total settlement: %w", err)
+		}
+
+		// 2. Remove settlement request
+		if err := d.repository.settlement.BatchDeleteDriverSettlementRequest(ctx, i, inflightRequest.DriverId, inflightRequest.CreateTime); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferSuccess: error while delete settlement requests: %w", err)
+		}
+
+		if err := d.repository.settlement.DeleteInflightSettlementTransfer(ctx, i, inflightRequest); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferSuccess: error while delete failed inflight transfer: %w", err)
+		}
+
+		// 4. Notify
+		cmd := settlementTransferSuccessMessage(inflightRequest.DriverId, inflightRequest.Amount)
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferSuccess: error while create push notification command: %w", err)
+		}
+		return nil
+	})
+}
+
+func (d driversettlementApp) handleSettlementTransferFail(ctx context.Context, event entity.Event) error {
+	cmd := command.DriverSettlementTransferFailCommand{}
+	err := json.Unmarshal(event.Payload, &cmd)
+	if err != nil {
+		return fmt.Errorf("app.driversettlementApp.handleSettlementTransferFail: error while unmarshal command: %w", err)
+	}
+
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		inflightRequest, err := d.repository.settlement.GetInflightSettlementTransferByDriverId(ctx, i, cmd.DriverId)
+		if errors.Is(err, value.ErrNotFound) {
+			return nil
+		}
+		if err != nil && errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferFail: error while get inflight transfer: %w", err)
+		}
+
+		if inflightRequest.State != enum.SettlementTransferProcessState_EXECUTED {
+			return nil
+		}
+
+		failedRequest := entity.DriverFailedSettlementTransfer{
+			TransferId:        inflightRequest.TransferId,
+			DriverId:          inflightRequest.DriverId,
+			ExecutionKey:      inflightRequest.ExecutionKey,
+			BankTransactionId: inflightRequest.BankTransactionId,
+			Amount:            inflightRequest.Amount,
+			Message:           inflightRequest.Message,
+			FailureMessage:    cmd.FailureMessage,
+			CreateTime:        event.CreateTime,
+		}
+
+		if err := d.repository.settlement.CreateFailedSettlementTransfer(ctx, i, failedRequest); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferFail: error while create failed transfer: %w", err)
+		}
+
+		if err := d.repository.settlement.DeleteInflightSettlementTransfer(ctx, i, inflightRequest); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferFail: error while delete failed inflight transfer: %w", err)
+		}
+
+		cmd := settlementTransferFailureMessage(inflightRequest.DriverId)
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferFail: error while create push notification command: %w", err)
+		}
 		return nil
 	})
 }

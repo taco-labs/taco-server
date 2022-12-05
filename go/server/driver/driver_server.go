@@ -39,6 +39,7 @@ type driverApp interface {
 
 	GetExpectedDriverSettlement(context.Context, string) (entity.DriverTotalSettlement, error)
 	ListDriverSettlementHistory(context.Context, request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error)
+	RequestSettlementTransfer(ctx context.Context, driverId string) (int, error)
 }
 
 func (d driverServer) SmsVerificationRequest(e echo.Context) error {
@@ -401,6 +402,17 @@ func (d driverServer) ListDriverSettlementHistory(e echo.Context) error {
 	return e.JSON(http.StatusOK, resp)
 }
 
-func (d driverServer) RequestDriverSettlement(e echo.Context) error {
-	return e.JSON(http.StatusOK, struct{}{})
+func (d driverServer) RequestDriverSettlementTransfer(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+
+	resp, err := d.app.driver.RequestSettlementTransfer(ctx, driverId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, response.DriverSettlementTransferResponse{
+		ExpectedTransferAmount: resp,
+	})
 }

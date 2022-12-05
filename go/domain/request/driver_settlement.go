@@ -36,3 +36,12 @@ func (r ListDriverSettlementHistoryRequest) ToPageTokenTime() time.Time {
 	t, _ := time.Parse(r.PageToken, time.RFC3339Nano)
 	return t
 }
+
+type DriverSettlementTransferSuccessCallbackRequest struct {
+	DriverId string
+}
+
+type DriverSettlementTransferFailureCallbackRequest struct {
+	DriverId       string
+	FailureMessage string
+}

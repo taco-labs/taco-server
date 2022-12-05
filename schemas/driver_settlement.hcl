@@ -1,3 +1,124 @@
+enum "settlement_transfer_process_state"  {
+  schema = schema.taco
+
+  values = [
+    "TRANSFER_REQUEST_RECEIVED",
+    "TRANSFER_REQUESTED",
+    "TRANSFER_EXECUTED",
+  ]
+}
+
+table "driver_inflight_settlement_transfer" {
+  schema = schema.taco
+
+  column "transfer_id" {
+    type = uuid
+    null = false
+  }
+
+  column "driver_id" { 
+    type = uuid
+    null = false
+  }
+
+  column "execution_key" {
+    type = text
+    null = false
+  }
+
+  column "bank_transaction_id" {
+    type = text
+    null = false
+  }
+
+  column "amount" {
+    type = int
+    null = false
+  }
+
+  column "message" {
+    type = varchar(10)
+    null = false
+  }
+
+  column "state" {
+    type = enum.settlement_transfer_process_state
+    null = false
+  }
+
+  column "create_time" {
+    type = timestamp
+    null = false
+  }
+
+  column "update_time" {
+    type = timestamp
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.transfer_id,
+    ]
+  }
+
+  index "inflight_settlement_transfer_driver_id_uidx" {
+    unique = true
+    columns = [
+      column.driver_id,
+    ]
+  }
+}
+
+table "driver_failed_settlement_transfer" {
+  schema = schema.taco
+
+  column "transfer_id" {
+    type = uuid
+  }
+
+  column "driver_id" { 
+    type = uuid
+    null = false
+  }
+
+  column "execution_key" {
+    type = text
+    null = false
+  }
+
+  column "bank_transaction_id" {
+    type = text
+    null = false
+  }
+
+  column "amount" {
+    type = int
+    null = false
+  }
+
+  column "message" {
+    type = varchar(10)
+    null = false
+  }
+
+  column "failure_message" {
+    type = text
+    null = false
+  }
+
+  column "create_time" {
+    type = timestamp
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.transfer_id,
+    ]
+  }
+}
+
 table "driver_settlement_request" {
   schema = schema.taco
 
@@ -70,18 +191,13 @@ table "driver_settlement_history" {
     null = false
   }
 
-  column "settlement_period_start" {
-    type = timestamp
-    null = false
-  }
-
-  column "settlement_period_end" {
-    type = timestamp
-    null = false
-  }
-
   column "amount" {
     type = int
+    null = false
+  }
+
+  column "request_time" {
+    type = timestamp
     null = false
   }
 
@@ -93,10 +209,7 @@ table "driver_settlement_history" {
   primary_key {
     columns = [
       column.driver_id,
-      column.settlement_period_start,
-      column.settlement_period_end,
+      column.create_time,
     ]
   }
-
-  // TODO (taekyeom) Add brin index in create_time
 }

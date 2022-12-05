@@ -8,9 +8,12 @@ import (
 
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/repository"
+	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
 )
@@ -20,11 +23,16 @@ type driversettlementApp struct {
 
 	repository struct {
 		settlement repository.DriverSettlementRepository
+		event      repository.EventRepository
+	}
+
+	service struct {
+		settlementAccount service.SettlementAccountService
 	}
 }
 
 // TODO (taekyeom) To be parameterized
-func getRequestableTime(t time.Time) time.Time {
+func getSettlementRequestableTime(t time.Time) time.Time {
 	loc, _ := time.LoadLocation("Asia/Seoul")
 
 	timeInLocation := t.In(loc)
@@ -36,7 +44,7 @@ func getRequestableTime(t time.Time) time.Time {
 func (d driversettlementApp) GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverTotalSettlement, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
-	settlementRequestableTime := getRequestableTime(requestTime)
+	settlementRequestableTime := getSettlementRequestableTime(requestTime)
 
 	var expectedSettlement entity.DriverTotalSettlement
 
@@ -90,4 +98,80 @@ func (d driversettlementApp) ListDriverSettlementHistory(ctx context.Context, re
 	})
 
 	return settlementHistories, pageToken, err
+}
+
+func (d driversettlementApp) RequestSettlementTransfer(ctx context.Context, settlementAccount entity.DriverSettlementAccount) (int, error) {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+	settlementRequestableTime := getSettlementRequestableTime(requestTime)
+	var expectedTransferAmount int
+
+	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		// Check inflight settlement transfer exists
+		inflightSettlementTransfer, err := d.repository.settlement.GetInflightSettlementTransferByDriverId(ctx, i, settlementAccount.DriverId)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.driversettlementApp.RequestSettlementTransfer: error while get inflight transfer: %w", err)
+		}
+		if inflightSettlementTransfer.TransferId != "" {
+			return fmt.Errorf("app.driversettlementApp.RequestSettlementTransfer: already inflight settlement transfer exists: %w", value.ErrAlreadyExists)
+		}
+
+		transferAmount, err := d.repository.settlement.AggregateDriverRequestableSettlement(ctx, i, settlementAccount.DriverId, settlementRequestableTime)
+		if err != nil {
+			return fmt.Errorf("app.driversettlementApp.RequestSettlementTransfer: error while get transferable amount: %w", err)
+		}
+
+		if transferAmount == 0 {
+			return fmt.Errorf("app.driversettlementApp.RequestSettlementTransfer: no transferable amount: %w", value.ErrInvalidOperation)
+		}
+
+		inflightSettlementTransfer = entity.DriverInflightSettlementTransfer{
+			TransferId:        utils.MustNewUUID(),
+			DriverId:          settlementAccount.DriverId,
+			BankTransactionId: settlementAccount.BankTransactionId,
+			Amount:            transferAmount,
+			Message:           "타코 정산", // TODO (taekyeom) more precise message?
+			State:             enum.SettlementTransferProcessState_Received,
+			CreateTime:        requestTime,
+			UpdateTime:        requestTime,
+		}
+
+		if err := d.repository.settlement.CreateInflightSettlementTransfer(ctx, i, inflightSettlementTransfer); err != nil {
+			return fmt.Errorf("app.driversettlementApp.RequestSettlementTransfer: error while create inflight transfer request: %w", err)
+		}
+
+		cmd := command.NewDriverSettlementTransferRequestCommand(inflightSettlementTransfer.DriverId)
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.driversettlementApp.RequestSettlementTransfer: error while create command: %w", err)
+		}
+
+		expectedTransferAmount = transferAmount
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return expectedTransferAmount, nil
+}
+
+func (d driversettlementApp) DriverSettlementTransferSuccessCallback(ctx context.Context, req request.DriverSettlementTransferSuccessCallbackRequest) error {
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		cmd := command.NewDriverSettlementTransferSuccessCommand(req.DriverId)
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.driversettlementApp.DriverSettlementTransferSuccessCallback: error while create success command: %w", err)
+		}
+		return nil
+	})
+}
+
+func (d driversettlementApp) DriverSettlementTransferFailureCallback(ctx context.Context, req request.DriverSettlementTransferFailureCallbackRequest) error {
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		cmd := command.NewDriverSettlementTransferFailCommand(req.DriverId, req.FailureMessage)
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.driversettlementApp.DriverSettlementTransferFailureCallback: error while create fail command: %w", err)
+		}
+		return nil
+	})
 }

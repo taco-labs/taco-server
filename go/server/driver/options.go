@@ -27,3 +27,9 @@ func WithMiddleware(middleware echo.MiddlewareFunc) driverServerOption {
 		ds.middlewares = append(ds.middlewares, middleware)
 	}
 }
+
+func WithExtension(extension func(*echo.Echo)) driverServerOption {
+	return func(us *driverServer) {
+		extension(us.echo)
+	}
+}

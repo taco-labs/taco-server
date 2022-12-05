@@ -100,20 +100,18 @@ func DriverTotalSettlementToResponse(driverTotalSettlement entity.DriverTotalSet
 }
 
 type DriverSettlementHistoryResponse struct {
-	DriverId              string    `json:"driverId"`
-	SettlementPeriodStart time.Time `json:"settlementPeriodStart"`
-	SettlementPeriodEnd   time.Time `json:"settlementPeriodEnd"`
-	CreateTime            time.Time `json:"createTime"`
-	Amount                int       `json:"amount"`
+	DriverId    string    `json:"driverId"`
+	Amount      int       `json:"amount"`
+	RequestTime time.Time `json:"requestTime"`
+	CreateTime  time.Time `json:"createTime"`
 }
 
 func DriverSettlementHistoryToResponse(settlementHistory entity.DriverSettlementHistory) DriverSettlementHistoryResponse {
 	return DriverSettlementHistoryResponse{
-		DriverId:              settlementHistory.DriverId,
-		SettlementPeriodStart: settlementHistory.SettlementPeriodStart,
-		SettlementPeriodEnd:   settlementHistory.SettlementPeriodEnd,
-		CreateTime:            settlementHistory.CreateTime,
-		Amount:                settlementHistory.Amount,
+		DriverId:    settlementHistory.DriverId,
+		Amount:      settlementHistory.Amount,
+		RequestTime: settlementHistory.RequestTime,
+		CreateTime:  settlementHistory.CreateTime,
 	}
 }
 
@@ -127,4 +125,8 @@ func ListDriverSettlementHistoryToResponse(settlementHistories []entity.DriverSe
 		PageToken: url.QueryEscape(pageToken.Format(time.RFC3339Nano)),
 		Histories: slices.Map(settlementHistories, DriverSettlementHistoryToResponse),
 	}
+}
+
+type DriverSettlementTransferResponse struct {
+	ExpectedTransferAmount int `json:"expectedTransferAmount"`
 }

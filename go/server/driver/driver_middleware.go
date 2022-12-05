@@ -19,6 +19,9 @@ var skipSet = map[string]struct{}{
 	"/driver/signin/sms/verify":  {},
 	"/driver/signup":             {},
 	"/healthz":                   {},
+
+	// TODO (taekyeom) move to extension
+	"/payment/payple/settlement_callback": {},
 }
 
 var denyNonActiveDriverPath = map[string]struct{}{

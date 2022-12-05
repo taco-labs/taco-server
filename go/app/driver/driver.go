@@ -58,6 +58,7 @@ type driverTaxiCallInterface interface {
 type driverSettlementInterface interface {
 	GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverTotalSettlement, error)
 	ListDriverSettlementHistory(ctx context.Context, req request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error)
+	RequestSettlementTransfer(ctx context.Context, settlementAccount entity.DriverSettlementAccount) (int, error)
 }
 
 type driverApp struct {

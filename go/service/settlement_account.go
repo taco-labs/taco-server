@@ -80,7 +80,7 @@ func (p paypleSettlementAccountService) TransferRequest(ctx context.Context, req
 		SubId:             req.DriverId,
 		DistinctKey:       req.TransferKey,
 		BankTransactionId: req.BankTransactionId,
-		TransactionAmount: req.Amount,
+		TransactionAmount: fmt.Sprint(req.Amount),
 		PrintMessage:      req.Message,
 	}
 
@@ -95,6 +95,9 @@ func (p paypleSettlementAccountService) TransferRequest(ctx context.Context, req
 	}
 
 	transferResp := resp.Result().(*paypleSettlementTransferResponse)
+	if transferResp.Result == "R0132" {
+		return value.SettlementTransfer{}, value.ErrAlreadyExists
+	}
 	if !transferResp.Success() {
 		return value.SettlementTransfer{}, fmt.Errorf("%w: error from payple transfer: messge: [%s]%s", value.ErrExternal, transferResp.Result, transferResp.Message)
 	}
@@ -213,7 +216,7 @@ type paypleSettlementTransferRequest struct {
 	SubId             string `json:"sub_id"`
 	DistinctKey       string `json:"distinct_key"`
 	BankTransactionId string `json:"billing_tran_id"`
-	TransactionAmount int    `json:"tran_amt"`
+	TransactionAmount string `json:"tran_amt"`
 	PrintMessage      string `json:"print_content"`
 }
 
@@ -226,7 +229,7 @@ type paypleSettlementTransferResponse struct {
 	GroupKey          string `json:"group_key"`
 	DistinctKey       string `json:"distinct_key"`
 	BankTransactionId string `json:"billing_tran_id"`
-	TransactionAmount int    `json:"tran_amt"`
+	TransactionAmount string `json:"tran_amt"`
 	PrintMessage      string `json:"print_content"`
 }
 
@@ -240,6 +243,15 @@ type paypleSettlementTransferExeuctionRequest struct {
 	GroupKey          string `json:"group_key"`
 	BankTransactionId string `json:"billing_tran_id"`
 	ExecutionType     string `json:"execute_type"`
+}
+
+type mockPaypleSettlementTransferExeuctionRequest struct {
+	CustomerId        string `json:"cst_id"`
+	CustomerKey       string `json:"custKey"`
+	GroupKey          string `json:"group_key"`
+	BankTransactionId string `json:"billing_tran_id"`
+	ExecutionType     string `json:"execute_type"`
+	WebhookUrl        string `json:"webhook_url"`
 }
 
 type paypleSettlementTransferExeuctionResponse struct {
@@ -269,7 +281,8 @@ func NewPaypleSettlemtnAccountService(serviceEndpoint, customerId, customerKey s
 }
 
 type mockSettlementAccountService struct {
-	inner *paypleSettlementAccountService
+	inner      *paypleSettlementAccountService
+	webhookUrl string
 }
 
 func (m mockSettlementAccountService) GetSettlementAccount(ctx context.Context, driver entity.Driver,
@@ -285,15 +298,48 @@ func (m mockSettlementAccountService) GetSettlementAccount(ctx context.Context, 
 }
 
 func (m mockSettlementAccountService) TransferRequest(ctx context.Context, req value.SettlementTransferRequest) (value.SettlementTransfer, error) {
+	// For test purpose..
+	req.Amount = 1000
 	return m.inner.TransferRequest(ctx, req)
 }
 
 func (m mockSettlementAccountService) TransferExecution(ctx context.Context, req value.SettlementTransfer) error {
-	return m.inner.TransferExecution(ctx, req)
+	authResp, err := m.inner.partnerAuthnetication()
+
+	if err != nil {
+		return err
+	}
+
+	request := mockPaypleSettlementTransferExeuctionRequest{
+		CustomerId:        m.inner.customerId,
+		CustomerKey:       m.inner.customerKey,
+		GroupKey:          req.ExecutionKey,
+		BankTransactionId: "ALL",
+		ExecutionType:     "NOW",
+		WebhookUrl:        m.webhookUrl,
+	}
+
+	resp, err := m.inner.client.R().
+		SetAuthScheme(authResp.TokenType).SetAuthToken(authResp.AccessToken).
+		SetBody(request).
+		SetResult(&paypleSettlementTransferExeuctionResponse{}).
+		Post("transfer/execute")
+
+	if err != nil {
+		return fmt.Errorf("%w: error from settlement transfer execution: %v", value.ErrExternal, err)
+	}
+
+	transferExecutionResp := resp.Result().(*paypleSettlementTransferExeuctionResponse)
+	if !transferExecutionResp.Success() {
+		return fmt.Errorf("%w: error from payple transfer: messge: [%s]%s", value.ErrExternal, transferExecutionResp.Result, transferExecutionResp.Message)
+	}
+
+	return nil
 }
 
-func NewMockSettlementAccountService(serviceEndpoint, customerId, customerKey string) *mockSettlementAccountService {
+func NewMockSettlementAccountService(serviceEndpoint, customerId, customerKey, mockWebhookUrl string) *mockSettlementAccountService {
 	return &mockSettlementAccountService{
-		inner: NewPaypleSettlemtnAccountService(serviceEndpoint, customerId, customerKey),
+		inner:      NewPaypleSettlemtnAccountService(serviceEndpoint, customerId, customerKey),
+		webhookUrl: mockWebhookUrl,
 	}
 }

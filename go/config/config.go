@@ -32,10 +32,11 @@ type PaymentServiceConfig struct {
 }
 
 type SettlementAccountServiceConfig struct {
-	Type      string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_TYPE,default=mock"`
-	Endpoint  string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_ENDPOINT"`
-	ApiKey    string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_API_KEY"`
-	ApiSecret string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_API_SECRET"`
+	Type       string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_TYPE,default=mock"`
+	Endpoint   string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_ENDPOINT"`
+	ApiKey     string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_API_KEY"`
+	ApiSecret  string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_API_SECRET"`
+	WebhookUrl string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_WEBHOOK_URL"`
 }
 
 type RouteServiceConfig struct {
