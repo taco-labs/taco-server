@@ -21,6 +21,10 @@ func (p paymentApp) Accept(ctx context.Context, event entity.Event) bool {
 	return strings.HasPrefix(event.EventUri, command.EventUri_PaymentPrefix)
 }
 
+func (p paymentApp) OnFailure(ctx context.Context, event entity.Event, lastErr error) error {
+	return nil
+}
+
 func (p paymentApp) Process(ctx context.Context, event entity.Event) error {
 	select {
 	case <-ctx.Done():

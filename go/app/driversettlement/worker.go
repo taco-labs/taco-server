@@ -20,6 +20,17 @@ func (d driversettlementApp) Accept(ctx context.Context, event entity.Event) boo
 	return strings.HasPrefix(event.EventUri, command.EventUri_DriverSettlementPrefix)
 }
 
+func (d driversettlementApp) OnFailure(ctx context.Context, event entity.Event, lastErr error) error {
+	var err error
+	switch event.EventUri {
+	case command.EventUri_DriverSettlementTransferRequest:
+		err = d.handleTransferRequestFailure(ctx, event, lastErr)
+	case command.EventUri_DriverSettlementTransferExecution:
+		err = d.handleTransferExecutionFailure(ctx, event, lastErr)
+	}
+	return err
+}
+
 func (d driversettlementApp) Process(ctx context.Context, event entity.Event) error {
 	select {
 	case <-ctx.Done():
@@ -276,6 +287,38 @@ func (d driversettlementApp) handleSettlementTransferFail(ctx context.Context, e
 		cmd := settlementTransferFailureMessage(inflightRequest.DriverId)
 		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
 			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferFail: error while create push notification command: %w", err)
+		}
+		return nil
+	})
+}
+
+func (d driversettlementApp) handleTransferRequestFailure(ctx context.Context, event entity.Event, lastErr error) error {
+	cmd := command.DriverSettlementTransferRequestCommand{}
+	err := json.Unmarshal(event.Payload, &cmd)
+	if err != nil {
+		return fmt.Errorf("app.driversettlementApp.handleSettlementTransferRequest: error while unmarshal command: %w", err)
+	}
+
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		cmd := command.NewDriverSettlementTransferFailCommand(cmd.DriverId, lastErr.Error())
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleTransferRequestFailure: error while create failure command: %w", err)
+		}
+		return nil
+	})
+}
+
+func (d driversettlementApp) handleTransferExecutionFailure(ctx context.Context, event entity.Event, lastErr error) error {
+	cmd := command.DriverSettlementTransferExecutionCommand{}
+	err := json.Unmarshal(event.Payload, &cmd)
+	if err != nil {
+		return fmt.Errorf("app.driversettlementApp.handleSettlementTransferExecution: error while unmarshal command: %w", err)
+	}
+
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		cmd := command.NewDriverSettlementTransferFailCommand(cmd.DriverId, lastErr.Error())
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleTransferExecutionFailure: error while create failure command: %w", err)
 		}
 		return nil
 	})

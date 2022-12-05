@@ -17,6 +17,10 @@ func (t taxiCallPushApp) Accept(ctx context.Context, event entity.Event) bool {
 	return strings.HasPrefix(event.EventUri, command.EventUri_PushPrefix)
 }
 
+func (t taxiCallPushApp) OnFailure(ctx context.Context, event entity.Event, lastErr error) error {
+	return nil
+}
+
 func (t taxiCallPushApp) Process(ctx context.Context, event entity.Event) error {
 	select {
 	case <-ctx.Done():

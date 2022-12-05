@@ -13,6 +13,7 @@ import (
 type SubscriberStream interface {
 	Accept(ctx context.Context, event entity.Event) bool
 	Process(ctx context.Context, event entity.Event) error
+	OnFailure(ctx context.Context, event entity.Event, lastErr error) error
 }
 
 type EventSubscriptionStreamService struct {
@@ -66,6 +67,10 @@ func (s EventSubscriptionStreamService) consume(ctx context.Context, logger *zap
 					if err != nil && event.Attempt < 4 {
 						event.Nack()
 						return
+					}
+					// If error limit reached.. handle failure
+					if failreHandlerErr := s.streams[idx].OnFailure(ctx, event, err); failreHandlerErr != nil {
+						logger.Error("[EventSubscriberStream.consume] error while handle failure message", zap.Error(failreHandlerErr))
 					}
 				}
 				event.Ack()
