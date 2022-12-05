@@ -22,16 +22,16 @@ func (u userApp) GetAddress(ctx context.Context, req request.GetAddressRequest) 
 	return resp, nil
 }
 
-func (u userApp) SearchLocation(ctx context.Context, req request.SearchLocationRequest) ([]value.LocationSummary, error) {
+func (u userApp) SearchLocation(ctx context.Context, req request.SearchLocationRequest) ([]value.LocationSummary, int, error) {
 	point := value.Point{
 		Latitude:  req.Latitude,
 		Longitude: req.Longitude,
 	}
-	resp, err := u.service.location.SearchLocation(ctx, point, req.Keyword)
+	resp, pageToken, err := u.service.location.SearchLocation(ctx, point, req.Keyword, req.PageToken)
 
 	if err != nil {
-		return []value.LocationSummary{}, fmt.Errorf("app.user.SearchLocation: error from search location: %w", err)
+		return []value.LocationSummary{}, pageToken, fmt.Errorf("app.user.SearchLocation: error from search location: %w", err)
 	}
 
-	return resp, nil
+	return resp, pageToken, nil
 }

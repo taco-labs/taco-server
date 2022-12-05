@@ -10,8 +10,12 @@ import (
 	"github.com/taco-labs/taco/go/utils/slices"
 )
 
+const (
+	SentinelPageToken = -1
+)
+
 type LocationService interface {
-	SearchLocation(context.Context, value.Point, string) ([]value.LocationSummary, error)
+	SearchLocation(context.Context, value.Point, string, int) ([]value.LocationSummary, int, error)
 	GetAddress(context.Context, value.Point) (value.Address, error)
 }
 
@@ -44,26 +48,40 @@ func toLocationSummary(k kakaoLocationSearchDocuments) value.LocationSummary {
 
 type kakaoLocationSearchResponse struct {
 	Documents []kakaoLocationSearchDocuments `json:"documents"`
+	Meta      struct {
+		IsEnd bool `json:"is_end"`
+	} `json:"meta"`
 }
 
-func (k kakaoLocationService) SearchLocation(ctx context.Context, point value.Point, keyword string) ([]value.LocationSummary, error) {
-	// TODO(taekyeom) to be paginationed
+func (k kakaoLocationService) SearchLocation(ctx context.Context, point value.Point, keyword string, pageToken int) ([]value.LocationSummary, int, error) {
+	if pageToken == SentinelPageToken {
+		return []value.LocationSummary{}, SentinelPageToken, nil
+	}
+
 	resp, err := k.client.R().
 		SetQueryParam("query", keyword).
 		SetQueryParam("x", fmt.Sprint(point.Longitude)).
 		SetQueryParam("y", fmt.Sprint(point.Latitude)).
+		SetQueryParam("page", fmt.Sprint(pageToken+1)).
 		SetResult(&kakaoLocationSearchResponse{}).
 		Get("v2/local/search/keyword.json")
 
 	if err != nil {
-		return []value.LocationSummary{}, fmt.Errorf("%w: erorr from kakao map search: %v", value.ErrExternal, err)
+		return []value.LocationSummary{}, pageToken, fmt.Errorf("%w: erorr from kakao map search: %v", value.ErrExternal, err)
 	}
 
-	searcResp := resp.Result().(*kakaoLocationSearchResponse)
+	searchResp := resp.Result().(*kakaoLocationSearchResponse)
 
-	documents := searcResp.Documents
+	documents := searchResp.Documents
 
-	return slices.Map(documents, toLocationSummary), nil
+	var newPageToken int
+	if searchResp.Meta.IsEnd {
+		newPageToken = SentinelPageToken
+	} else {
+		newPageToken = pageToken + 1
+	}
+
+	return slices.Map(documents, toLocationSummary), newPageToken, nil
 }
 
 type kakaoAddress struct {

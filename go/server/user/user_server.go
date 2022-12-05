@@ -31,7 +31,7 @@ type UserApp interface {
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	CancelTaxiCallRequest(context.Context, string) error
 
-	SearchLocation(context.Context, request.SearchLocationRequest) ([]value.LocationSummary, error)
+	SearchLocation(context.Context, request.SearchLocationRequest) ([]value.LocationSummary, int, error)
 	GetAddress(context.Context, request.GetAddressRequest) (value.Address, error)
 }
 
@@ -257,10 +257,12 @@ func (u userServer) SearchLocation(e echo.Context) error {
 		return err
 	}
 
-	resp, err := u.app.user.SearchLocation(ctx, req)
+	locations, pageToken, err := u.app.user.SearchLocation(ctx, req)
 	if err != nil {
 		return server.ToResponse(e, err)
 	}
+
+	resp := response.SearchLocationsToResopnse(locations, pageToken)
 
 	return e.JSON(http.StatusOK, resp)
 }
