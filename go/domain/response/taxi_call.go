@@ -93,13 +93,15 @@ func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallR
 
 type UserLatestTaxiCallRequestResponse struct {
 	TaxiCallRequestResponse
-	DriverPhone string `json:"driverPhone"`
+	DriverPhone     string `json:"driverPhone"`
+	DriverCarNumber string `json:"driverCarNumber"`
 }
 
 func UserLatestTaxiCallRequestToResponse(userLatestTaxiCallRequest entity.UserLatestTaxiCallRequest) UserLatestTaxiCallRequestResponse {
 	return UserLatestTaxiCallRequestResponse{
 		TaxiCallRequestResponse: TaxiCallRequestToResponse(userLatestTaxiCallRequest.TaxiCallRequest),
 		DriverPhone:             userLatestTaxiCallRequest.DriverPhone,
+		DriverCarNumber:         userLatestTaxiCallRequest.DriverCarNumber,
 	}
 }
 

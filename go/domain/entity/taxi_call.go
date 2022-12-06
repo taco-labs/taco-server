@@ -27,7 +27,8 @@ type DriverLatestTaxiCallRequest struct {
 
 type UserLatestTaxiCallRequest struct {
 	TaxiCallRequest
-	DriverPhone string
+	DriverPhone     string
+	DriverCarNumber string
 }
 
 type TaxiCallRequest struct {

@@ -90,6 +90,7 @@ func (t taxicallApp) LatestUserTaxiCallRequest(ctx context.Context, userId strin
 		latestTaxiCallRequest = entity.UserLatestTaxiCallRequest{
 			TaxiCallRequest: taxiCallRequest,
 			DriverPhone:     driver.Phone,
+			DriverCarNumber: driver.CarNumber,
 		}
 
 		return nil
