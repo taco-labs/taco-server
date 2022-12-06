@@ -227,7 +227,14 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: invalid state change:%w", err)
 		}
 
+		// TODO (taekyeom) seperate external api call
+		routeToDeparture, err := t.service.route.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get route between departure:%w", err)
+		}
+
 		taxiCallRequest.AdditionalPrice = actualTicket.AdditionalPrice
+		taxiCallRequest.ToDepartureRoute = routeToDeparture
 		taxiCallRequest.DriverId = sql.NullString{
 			Valid:  true,
 			String: driverId,

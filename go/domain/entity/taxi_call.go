@@ -35,9 +35,8 @@ type TaxiCallRequest struct {
 	bun.BaseModel `bun:"table:taxi_call_request"`
 
 	// In Memroy
-	Dryrun bool        `bun:"-"`
-	Route  value.Route `bun:"-"`
-	Tags   []string    `bun:"-"`
+	Dryrun bool     `bun:"-"`
+	Tags   []string `bun:"-"`
 
 	Id                        string               `bun:"id,pk"`
 	UserId                    string               `bun:"user_id"`
@@ -54,6 +53,8 @@ type TaxiCallRequest struct {
 	TollFee                   int                  `bun:"toll_fee"`
 	AdditionalPrice           int                  `bun:"additional_price"`
 	CurrentState              enum.TaxiCallState   `bun:"taxi_call_state"`
+	ToDepartureRoute          value.Route          `bun:"to_departure_route"`
+	ToArrivalRoute            value.Route          `bun:"to_arrival_route"`
 	CreateTime                time.Time            `bun:"create_time"`
 	UpdateTime                time.Time            `bun:"update_time"`
 }

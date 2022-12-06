@@ -9,7 +9,6 @@ import (
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/uptrace/bun"
-	"golang.org/x/sync/errgroup"
 )
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestProgress(ctx context.Context, fcmToken string,
@@ -19,6 +18,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestProgress(ctx context.Context, 
 		"taxiCallState":          cmd.TaxiCallState,
 		"currentAdditionalPrice": fmt.Sprint(cmd.AdditionalPrice),
 		"searchRangeInMinutes":   fmt.Sprint(cmd.SearchRangeInMinutes),
+		"updateTime":             cmd.UpdateTime.String(),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, "", "", data), nil
@@ -40,50 +40,22 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		return value.Notification{}, err
 	}
 
-	group, gCtx := errgroup.WithContext(ctx)
-
-	var routeBetweenDeparture, routeBetweenArrival value.Route
-
-	group.Go(func() error {
-		r, err := t.service.route.GetRoute(gCtx, cmd.DriverLocation, cmd.Departure.Point)
-		if err != nil {
-			return fmt.Errorf("app.push.handleUserTaxiCallRequestAccepted: error while get route between driver location and departure: %w", err)
-		}
-		routeBetweenDeparture = r
-
-		return nil
-	})
-
-	group.Go(func() error {
-		r, err := t.service.route.GetRoute(gCtx, cmd.Departure.Point, cmd.Arrival.Point)
-		if err != nil {
-			return fmt.Errorf("app.push.handleUserTaxiCallRequestAccepted: error while get route between deprature and arrival: %w", err)
-		}
-		routeBetweenArrival = r
-
-		return nil
-	})
-
-	if err := group.Wait(); err != nil {
-		return value.Notification{},
-			fmt.Errorf("app.push.handleUserTaxiCallRequestAccepted: error while get route: %w", err)
-	}
-
-	messageTitle := fmt.Sprintf("배차 완료 (약 %d분)", int(routeBetweenDeparture.ETA.Minutes()))
+	messageTitle := fmt.Sprintf("배차 완료 (약 %d분)", int(cmd.ToArrivalRoute.ETA.Minutes()))
 	messageBody := fmt.Sprintf("%s (추가 요금 %d)", cmd.Departure.Address.AddressName, cmd.AdditionalPrice)
 
 	data := map[string]string{
-		"taxiCallRequestId":     cmd.TaxiCallRequestId,
-		"taxiCallState":         cmd.TaxiCallState,
-		"driverId":              cmd.DriverId,
-		"driverPhone":           driver.Phone,
-		"driverCarNumber":       driver.CarNumber,
-		"requestBasePrice":      fmt.Sprint(cmd.RequestBasePrice),
-		"additionalPrice":       fmt.Sprint(cmd.AdditionalPrice),
-		"toDepartureDistance":   fmt.Sprint(routeBetweenDeparture.Distance),
-		"whenDriverToDeparture": fmt.Sprint(time.Now().Add(routeBetweenDeparture.ETA)),
-		"toArrivalDistance":     fmt.Sprint(routeBetweenArrival.Distance),
-		"toArrivalETA":          fmt.Sprint(routeBetweenArrival.ETA.Nanoseconds()),
+		"taxiCallRequestId":   cmd.TaxiCallRequestId,
+		"taxiCallState":       cmd.TaxiCallState,
+		"driverId":            cmd.DriverId,
+		"driverPhone":         driver.Phone,
+		"driverCarNumber":     driver.CarNumber,
+		"requestBasePrice":    fmt.Sprint(cmd.RequestBasePrice),
+		"additionalPrice":     fmt.Sprint(cmd.AdditionalPrice),
+		"toDepartureDistance": fmt.Sprint(cmd.ToDepartureRoute.Distance),
+		"toDepartureETA":      fmt.Sprint(cmd.ToDepartureRoute.ETA.Nanoseconds()),
+		"toArrivalDistance":   fmt.Sprint(cmd.ToArrivalRoute.Distance),
+		"toArrivalETA":        fmt.Sprint(cmd.ToArrivalRoute.ETA.Nanoseconds()),
+		"updateTime":          cmd.UpdateTime.String(),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
@@ -114,6 +86,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmT
 		"taxiCallState":     cmd.TaxiCallState,
 		"basePrice":         fmt.Sprint(cmd.BasePrice),
 		"additionalPrice":   fmt.Sprint(cmd.AdditionalPrice),
+		"updateTime":        cmd.UpdateTime.String(),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
@@ -127,6 +100,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestCanceled(ctx context.Context
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
 		"taxiCallState":     cmd.TaxiCallState,
+		"updateTime":        cmd.UpdateTime.String(),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil

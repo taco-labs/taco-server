@@ -93,6 +93,16 @@ table "taxi_call_request" {
     null = true
   }
 
+  column "to_departure_route" {
+    type = jsonb
+    null = false
+  }
+
+  column "to_arrival_route" {
+    type = jsonb
+    null = false
+  }
+
   column "create_time" {
     type = timestamp
     null = false

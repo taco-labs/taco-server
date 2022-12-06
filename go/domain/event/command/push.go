@@ -3,6 +3,7 @@ package command
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
@@ -27,7 +28,10 @@ type PushUserTaxiCallCommand struct {
 	DriverLocation       value.Point    `json:"driverLocation,omitempty"`
 	Departure            value.Location `json:"departureAddress,omitempty"`
 	Arrival              value.Location `json:"arrivalAddress,omitempty"`
+	ToDepartureRoute     value.Route    `json:"toDepartureRoute"`
+	ToArrivalRoute       value.Route    `json:"toArrivalRoute"`
 	SearchRangeInMinutes int            `json:"searchRangeInMinutes,omitempty"`
+	UpdateTime           time.Time      `json:"updateTime"`
 }
 
 type PushDriverTaxiCallCommand struct {
@@ -41,9 +45,11 @@ type PushDriverTaxiCallCommand struct {
 	AdditionalPrice   int            `json:"additionalPrice,omitempty"`
 	Departure         value.Location `json:"departureAddress,omitempty"`
 	Arrival           value.Location `json:"arrivalAddress,omitempty"`
+	ToArrivalRoute    value.Route    `json:"toArrivalRoute"`
 	Tags              []string       `json:"tags"`
 	UserTag           string         `json:"userTag"`
 	Attempt           int            `json:"attempt"`
+	UpdateTime        time.Time      `json:"updateTime"`
 }
 
 type PushRawCommand struct {
@@ -56,7 +62,9 @@ type PushRawCommand struct {
 
 func NewPushUserTaxiCallCommand(taxiCallRequest entity.TaxiCallRequest,
 	taxiCallTicket entity.TaxiCallTicket,
-	driverTaxiCallContext entity.DriverTaxiCallContext) entity.Event {
+	driverTaxiCallContext entity.DriverTaxiCallContext,
+	updateTime time.Time,
+) entity.Event {
 	cmd := PushUserTaxiCallCommand{
 		UserId:               taxiCallRequest.UserId,
 		TaxiCallRequestId:    taxiCallRequest.Id,
@@ -68,7 +76,10 @@ func NewPushUserTaxiCallCommand(taxiCallRequest entity.TaxiCallRequest,
 		DriverLocation:       driverTaxiCallContext.Location,
 		Departure:            taxiCallRequest.Departure,
 		Arrival:              taxiCallRequest.Arrival,
+		ToDepartureRoute:     taxiCallRequest.ToDepartureRoute,
+		ToArrivalRoute:       taxiCallRequest.ToArrivalRoute,
 		SearchRangeInMinutes: taxiCallTicket.GetRadiusMinutes(),
+		UpdateTime:           updateTime,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)
@@ -85,7 +96,9 @@ func NewPushDriverTaxiCallCommand(
 	driverId string,
 	taxiCallRequest entity.TaxiCallRequest,
 	taxiCallTicket entity.TaxiCallTicket,
-	driverTaxiCallContext entity.DriverTaxiCallContext) entity.Event {
+	driverTaxiCallContext entity.DriverTaxiCallContext,
+	updateTime time.Time,
+) entity.Event {
 
 	cmd := PushDriverTaxiCallCommand{
 		DriverId:          driverId,
@@ -99,8 +112,10 @@ func NewPushDriverTaxiCallCommand(
 		AdditionalPrice:   taxiCallTicket.DriverAdditionalPrice(),
 		Departure:         taxiCallRequest.Departure,
 		Arrival:           taxiCallRequest.Arrival,
+		ToArrivalRoute:    taxiCallRequest.ToArrivalRoute,
 		Tags:              taxiCallRequest.Tags,
 		UserTag:           taxiCallRequest.UserTag,
+		UpdateTime:        updateTime,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)

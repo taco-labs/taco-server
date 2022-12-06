@@ -178,9 +178,9 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 			maxAdditionalPrice = 10000
 		}
 		taxiCallRequest := entity.TaxiCallRequest{
-			Dryrun: req.Dryrun,
-			UserId: userId,
-			Route:  route,
+			Dryrun:         req.Dryrun,
+			UserId:         userId,
+			ToArrivalRoute: route,
 			Departure: value.Location{
 				Point:   req.Departure,
 				Address: departure,
@@ -208,10 +208,10 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// create taxi call request
 		taxiCallRequest = entity.TaxiCallRequest{
-			Dryrun: req.Dryrun,
-			Route:  route,
-			Id:     utils.MustNewUUID(),
-			UserId: userId,
+			Dryrun:         req.Dryrun,
+			ToArrivalRoute: route,
+			Id:             utils.MustNewUUID(),
+			UserId:         userId,
 			Departure: value.Location{
 				Point:   req.Departure,
 				Address: departure,
@@ -259,8 +259,8 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 		Id:                        taxiCallRequest.Id,
 		Departure:                 taxiCallRequest.Departure,
 		Arrival:                   taxiCallRequest.Arrival,
-		ETA:                       taxiCallRequest.Route.ETA,
-		Distance:                  taxiCallRequest.Route.Distance,
+		ToArrivalETA:              taxiCallRequest.ToArrivalRoute.ETA,
+		ToArrivalDistance:         taxiCallRequest.ToArrivalRoute.Distance,
 		Tags:                      taxiCallRequest.Tags,
 		UserTag:                   taxiCallRequest.UserTag,
 		PaymentSummary:            taxiCallRequest.PaymentSummary,

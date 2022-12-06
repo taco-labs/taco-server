@@ -26,8 +26,8 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 		return fmt.Errorf("app.taxicall.handleEvent: error while unmarshal json: %v", err)
 	}
 
-	recieveTime := time.Now()
-	if until := time.Until(taxiProgressCmd.DesiredScheduleTime); until > 0 {
+	recieveTime := event.CreateTime
+	if until := recieveTime.Sub(taxiProgressCmd.DesiredScheduleTime); until > 0 {
 		recieveTime = taxiProgressCmd.DesiredScheduleTime
 		select {
 		case <-ctx.Done():
@@ -40,7 +40,6 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 }
 
 func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCount int, cmd command.TaxiCallProcessMessage) error {
-	logger := utils.GetLogger(ctx)
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, cmd.TaxiCallRequestId)
 		if err != nil {
@@ -53,31 +52,8 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 		}
 		taxiCallRequest.Tags = tags
 
-		//TODO (taekyeom) make taxi call request failed when retry count exceeded
-		// if retryCount > 3 {
-		// 	// TODO (taekyeom) logging
-		// 	if err := taxiCallRequest.UpdateState(receiveTime, enum.TaxiCallState_FAILED); err != nil {
-		// 		return fmt.Errorf("app.taxicall.process [%s]: failed to forece mark failed state: %w", cmd.TaxiCallRequestId, err)
-		// 	}
-		// 	if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
-		// 		return fmt.Errorf("app.taxicall.process: [%s] failed to forece update failed state: %w", cmd.TaxiCallRequestId, err)
-		// 	}
-
-		// 	taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState, receiveTime, receiveTime)
-		// 	if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{taxiCallCmd}); err != nil {
-		// 		return fmt.Errorf("app.taxicall.process [%s]: failed to create taxi call force failure event: %w", cmd.TaxiCallRequestId, err)
-		// 	}
-		// 	return nil
-		// }
-
 		// Guard.. commands'state and request's current state must be same
 		if string(taxiCallRequest.CurrentState) != cmd.TaxiCallState {
-			logger.Warn("late taxi call request message arrived",
-				zap.String("type", "taxicall"),
-				zap.String("method", "process"),
-				zap.Any("currentRequest", taxiCallRequest),
-				zap.Any("message", cmd),
-			)
 			return nil
 		}
 
@@ -203,9 +179,9 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 
 		taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState,
 			receiveTime, receiveTime.Add(time.Second*10))
-		userCmd := command.NewPushUserTaxiCallCommand(taxiCallRequest, taxiCallTicket, entity.DriverTaxiCallContext{})
+		userCmd := command.NewPushUserTaxiCallCommand(taxiCallRequest, taxiCallTicket, entity.DriverTaxiCallContext{}, receiveTime)
 		driverCmds := slices.Map(driverTaxiCallContexts, func(i entity.DriverTaxiCallContext) entity.Event {
-			return command.NewPushDriverTaxiCallCommand(i.DriverId, taxiCallRequest, taxiCallTicket, i)
+			return command.NewPushDriverTaxiCallCommand(i.DriverId, taxiCallRequest, taxiCallTicket, i, receiveTime)
 		})
 
 		events = append(events, taxiCallCmd)
@@ -289,6 +265,7 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 			taxiCallRequest,
 			taxiCallTicket,
 			driverTaxiCallContext,
+			recieveTime,
 		))
 
 		return nil
@@ -325,6 +302,7 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, reciev
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},
+			recieveTime,
 		))
 		events = append(events, command.NewPaymentUserTransactionCommand(
 			taxiCallRequest.UserId,
@@ -371,6 +349,7 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 				taxiCallRequest,
 				entity.TaxiCallTicket{},
 				entity.DriverTaxiCallContext{},
+				recieveTime,
 			))
 		}
 
@@ -414,6 +393,7 @@ func (t taxicallApp) handleDriverCancelled(ctx context.Context, eventTime time.T
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},
+			recieveTime,
 		))
 
 		return nil
@@ -445,6 +425,7 @@ func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, reci
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},
+			recieveTime,
 		))
 		return nil
 	})
