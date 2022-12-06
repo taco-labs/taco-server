@@ -93,9 +93,17 @@ type kakaoAddress struct {
 	SubAddressNo  string `json:"sub_address_no"`
 }
 
+type kakaoRoadAddress struct {
+	BuildingName string `json:"building_name"`
+}
+
 type kakaoAddressResponse struct {
+	Meta struct {
+		TotalCount int `json:"total_count"`
+	} `json:"meta"`
 	Documents []struct {
-		Address kakaoAddress `json:"address"`
+		Address     *kakaoAddress     `json:"address"`
+		RoadAddress *kakaoRoadAddress `json:"road_address"`
 	} `json:"documents"`
 }
 
@@ -110,19 +118,30 @@ func (k kakaoLocationService) GetAddress(ctx context.Context, point value.Point)
 		return value.Address{}, fmt.Errorf("%w: error from kakao coord2regioncode: %v", value.ErrExternal, err)
 	}
 
-	addressResp := resp.Result().(*kakaoAddressResponse).Documents[0].Address
+	addressResp := resp.Result().(*kakaoAddressResponse)
 
-	address := value.Address{
-		AddressName:   addressResp.AddressName,
-		RegionDepth1:  addressResp.RegionDepth1,
-		RegionDepth2:  addressResp.RegionDepth2,
-		RegionDepth3:  addressResp.RegionDepth3,
-		MainAddressNo: addressResp.MainAddressNo,
-		SubAddressNo:  addressResp.SubAddressNo,
-		ServiceRegion: value.GetServiceRegion(addressResp.AddressName),
+	if addressResp.Meta.TotalCount == 0 {
+		return value.Address{}, fmt.Errorf("%w: invalid location", value.ErrInvalidLocation)
 	}
 
-	return address, nil
+	// addressResp := resp.Result().(*kakaoAddressResponse).Documents[0].Address
+	address := addressResp.Documents[0]
+
+	result := value.Address{
+		AddressName:   address.Address.AddressName,
+		RegionDepth1:  address.Address.RegionDepth1,
+		RegionDepth2:  address.Address.RegionDepth2,
+		RegionDepth3:  address.Address.RegionDepth3,
+		MainAddressNo: address.Address.MainAddressNo,
+		SubAddressNo:  address.Address.SubAddressNo,
+		ServiceRegion: value.GetServiceRegion(address.Address.AddressName),
+	}
+
+	if address.RoadAddress != nil {
+		result.BuildingName = address.RoadAddress.BuildingName
+	}
+
+	return result, nil
 }
 
 func NewKakaoLocationService(endpoint string, apiKey string) *kakaoLocationService {

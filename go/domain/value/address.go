@@ -56,6 +56,7 @@ type Address struct {
 	RegionDepth3  string `json:"regionDepth3"`
 	MainAddressNo string `json:"mainAddressNo"`
 	SubAddressNo  string `json:"subAddressNo"`
+	BuildingName  string `json:"buildingName"`
 
 	// TODO (taekyeom) Address Name 과 Service region 값 사이 불일치가 있을 수 있음.. 일단 별도의 필드로 둔다.
 	ServiceRegion string `json:"serviceRegion"`

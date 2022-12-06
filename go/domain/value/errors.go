@@ -70,6 +70,8 @@ var (
 
 	ErrInvalidRoute = TacoError{ERR_INVALID, "invalid route request"}
 
+	ErrInvalidLocation = TacoError{ERR_INVALID, "invalid location"}
+
 	ErrInvalidTaxiCallStateTransition = TacoError{ERR_INVALID, "invalid taxi call state change"}
 
 	ErrConfirmationNeededStateTransition = TacoError{ERR_NEED_CONFIRMATION, "need confirmation"}

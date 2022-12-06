@@ -138,20 +138,20 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 	group, _ := errgroup.WithContext(ctx)
 	var departure, arrival value.Address
 	group.Go(func() error {
-		roadAddress, err := t.service.location.GetAddress(ctx, req.Departure)
+		addr, err := t.service.location.GetAddress(ctx, req.Departure)
 		if err != nil {
 			return fmt.Errorf("%w: error from get road address of departure", err)
 		}
-		departure = roadAddress
+		departure = addr
 		return nil
 	})
 
 	group.Go(func() error {
-		roadAddress, err := t.service.location.GetAddress(ctx, req.Arrival)
+		addr, err := t.service.location.GetAddress(ctx, req.Arrival)
 		if err != nil {
 			return fmt.Errorf("%w: error from get road address of arrival", err)
 		}
-		arrival = roadAddress
+		arrival = addr
 		return nil
 	})
 
