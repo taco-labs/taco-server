@@ -64,7 +64,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"userPhone":                    user.Phone,
 		"tags":                         strings.Join(cmd.Tags, ","),
 		"userTag":                      cmd.UserTag,
-		"updateTime":                   cmd.UpdateTime.String(),
+		"updateTime":                   cmd.UpdateTime.Format(time.RFC3339),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
@@ -79,7 +79,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestCanceled(ctx context.Context, 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
 		"taxiCallState":     cmd.TaxiCallState,
-		"updateTime":        cmd.UpdateTime.String(),
+		"updateTime":        cmd.UpdateTime.Format(time.RFC3339),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil

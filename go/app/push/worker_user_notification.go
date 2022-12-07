@@ -55,7 +55,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		"toDepartureETA":      fmt.Sprint(cmd.ToDepartureRoute.ETA.Nanoseconds()),
 		"toArrivalDistance":   fmt.Sprint(cmd.ToArrivalRoute.Distance),
 		"toArrivalETA":        fmt.Sprint(cmd.ToArrivalRoute.ETA.Nanoseconds()),
-		"updateTime":          cmd.UpdateTime.String(),
+		"updateTime":          cmd.UpdateTime.Format(time.RFC3339),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
@@ -86,7 +86,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmT
 		"taxiCallState":     cmd.TaxiCallState,
 		"basePrice":         fmt.Sprint(cmd.BasePrice),
 		"additionalPrice":   fmt.Sprint(cmd.AdditionalPrice),
-		"updateTime":        cmd.UpdateTime.String(),
+		"updateTime":        cmd.UpdateTime.Format(time.RFC3339),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
@@ -100,7 +100,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestCanceled(ctx context.Context
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
 		"taxiCallState":     cmd.TaxiCallState,
-		"updateTime":        cmd.UpdateTime.String(),
+		"updateTime":        cmd.UpdateTime.Format(time.RFC3339),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
