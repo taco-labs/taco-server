@@ -280,7 +280,15 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 
 func (t taxicallApp) handleDriverToArrival(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
 	// TODO(taekyeom) Send location push message to user
-	return []entity.Event{}, nil
+	var events []entity.Event
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		events = append(events, command.NewPushUserTaxiCallCommand(taxiCallRequest, entity.TaxiCallTicket{}, entity.DriverTaxiCallContext{}, recieveTime))
+		return nil
+	})
+	if err != nil {
+		return []entity.Event{}, err
+	}
+	return events, nil
 }
 
 func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {

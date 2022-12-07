@@ -18,7 +18,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestProgress(ctx context.Context, 
 		"taxiCallState":          cmd.TaxiCallState,
 		"currentAdditionalPrice": fmt.Sprint(cmd.AdditionalPrice),
 		"searchRangeInMinutes":   fmt.Sprint(cmd.SearchRangeInMinutes),
-		"updateTime":             cmd.UpdateTime.String(),
+		"updateTime":             cmd.UpdateTime.Format(time.RFC3339),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, "", "", data), nil
@@ -70,6 +70,22 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestFailed(ctx context.Context, fc
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
 		"taxiCallState":     cmd.TaxiCallState,
+	}
+
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
+}
+
+func (t taxiCallPushApp) handleUserTaxiCallDriverToArrival(ctx context.Context, fcmToken string,
+	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
+	messageTitle := "운행 시작"
+	messageBody := "택시 운행이 시작되었습니다."
+
+	data := map[string]string{
+		"taxiCallRequestId": cmd.TaxiCallRequestId,
+		"taxiCallState":     cmd.TaxiCallState,
+		"toArrivalDistance": fmt.Sprint(cmd.ToArrivalRoute.Distance),
+		"toArrivalETA":      fmt.Sprint(cmd.ToArrivalRoute.ETA.Nanoseconds()),
+		"updateTime":        cmd.UpdateTime.Format(time.RFC3339),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil

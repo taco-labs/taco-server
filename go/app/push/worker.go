@@ -104,6 +104,8 @@ func (t taxiCallPushApp) handleUserNotification(ctx context.Context, event entit
 		notification, err = t.handleUserTaxiCallRequestProgress(ctx, fcmToken, event.CreateTime, userNotificationCommand)
 	case enum.TaxiCallState_DRIVER_TO_DEPARTURE:
 		notification, err = t.handleUserTaxiCallRequestAccepted(ctx, fcmToken, event.CreateTime, userNotificationCommand)
+	case enum.TaxiCallState_DRIVER_TO_ARRIVAL:
+		notification, err = t.handleUserTaxiCallDriverToArrival(ctx, fcmToken, event.CreateTime, userNotificationCommand)
 	case enum.TaxiCallState_FAILED:
 		notification, err = t.handleUserTaxiCallRequestFailed(ctx, fcmToken, event.CreateTime, userNotificationCommand)
 	case enum.TaxiCallState_DONE:
