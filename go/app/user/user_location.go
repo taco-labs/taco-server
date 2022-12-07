@@ -6,6 +6,7 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/service"
 )
 
 func (u userApp) GetAddress(ctx context.Context, req request.GetAddressRequest) (value.Address, error) {
@@ -23,6 +24,10 @@ func (u userApp) GetAddress(ctx context.Context, req request.GetAddressRequest) 
 }
 
 func (u userApp) SearchLocation(ctx context.Context, req request.SearchLocationRequest) ([]value.LocationSummary, int, error) {
+	if req.Keyword == "" {
+		return []value.LocationSummary{}, service.SentinelPageToken, nil
+	}
+
 	point := value.Point{
 		Latitude:  req.Latitude,
 		Longitude: req.Longitude,
