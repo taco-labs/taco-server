@@ -182,7 +182,7 @@ func (u userServer) CreateTaxiCallRequest(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp := response.TaxiCallRequestToResponse(taxiCallRequest)
+	resp := response.UserTaxiCallRequestToResponse(taxiCallRequest)
 	return e.JSON(http.StatusOK, resp)
 }
 
@@ -229,9 +229,9 @@ func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp := slices.Map(taxiCallRequests, response.TaxiCallRequestToResponse)
+	resp := slices.Map(taxiCallRequests, response.UserTaxiCallRequestToResponse)
 
-	return e.JSON(http.StatusOK, response.TaxiCallRequestPageResponse{
+	return e.JSON(http.StatusOK, response.UserTaxiCallRequestPageResponse{
 		PageToken: pageToken,
 		Data:      resp,
 	})

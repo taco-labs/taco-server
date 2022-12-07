@@ -13,7 +13,7 @@ type PaymentSummaryResponse struct {
 	CardNumber string `json:"cardNumber"`
 }
 
-type TaxiCallRequestResponse struct {
+type UserTaxiCallRequestResponse struct {
 	Dryrun                    bool                   `json:"dryrun"`
 	ToArrivalDistance         int                    `json:"toArrivalDistance"`
 	ToArrivalETA              time.Duration          `json:"toArrivalEta"`
@@ -37,9 +37,14 @@ type TaxiCallRequestResponse struct {
 	UpdateTime                time.Time              `json:"updateTime"`
 }
 
-type TaxiCallRequestPageResponse struct {
-	PageToken string                    `json:"pageToken"`
-	Data      []TaxiCallRequestResponse `json:"data"`
+type UserTaxiCallRequestPageResponse struct {
+	PageToken string                        `json:"pageToken"`
+	Data      []UserTaxiCallRequestResponse `json:"data"`
+}
+
+type DriverTaxiCallRequestPageResponse struct {
+	PageToken string                          `json:"pageToken"`
+	Data      []DriverTaxiCallRequestResponse `json:"data"`
 }
 
 func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummaryResponse {
@@ -50,8 +55,32 @@ func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummar
 	}
 }
 
-func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallRequestResponse {
-	resp := TaxiCallRequestResponse{
+type DriverTaxiCallRequestResponse struct {
+	Dryrun                    bool                   `json:"dryrun"`
+	ToArrivalDistance         int                    `json:"toArrivalDistance"`
+	ToArrivalETA              time.Duration          `json:"toArrivalEta"`
+	ToArrivalPath             []value.Point          `json:"toArrivalPath"`
+	Id                        string                 `json:"id"`
+	UserId                    string                 `json:"userId"`
+	DriverId                  string                 `json:"driverId"`
+	Departure                 value.Location         `json:"departure"`
+	Arrival                   value.Location         `json:"arrival"`
+	Tags                      []string               `json:"tags"`
+	UserTag                   string                 `json:"userTag"`
+	Payment                   PaymentSummaryResponse `json:"payment"`
+	RequestBasePrice          int                    `json:"requestBasePrice"`
+	RequestMinAdditionalPrice int                    `json:"requestMinAdditionalPrice"`
+	RequestMaxAdditionalPrice int                    `json:"requestMaxAdditionalPrice"`
+	BasePrice                 int                    `json:"basePrice"`
+	TollFee                   int                    `json:"tollFee"`
+	AdditionalPrice           int                    `json:"additionalPrice"`
+	CurrentState              string                 `json:"currentState"`
+	CreateTime                time.Time              `json:"createTime"`
+	UpdateTime                time.Time              `json:"updateTime"`
+}
+
+func UserTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) UserTaxiCallRequestResponse {
+	resp := UserTaxiCallRequestResponse{
 		Dryrun:            taxiCallRequest.Dryrun,
 		ToArrivalDistance: taxiCallRequest.ToArrivalRoute.Distance,
 		ToArrivalETA:      taxiCallRequest.ToArrivalRoute.ETA,
@@ -74,7 +103,39 @@ func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallR
 		RequestMaxAdditionalPrice: taxiCallRequest.RequestMaxAdditionalPrice,
 		BasePrice:                 taxiCallRequest.BasePrice,
 		TollFee:                   taxiCallRequest.TollFee,
-		AdditionalPrice:           taxiCallRequest.AdditionalPrice,
+		AdditionalPrice:           taxiCallRequest.UserAdditionalPrice(),
+		CurrentState:              string(taxiCallRequest.CurrentState),
+		CreateTime:                taxiCallRequest.CreateTime,
+		UpdateTime:                taxiCallRequest.UpdateTime,
+	}
+
+	return resp
+}
+
+func DriverTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) DriverTaxiCallRequestResponse {
+	resp := DriverTaxiCallRequestResponse{
+		Dryrun:            taxiCallRequest.Dryrun,
+		ToArrivalDistance: taxiCallRequest.ToArrivalRoute.Distance,
+		ToArrivalETA:      taxiCallRequest.ToArrivalRoute.ETA,
+		ToArrivalPath:     append([]value.Point{}, taxiCallRequest.ToArrivalRoute.Path...),
+		Id:                taxiCallRequest.Id,
+		UserId:            taxiCallRequest.UserId,
+		DriverId: func() string {
+			if taxiCallRequest.DriverId.Valid {
+				return taxiCallRequest.DriverId.String
+			}
+			return ""
+		}(),
+		Departure:                 taxiCallRequest.Departure,
+		Arrival:                   taxiCallRequest.Arrival,
+		Tags:                      append([]string{}, taxiCallRequest.Tags...),
+		UserTag:                   taxiCallRequest.UserTag,
+		RequestBasePrice:          taxiCallRequest.RequestBasePrice,
+		RequestMinAdditionalPrice: taxiCallRequest.RequestMinAdditionalPrice,
+		RequestMaxAdditionalPrice: taxiCallRequest.RequestMaxAdditionalPrice,
+		BasePrice:                 taxiCallRequest.BasePrice,
+		TollFee:                   taxiCallRequest.TollFee,
+		AdditionalPrice:           taxiCallRequest.DriverSettlementAdditonalPrice(),
 		CurrentState:              string(taxiCallRequest.CurrentState),
 		CreateTime:                taxiCallRequest.CreateTime,
 		UpdateTime:                taxiCallRequest.UpdateTime,
@@ -84,7 +145,7 @@ func TaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) TaxiCallR
 }
 
 type UserLatestTaxiCallRequestResponse struct {
-	TaxiCallRequestResponse
+	UserTaxiCallRequestResponse
 	DriverPhone         string        `json:"driverPhone"`
 	DriverCarNumber     string        `json:"driverCarNumber"`
 	ToDepartureDistance int           `json:"toDepartureDistance"`
@@ -94,17 +155,17 @@ type UserLatestTaxiCallRequestResponse struct {
 
 func UserLatestTaxiCallRequestToResponse(userLatestTaxiCallRequest entity.UserLatestTaxiCallRequest) UserLatestTaxiCallRequestResponse {
 	return UserLatestTaxiCallRequestResponse{
-		TaxiCallRequestResponse: TaxiCallRequestToResponse(userLatestTaxiCallRequest.TaxiCallRequest),
-		DriverPhone:             userLatestTaxiCallRequest.DriverPhone,
-		DriverCarNumber:         userLatestTaxiCallRequest.DriverCarNumber,
-		ToDepartureDistance:     userLatestTaxiCallRequest.ToDepartureRoute.Distance,
-		ToDepartureETA:          userLatestTaxiCallRequest.ToDepartureRoute.ETA,
-		ToDeparturePath:         append([]value.Point{}, userLatestTaxiCallRequest.ToDepartureRoute.Path...),
+		UserTaxiCallRequestResponse: UserTaxiCallRequestToResponse(userLatestTaxiCallRequest.TaxiCallRequest),
+		DriverPhone:                 userLatestTaxiCallRequest.DriverPhone,
+		DriverCarNumber:             userLatestTaxiCallRequest.DriverCarNumber,
+		ToDepartureDistance:         userLatestTaxiCallRequest.ToDepartureRoute.Distance,
+		ToDepartureETA:              userLatestTaxiCallRequest.ToDepartureRoute.ETA,
+		ToDeparturePath:             append([]value.Point{}, userLatestTaxiCallRequest.ToDepartureRoute.Path...),
 	}
 }
 
 type DriverLatestTaxiCallRequestResponse struct {
-	TaxiCallRequestResponse
+	DriverTaxiCallRequestResponse
 	UserPhone           string        `json:"userPhone"`
 	ToDepartureDistance int           `json:"toDepartureDistance"`
 	ToDepartureETA      time.Duration `json:"toDepartureEta"`
@@ -113,10 +174,10 @@ type DriverLatestTaxiCallRequestResponse struct {
 
 func DriverLatestTaxiCallRequestToResponse(driverLatestTaxiCallRequest entity.DriverLatestTaxiCallRequest) DriverLatestTaxiCallRequestResponse {
 	return DriverLatestTaxiCallRequestResponse{
-		TaxiCallRequestResponse: TaxiCallRequestToResponse(driverLatestTaxiCallRequest.TaxiCallRequest),
-		UserPhone:               driverLatestTaxiCallRequest.UserPhone,
-		ToDepartureDistance:     driverLatestTaxiCallRequest.ToDepartureRoute.Distance,
-		ToDepartureETA:          driverLatestTaxiCallRequest.ToDepartureRoute.ETA,
-		ToDeparturePath:         append([]value.Point{}, driverLatestTaxiCallRequest.ToDepartureRoute.Path...),
+		DriverTaxiCallRequestResponse: DriverTaxiCallRequestToResponse(driverLatestTaxiCallRequest.TaxiCallRequest),
+		UserPhone:                     driverLatestTaxiCallRequest.UserPhone,
+		ToDepartureDistance:           driverLatestTaxiCallRequest.ToDepartureRoute.Distance,
+		ToDepartureETA:                driverLatestTaxiCallRequest.ToDepartureRoute.ETA,
+		ToDeparturePath:               append([]value.Point{}, driverLatestTaxiCallRequest.ToDepartureRoute.Path...),
 	}
 }
