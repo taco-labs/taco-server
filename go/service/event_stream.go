@@ -64,7 +64,7 @@ func (s EventSubscriptionStreamService) consume(ctx context.Context, logger *zap
 						return
 					}
 					// If error occurred, resend event with increased retry event count
-					if err != nil && event.Attempt < 4 {
+					if event.Attempt < 4 {
 						event.Nack()
 						return
 					}

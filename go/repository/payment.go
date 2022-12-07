@@ -25,6 +25,10 @@ type PaymentRepository interface {
 	BatchDeleteUserPayment(context.Context, bun.IDB, string) ([]entity.UserPayment, error)
 	UpdateUserPayment(context.Context, bun.IDB, entity.UserPayment) error
 
+	GetPaymentTransactionRequest(context.Context, bun.IDB, string) (entity.UserPaymentTransactionRequest, error)
+	CreatePaymentTransactionRequest(context.Context, bun.IDB, entity.UserPaymentTransactionRequest) error
+	DeletePaymentTransactionRequest(context.Context, bun.IDB, entity.UserPaymentTransactionRequest) error
+
 	// Payment order
 	GetPaymentOrder(context.Context, bun.IDB, string) (entity.UserPaymentOrder, error)
 	CreatePaymentOrder(context.Context, bun.IDB, entity.UserPaymentOrder) error
@@ -147,7 +151,7 @@ func (u userPaymentRepository) DeleteUserPayment(ctx context.Context, db bun.IDB
 	}).WherePK().Exec(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
-		return value.ErrUserNotFound
+		return value.ErrNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
@@ -194,8 +198,57 @@ func (u userPaymentRepository) UpdateUserPayment(ctx context.Context, db bun.IDB
 	return nil
 }
 
-func NewUserPaymentRepository() *userPaymentRepository {
-	return &userPaymentRepository{}
+func (u userPaymentRepository) GetPaymentTransactionRequest(ctx context.Context, db bun.IDB, orderId string) (entity.UserPaymentTransactionRequest, error) {
+	resp := entity.UserPaymentTransactionRequest{
+		OrderId: orderId,
+	}
+
+	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
+
+	if errors.Is(sql.ErrNoRows, err) {
+		return entity.UserPaymentTransactionRequest{}, value.ErrNotFound
+	}
+	if err != nil {
+		return entity.UserPaymentTransactionRequest{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (u userPaymentRepository) CreatePaymentTransactionRequest(ctx context.Context, db bun.IDB, transactionRequest entity.UserPaymentTransactionRequest) error {
+	res, err := db.NewInsert().Model(&transactionRequest).Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (u userPaymentRepository) DeletePaymentTransactionRequest(ctx context.Context, db bun.IDB, transactionRequest entity.UserPaymentTransactionRequest) error {
+	res, err := db.NewDelete().Model(&transactionRequest).WherePK().Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
 }
 
 func (u userPaymentRepository) GetPaymentOrder(ctx context.Context, db bun.IDB, orderId string) (entity.UserPaymentOrder, error) {
@@ -206,15 +259,15 @@ func (u userPaymentRepository) GetPaymentOrder(ctx context.Context, db bun.IDB, 
 	err := db.NewSelect().Model(&userPaymentOrder).WherePK().Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
-		return entity.UserPaymentOrder{}, value.ErrUserNotFound
+		return entity.UserPaymentOrder{}, value.ErrNotFound
 	}
 	if err != nil {
 		return entity.UserPaymentOrder{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}
 
 	return userPaymentOrder, nil
-
 }
+
 func (u userPaymentRepository) CreatePaymentOrder(ctx context.Context, db bun.IDB, userPaymentOrder entity.UserPaymentOrder) error {
 	res, err := db.NewInsert().Model(&userPaymentOrder).Exec(ctx)
 
@@ -279,4 +332,8 @@ func (u userPaymentRepository) GetFailedOrdersByUserId(ctx context.Context, db b
 	}
 
 	return resp, nil
+}
+
+func NewUserPaymentRepository() *userPaymentRepository {
+	return &userPaymentRepository{}
 }

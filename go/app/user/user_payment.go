@@ -84,3 +84,11 @@ func (u userApp) DeleteUserPayment(ctx context.Context, userPaymentId string) er
 
 	return nil
 }
+
+func (u userApp) PaymentTransactionSuccessCallback(ctx context.Context, req request.PaymentTransactionSuccessCallbackRequest) error {
+	return u.service.userPayment.PaymentTransactionSuccessCallback(ctx, req)
+}
+
+func (u userApp) PaymentTransactionFailCallback(ctx context.Context, req request.PaymentTransactionFailCallbackRequest) error {
+	return u.service.userPayment.PaymentTransactionFailCallback(ctx, req)
+}

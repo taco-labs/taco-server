@@ -27,7 +27,7 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 	}
 
 	recieveTime := event.CreateTime
-	if until := recieveTime.Sub(taxiProgressCmd.DesiredScheduleTime); until > 0 {
+	if until := taxiProgressCmd.DesiredScheduleTime.Sub(event.CreateTime); until > 0 {
 		recieveTime = taxiProgressCmd.DesiredScheduleTime
 		select {
 		case <-ctx.Done():
@@ -99,7 +99,7 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 			taxiCallTicket = entity.TaxiCallTicket{
 				TaxiCallRequestId: taxiCallRequest.Id,
 				Attempt:           0,
-				AdditionalPrice:   0,
+				AdditionalPrice:   taxiCallRequest.RequestMinAdditionalPrice,
 				TicketId:          utils.MustNewUUID(),
 				CreateTime:        eventTime,
 			}
@@ -304,19 +304,18 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, reciev
 			entity.DriverTaxiCallContext{},
 			recieveTime,
 		))
-		events = append(events, command.NewPaymentUserTransactionCommand(
-			taxiCallRequest.UserId,
-			taxiCallRequest.PaymentSummary.PaymentId,
-			taxiCallRequest.Id,
-			"타코 이용 요금", // TODO (taekyeom) order name generation?
-			taxiCallRequest.UserAdditionalPrice(),
-		))
-		events = append(events, command.NewDriverSettlementRequestCommand(
-			taxiCallRequest.DriverId.String,
-			taxiCallRequest.Id,
-			taxiCallRequest.DriverSettlementAdditonalPrice(),
-			taxiCallRequest.UpdateTime,
-		))
+		if taxiCallRequest.UserAdditionalPrice() > 0 {
+			events = append(events, command.NewUserPaymentTransactionRequestCommand(
+				taxiCallRequest.UserId,
+				taxiCallRequest.PaymentSummary.PaymentId,
+				taxiCallRequest.Id,
+				"타코 이용 요금", // TODO (taekyeom) order name generation?
+				taxiCallRequest.DriverId.String,
+				taxiCallRequest.UserAdditionalPrice(),
+				taxiCallRequest.DriverSettlementAdditonalPrice(),
+				false,
+			))
+		}
 		return nil
 	})
 

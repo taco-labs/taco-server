@@ -3,47 +3,50 @@ package command
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
-	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/utils"
 )
 
 var (
-	EventUri_PaymentPrefix           = "Payment/"
-	EventUri_UserDeletePayment       = fmt.Sprintf("%sUserRemovePayment", EventUri_PaymentPrefix)
-	EventUri_UserTransaction         = fmt.Sprintf("%sUserTransaction", EventUri_PaymentPrefix)
-	EventUri_UserTransactionFailed   = fmt.Sprintf("%sUserTransactionFailed", EventUri_PaymentPrefix)
-	EventUri_UserTransactionRecovery = fmt.Sprintf("%sUserTransactionRecovery", EventUri_PaymentPrefix)
+	EventUri_PaymentPrefix = "Payment/"
+
+	EventUri_UserTransactionRequest = fmt.Sprintf("%sUserTransactionRequest", EventUri_PaymentPrefix)
+	EventUri_UserTransactionSuccess = fmt.Sprintf("%sUserTransactionSuccess", EventUri_PaymentPrefix)
+	EventUri_UserTransactionFail    = fmt.Sprintf("%sUserTransactionFail", EventUri_PaymentPrefix)
+
+	EventUri_UserDeletePayment = fmt.Sprintf("%sUserRemovePayment", EventUri_PaymentPrefix)
 )
 
-type PaymentUserPaymentDeleteCommand struct {
-	UserId     string `json:"userId"`
-	PaymentId  string `json:"paymentId"`
-	BillingKey string `json:"billingKey"`
-}
-
-type PaymentUserTransactionCommand struct {
-	UserId    string `json:"userId"`
-	PaymentId string `json:"paymentId"`
-	OrderId   string `json:"orderId"`
-	OrderName string `json:"orderName"`
-	Amount    int    `json:"amount"`
-}
-
-type PaymentUserTransactionFailedCommand struct {
+type PaymentUserTransactionRequestCommand struct {
 	UserId             string `json:"userId"`
 	PaymentId          string `json:"paymentId"`
 	OrderId            string `json:"orderId"`
 	OrderName          string `json:"orderName"`
 	Amount             int    `json:"amount"`
-	FailedErrorCode    string `json:"failedErrorCode"`
-	FailedErrorMessage string `json:"failedErrorMessage"`
+	SettlementTargetId string `json:"settlementTargetId"`
+	SettlementAmount   int    `json:"settlementAmount"`
+	Recovery           bool   `json:"recovery"`
 }
 
-type PaymentUserTransactionRecoveryCommand struct {
-	UserId    string `json:"userId"`
-	PaymentId string `json:"paymentId"`
+type PaymentUserTransactionSuccessCommand struct {
+	OrderId    string    `json:"orderId"`
+	PaymentKey string    `json:"paymentKey"`
+	ReceiptUrl string    `json:"receiptUrl"`
+	CreateTime time.Time `json:"createTime"`
+}
+
+type PaymentUserTransactionFailCommand struct {
+	OrderId       string `json:"orderId"`
+	FailureCode   string `json:"failureCode"`
+	FailureReason string `json:"failureReason"`
+}
+
+type PaymentUserPaymentDeleteCommand struct {
+	UserId     string `json:"userId"`
+	PaymentId  string `json:"paymentId"`
+	BillingKey string `json:"billingKey"`
 }
 
 func NewPaymentUserPaymentDeleteCommand(userId string, paymentId string, billingKey string) entity.Event {
@@ -63,60 +66,58 @@ func NewPaymentUserPaymentDeleteCommand(userId string, paymentId string, billing
 	}
 }
 
-func NewPaymentUserTransactionCommand(userId string, paymentId string, orderId string, orderName string, amount int) entity.Event {
-	cmd := PaymentUserTransactionCommand{
-		UserId:    userId,
-		PaymentId: paymentId,
-		OrderId:   orderId,
-		OrderName: orderName,
-		Amount:    amount,
-	}
-
-	cmdJson, _ := json.Marshal(cmd)
-
-	return entity.Event{
-		MessageId:    utils.MustNewUUID(),
-		EventUri:     EventUri_UserTransaction,
-		DelaySeconds: 0,
-		Payload:      cmdJson,
-	}
-}
-
-func NewPaymentUserTransactionFailedCommand(
-	userId string, paymentId string, orderId string, orderName string, amount int,
-	failedErrorCode value.ErrCode, failedErrorMessage string,
-) entity.Event {
-	cmd := PaymentUserTransactionFailedCommand{
+func NewUserPaymentTransactionRequestCommand(userId, paymentId, orderId, orderName, settlementTargetId string, amount, settlementAmount int, inRecovery bool) entity.Event {
+	cmd := PaymentUserTransactionRequestCommand{
 		UserId:             userId,
 		PaymentId:          paymentId,
 		OrderId:            orderId,
 		OrderName:          orderName,
 		Amount:             amount,
-		FailedErrorCode:    string(failedErrorCode),
-		FailedErrorMessage: failedErrorMessage,
+		SettlementTargetId: settlementTargetId,
+		SettlementAmount:   settlementAmount,
+		Recovery:           inRecovery,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)
 
 	return entity.Event{
 		MessageId:    utils.MustNewUUID(),
-		EventUri:     EventUri_UserTransactionFailed,
+		EventUri:     EventUri_UserTransactionRequest,
 		DelaySeconds: 0,
 		Payload:      cmdJson,
 	}
 }
 
-func NewPaymentUserTransactionRecoveryCommand(userId string, paymentId string) entity.Event {
-	cmd := PaymentUserTransactionRecoveryCommand{
-		UserId:    userId,
-		PaymentId: paymentId,
+func NewUserPaymentTransactionSuccessCommand(orderId, paymentKey, receiptUrl string, createTime time.Time) entity.Event {
+	cmd := PaymentUserTransactionSuccessCommand{
+		OrderId:    orderId,
+		PaymentKey: paymentKey,
+		ReceiptUrl: receiptUrl,
+		CreateTime: createTime,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)
 
 	return entity.Event{
 		MessageId:    utils.MustNewUUID(),
-		EventUri:     EventUri_UserTransactionRecovery,
+		EventUri:     EventUri_UserTransactionSuccess,
+		DelaySeconds: 0,
+		Payload:      cmdJson,
+	}
+}
+
+func NewUserPaymentTransactionFailCommand(orderId, failureCode, failureReason string) entity.Event {
+	cmd := PaymentUserTransactionFailCommand{
+		OrderId:       orderId,
+		FailureCode:   failureCode,
+		FailureReason: failureReason,
+	}
+
+	cmdJson, _ := json.Marshal(cmd)
+
+	return entity.Event{
+		MessageId:    utils.MustNewUUID(),
+		EventUri:     EventUri_UserTransactionFail,
 		DelaySeconds: 0,
 		Payload:      cmdJson,
 	}

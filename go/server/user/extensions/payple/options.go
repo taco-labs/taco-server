@@ -10,9 +10,9 @@ func WithDomain(domain string) paypleExtensionOption {
 	}
 }
 
-func WithPayplePaymentApp(app userApp) paypleExtensionOption {
+func WithPayplePaymentApp(app paymentApp) paypleExtensionOption {
 	return func(pe *paypleExtension) {
-		pe.app.userApp = app
+		pe.app.paymentApp = app
 	}
 }
 
@@ -27,7 +27,7 @@ func (p paypleExtension) validate() error {
 		return errors.New("payple extension need renderer")
 	}
 
-	if p.app.userApp == nil {
+	if p.app.paymentApp == nil {
 		return errors.New("payple extension need payple payment app")
 	}
 

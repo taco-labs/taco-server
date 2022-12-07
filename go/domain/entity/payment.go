@@ -39,6 +39,20 @@ func (u UserPayment) ToSummary() value.PaymentSummary {
 	}
 }
 
+type UserPaymentTransactionRequest struct {
+	bun.BaseModel `bun:"table:user_payment_transaction_request"`
+
+	OrderId            string               `bun:"order_id,pk"`
+	UserId             string               `bun:"user_id"`
+	PaymentSummary     value.PaymentSummary `bun:"payment_summary"`
+	OrderName          string               `bun:"order_name"`
+	Amount             int                  `bun:"amount"`
+	SettlementAmount   int                  `bun:"settlement_amount"`
+	SettlementTargetId string               `bun:"settlement_target_id"`
+	Recovery           bool                 `bun:"recovery"`
+	CreateTime         time.Time            `bun:"create_time"`
+}
+
 type UserPaymentOrder struct {
 	bun.BaseModel `bun:"table:user_payment_order"`
 
@@ -55,9 +69,11 @@ type UserPaymentOrder struct {
 type UserPaymentFailedOrder struct {
 	bun.BaseModel `bun:"table:user_payment_failed_order"`
 
-	OrderId    string    `bun:"order_id,pk"`
-	UserId     string    `bun:"user_id"`
-	OrderName  string    `bun:"order_name"`
-	Amount     int       `bun:"amount"`
-	CreateTime time.Time `bun:"create_time"`
+	OrderId            string    `bun:"order_id,pk"`
+	UserId             string    `bun:"user_id"`
+	OrderName          string    `bun:"order_name"`
+	Amount             int       `bun:"amount"`
+	SettlementAmount   int       `bun:"settlement_amount"`
+	SettlementTargetId string    `bun:"settlement_target_id"`
+	CreateTime         time.Time `bun:"create_time"`
 }

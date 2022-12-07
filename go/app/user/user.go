@@ -46,6 +46,8 @@ type userPaymentInterface interface {
 	TryRecoverUserPayment(context.Context, string, string) error
 	DeleteUserPayment(context.Context, entity.User, string) error
 	BatchDeleteUserPayment(context.Context, entity.User) error
+	PaymentTransactionSuccessCallback(ctx context.Context, req request.PaymentTransactionSuccessCallbackRequest) error
+	PaymentTransactionFailCallback(ctx context.Context, req request.PaymentTransactionFailCallbackRequest) error
 }
 
 type userApp struct {

@@ -101,8 +101,19 @@ func (u paymentApp) RegistrationCallback(ctx context.Context, req request.Paymen
 			return fmt.Errorf("app.payment.RegistrationCallback: Error while get failed orders: %w", err)
 		}
 		if len(failedOrders) > 0 {
-			recoveryCommand := command.NewPaymentUserTransactionRecoveryCommand(userPayment.UserId, userPayment.Id)
-			if err := u.repository.event.BatchCreate(ctx, i, []entity.Event{recoveryCommand}); err != nil {
+			orderCommands := slices.Map(failedOrders, func(i entity.UserPaymentFailedOrder) entity.Event {
+				return command.NewUserPaymentTransactionRequestCommand(
+					registrationRequest.UserId,
+					registrationRequest.PaymentId,
+					i.OrderId,
+					i.OrderName,
+					i.SettlementTargetId,
+					i.Amount,
+					i.SettlementAmount,
+					false,
+				)
+			})
+			if err := u.repository.event.BatchCreate(ctx, i, orderCommands); err != nil {
 				return fmt.Errorf("app.payment.RegistrationCallback: Error while create recovery payment events: %w", err)
 			}
 		}
@@ -180,9 +191,9 @@ func (u paymentApp) ListUserPayment(ctx context.Context, userId string) ([]entit
 	return userPayments, nil
 }
 
-func (u paymentApp) TryRecoverUserPayment(ctx context.Context, userId string, userPaymentId string) error {
-	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		userPayment, err := u.repository.payment.GetUserPayment(ctx, i, userPaymentId)
+func (p paymentApp) TryRecoverUserPayment(ctx context.Context, userId string, userPaymentId string) error {
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		userPayment, err := p.repository.payment.GetUserPayment(ctx, i, userPaymentId)
 		if err != nil {
 			return fmt.Errorf("app.userPayment.TryRecoverUserPayment: error while get user payment: %w", err)
 		}
@@ -190,9 +201,25 @@ func (u paymentApp) TryRecoverUserPayment(ctx context.Context, userId string, us
 			return fmt.Errorf("app.userPayment.TryRecoverUserPayment: unauthorized payment: %w", value.ErrUnAuthorized)
 		}
 
-		recoveryCommand := command.NewPaymentUserTransactionRecoveryCommand(userId, userPaymentId)
-		if err := u.repository.event.BatchCreate(ctx, i, []entity.Event{recoveryCommand}); err != nil {
-			return fmt.Errorf("app.userPayment.TryRecoverUserPayment: Error while create recovery payment events: %w", err)
+		failedOrders, err := p.repository.payment.GetFailedOrdersByUserId(ctx, i, userId)
+		if err != nil {
+			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to list failed order: %w", err)
+		}
+
+		if len(failedOrders) > 0 {
+			recoveryCommand := command.NewUserPaymentTransactionRequestCommand(
+				userId,
+				userPaymentId,
+				failedOrders[0].OrderId,
+				failedOrders[0].OrderName,
+				failedOrders[0].SettlementTargetId,
+				failedOrders[0].Amount,
+				failedOrders[0].SettlementAmount,
+				true,
+			)
+			if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{recoveryCommand}); err != nil {
+				return fmt.Errorf("app.userPayment.TryRecoverUserPayment: Error while create recovery payment events: %w", err)
+			}
 		}
 
 		return nil
@@ -238,6 +265,35 @@ func (u paymentApp) BatchDeleteUserPayment(ctx context.Context, user entity.User
 			return fmt.Errorf("app.userPayment.BatchDeleteUserPayment: error while create payment delete commands: %w", err)
 		}
 
+		return nil
+	})
+}
+
+func (p paymentApp) PaymentTransactionSuccessCallback(ctx context.Context, req request.PaymentTransactionSuccessCallbackRequest) error {
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		cmd := command.NewUserPaymentTransactionSuccessCommand(
+			req.OrderId,
+			req.PaymentKey,
+			req.ReceiptUrl,
+			req.CreateTime,
+		)
+		if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.paymentApp.PaymentTransactionSuccessCallback: error while create success event: %w", err)
+		}
+		return nil
+	})
+}
+
+func (p paymentApp) PaymentTransactionFailCallback(ctx context.Context, req request.PaymentTransactionFailCallbackRequest) error {
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		cmd := command.NewUserPaymentTransactionFailCommand(
+			req.OrderId,
+			req.FailureCode,
+			req.FailureReason,
+		)
+		if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.paymentApp.PaymentTransactionFailCallback: error while create fail event: %w", err)
+		}
 		return nil
 	})
 }

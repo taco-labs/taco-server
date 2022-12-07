@@ -137,6 +137,73 @@ table "user_default_payment" {
   }
 }
 
+table "user_payment_transaction_request" {
+  schema = schema.taco
+
+  column "order_id" {
+    type = text
+    null = false
+  }
+
+  column "user_id" {
+    type = uuid
+    null = false
+  }
+
+  column "payment_summary" {
+    type = jsonb
+    null = false
+    comment = "User payment id / company / redacted card number"
+  }
+
+  column "order_name" {
+    type = text
+    null = false
+  }
+
+  column "amount" {
+    type = int
+    null = false
+  }
+
+  column "settlement_amount" {
+    type = int
+    null = false
+  }
+
+  column "settlement_target_id" {
+    type = uuid
+    null = false
+  }
+
+  column "recovery" {
+    type = bool
+    null = false
+  }
+
+  column "create_time" {
+    type = timestamp
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.order_id,
+    ]
+  }
+
+  foreign_key "user_payment_order_user_id_fk" {
+    columns = [
+      column.user_id,
+    ]
+    ref_columns = [
+      table.user.column.id,
+    ]
+    on_delete = CASCADE
+    on_update = NO_ACTION
+  }
+}
+
 table "user_payment_order" {
   schema = schema.taco
 
@@ -219,6 +286,16 @@ table "user_payment_failed_order" {
 
   column "amount" {
     type = int
+    null = false
+  }
+
+  column "settlement_amount" {
+    type = int
+    null = false
+  }
+
+  column "settlement_target_id" {
+    type = uuid
     null = false
   }
 

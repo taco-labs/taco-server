@@ -30,9 +30,3 @@ func NewPaymentFailedNotification(userId string) entity.Event {
 
 	return command.NewRawMessageCommand(userId, value.NotificationCategory_Payment, messageTitle, messageBody, map[string]string{})
 }
-
-func NewPaymentRecoveryNotification(recoveredUserPayment entity.UserPayment) entity.Event {
-	messageTitle := fmt.Sprintf("결제 수단 %s 로 이용 요금 결제가 완료되었습니다.", recoveredUserPayment.Name)
-
-	return command.NewRawMessageCommand(recoveredUserPayment.UserId, value.NotificationCategory_Payment, messageTitle, "", map[string]string{})
-}

@@ -155,14 +155,11 @@ func (d driverSettlementRepository) CreateDriverSettlementHistory(ctx context.Co
 func (d driverSettlementRepository) AggregateDriverRequestableSettlement(ctx context.Context, db bun.IDB, driverId string, requestTime time.Time) (int, error) {
 	var amount int
 
-	q := db.NewSelect().Model(&entity.DriverSettlementRequest{}).
+	err := db.NewSelect().Model(&entity.DriverSettlementRequest{}).
 		Where("create_time < ?", requestTime).
 		Where("driver_id = ?", driverId).
-		ColumnExpr("sum(amount)")
-
-	fmt.Println(q)
-
-	err := q.Scan(ctx, &amount)
+		ColumnExpr("sum(amount)").
+		Scan(ctx, &amount)
 
 	if err != nil {
 		return 0, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
