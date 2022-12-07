@@ -410,6 +410,17 @@ func (d taxicallApp) DriverToArrival(ctx context.Context, driverId string, callR
 			return fmt.Errorf("app.taxiCall.DriverToArrival: error while update taxi call request: %w", err)
 		}
 
+		processMessage := command.NewTaxiCallProgressCommand(
+			taxiCallRequest.Id,
+			taxiCallRequest.CurrentState,
+			taxiCallRequest.UpdateTime,
+			taxiCallRequest.UpdateTime,
+		)
+
+		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
+			return fmt.Errorf("app.taxiCall.DriverToArrival: error while create event: %w", err)
+		}
+
 		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiToArrival, analytics.DriverTaxiToArrivalPayload{
 			DriverId:                  taxiCallRequest.DriverId.String,
 			RequestUserId:             taxiCallRequest.UserId,
