@@ -52,7 +52,14 @@ func notificationToFcmMessage(notification value.Notification) *messaging.Messag
 	}
 
 	if notification.MessageKey != "" {
-		message.Android.CollapseKey = notification.MessageKey
+		message.Android = &messaging.AndroidConfig{
+			CollapseKey: notification.MessageKey,
+		}
+		message.APNS = &messaging.APNSConfig{
+			Headers: map[string]string{
+				"apns-collapse-id": notification.MessageKey,
+			},
+		}
 	}
 
 	return &message
