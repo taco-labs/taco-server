@@ -2,6 +2,7 @@ package entity
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -71,16 +72,58 @@ func (t TaxiCallRequest) DriverSettlementAdditonalPrice() int {
 	return CalculateDriverAdditionalPrice(t.AdditionalPrice)
 }
 
+// TODO (taekyeom) paramterize it
+func (t TaxiCallRequest) UserCancelPaneltyPrice(cancelTime time.Time) int {
+	cancelTimeHour := cancelTime.UTC().Hour()
+	// 야간 (22시 ~ 새벽4시 in UTC)
+	if cancelTimeHour >= 13 && cancelTimeHour < 19 {
+		return 2000
+	}
+	return 1000
+}
+
+func (t TaxiCallRequest) DriverCancelPaneltyDuration() time.Duration {
+	return 5 * time.Minute
+}
+
 // TODO (taekyeom) 취소 수수료 같은 로직을 나중에 고려해야 할듯
 func (t *TaxiCallRequest) UpdateState(transitionTime time.Time, nextState enum.TaxiCallState) error {
 	if !t.CurrentState.TryChangeState(nextState) {
 		return value.ErrInvalidTaxiCallStateTransition
 	}
 
+	if nextState == enum.TaxiCallState_USER_CANCELLED && t.userCancelNeedConfirmation(transitionTime) {
+		return value.ErrConfirmationNeededStateTransition
+	}
+
+	if nextState == enum.TaxiCallState_DRIVER_CANCELLED && t.driverCancelNeedConfirmation() {
+		return value.ErrConfirmationNeededStateTransition
+	}
+
 	t.CurrentState = nextState
 	t.UpdateTime = transitionTime
 
 	return nil
+}
+
+func (t *TaxiCallRequest) ForceUpdateState(transitionTime time.Time, nextState enum.TaxiCallState) error {
+	err := t.UpdateState(transitionTime, nextState)
+	if err != nil && !errors.Is(err, value.ErrConfirmationNeededStateTransition) {
+		return err
+	}
+
+	t.CurrentState = nextState
+	t.UpdateTime = transitionTime
+
+	return nil
+}
+
+func (t TaxiCallRequest) userCancelNeedConfirmation(transitionTime time.Time) bool {
+	return t.CurrentState == enum.TaxiCallState_DRIVER_TO_DEPARTURE && transitionTime.Sub(t.UpdateTime) > time.Minute
+}
+
+func (t TaxiCallRequest) driverCancelNeedConfirmation() bool {
+	return t.CurrentState == enum.TaxiCallState_DRIVER_TO_DEPARTURE
 }
 
 type TaxiCallTicket struct {
@@ -163,6 +206,7 @@ type DriverTaxiCallContext struct {
 	LastReceivedRequestTicket string    `bun:"last_received_request_ticket"`
 	RejectedLastRequestTicket bool      `bun:"rejected_last_request_ticket"`
 	LastReceiveTime           time.Time `bun:"last_receive_time"`
+	BlockUntil                time.Time `bun:"block_until"`
 
 	// Read Only
 	Location value.Point `bun:"-"`

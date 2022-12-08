@@ -43,9 +43,9 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 	return taxiCallRequest, nil
 }
 
-func (u userApp) CancelTaxiCallRequest(ctx context.Context, taxiCallId string) error {
+func (u userApp) CancelTaxiCallRequest(ctx context.Context, req request.CancelTaxiCallRequest) error {
 	userId := utils.GetUserId(ctx)
-	err := u.service.taxiCall.UserCancelTaxiCallRequest(ctx, userId, taxiCallId)
+	err := u.service.taxiCall.UserCancelTaxiCallRequest(ctx, userId, req)
 	if err != nil {
 		return fmt.Errorf("app.user.CancelTaxiCallRequest: error while cancel taxi call request:%w", err)
 	}

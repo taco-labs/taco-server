@@ -52,6 +52,7 @@ func (t taxiCallRepository) BulkUpsertDriverTaxiCallContext(ctx context.Context,
 		Set("last_received_request_ticket = EXCLUDED.last_received_request_ticket").
 		Set("rejected_last_request_ticket = EXCLUDED.rejected_last_request_ticket").
 		Set("last_receive_time = EXCLUDED.last_receive_time").
+		Set("block_until = EXCLUDED.block_until").
 		Exec(ctx)
 
 	if err != nil {
@@ -333,6 +334,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		ColumnExpr("location").
 		Join("JOIN driver_distance_filtered AS t2 ON t2.driver_id = ?TableName.driver_id").
 		Join("JOIN driver_service_region AS t3 ON t3.id = ?TableName.driver_id").
+		Where("block_until is NULL or block_until < ?", requestTime).
 		Where("can_receive").
 		Where("last_received_request_ticket <> ? AND (rejected_last_request_ticket OR ? - last_receive_time > '10 seconds')", ticketId, requestTime).
 		Order("distance").
@@ -392,6 +394,7 @@ func (t taxiCallRepository) UpsertDriverTaxiCallContext(ctx context.Context, db 
 		Set("last_received_request_ticket = EXCLUDED.last_received_request_ticket").
 		Set("rejected_last_request_ticket = EXCLUDED.rejected_last_request_ticket").
 		Set("last_receive_time = EXCLUDED.last_receive_time").
+		Set("block_until = EXCLUDED.block_until").
 		Exec(ctx)
 
 	if err != nil {

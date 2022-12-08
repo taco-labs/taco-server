@@ -99,44 +99,6 @@ table "user_payment_registration_request" {
   }
 }
 
-table "user_default_payment" {
-  schema = schema.taco
-
-  column "user_id" {
-    type = uuid
-    null = false
-  }
-
-  column "payment_id" {
-    type = uuid
-    null = false
-  }
-
-  primary_key {
-    columns = [
-      column.user_id,
-    ]
-  }
-
-  index "user_default_payment_id_uidx" {
-    unique = true
-    columns = [
-      column.payment_id,
-    ]
-  }
-
-  foreign_key "user_default_payment_user_payment_fk" {
-    columns = [
-      column.payment_id,
-    ]
-    ref_columns = [
-      table.user_payment.column.id,
-    ]
-    on_delete = CASCADE
-    on_update = NO_ACTION
-  }
-}
-
 table "user_payment_transaction_request" {
   schema = schema.taco
 

@@ -239,6 +239,11 @@ table "driver_taxi_call_context" {
     null = false
   }
 
+  column "block_until" {
+    type = timestamp
+    null = true
+  }
+
   primary_key {
     columns = [
       column.driver_id,

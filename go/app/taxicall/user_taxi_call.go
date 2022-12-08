@@ -272,11 +272,12 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 	return taxiCallRequest, nil
 }
 
-func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId string, taxiCallId string) error {
+func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId string, req request.CancelTaxiCallRequest) error {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, taxiCallId)
+		var events []entity.Event
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, req.TaxiCallRequestId)
 		if err != nil {
 			return fmt.Errorf("app.taxCall.CancelTaxiCall: error while get taxi call:%w", err)
 		}
@@ -285,25 +286,34 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 			return fmt.Errorf("app.taxCall.CancelTaxiCall: Invalid request:%w", value.ErrUnAuthorized)
 		}
 
-		if err = taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_USER_CANCELLED); err != nil {
-			return fmt.Errorf("app.taxCall.CancelTaxiCall: error while cancel taxi call:%w", err)
+		err = taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_USER_CANCELLED)
+		if err != nil && !errors.Is(err, value.ErrConfirmationNeededStateTransition) {
+			return err
+		}
+		if errors.Is(err, value.ErrConfirmationNeededStateTransition) && !req.ConfirmCancel {
+			return err
+		}
+		if errors.Is(err, value.ErrConfirmationNeededStateTransition) && req.ConfirmCancel {
+			taxiCallRequest.ForceUpdateState(requestTime, enum.TaxiCallState_USER_CANCELLED)
+			taxiCallRequest.AdditionalPrice = taxiCallRequest.UserCancelPaneltyPrice(requestTime)
 		}
 
 		if err = t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxCall.CancelTaxiCall: error while update taxi call:%w", err)
 		}
 
-		processMessage := command.NewTaxiCallProgressCommand(
+		events = append(events, command.NewTaxiCallProgressCommand(
 			taxiCallRequest.Id,
 			taxiCallRequest.CurrentState,
 			taxiCallRequest.UpdateTime,
 			taxiCallRequest.UpdateTime,
-		)
+		))
 
-		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
+		if err := t.repository.event.BatchCreate(ctx, i, events); err != nil {
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
 
+		// TODO (taekyeom) 패널티 감수하고 취소했는지 체크 필요
 		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_UserCancelTaxiCallRequest, analytics.UserCancelTaxiCallRequestPayload{
 			UserId:     taxiCallRequest.UserId,
 			Id:         taxiCallRequest.Id,

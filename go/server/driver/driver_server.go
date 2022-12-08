@@ -33,7 +33,7 @@ type driverApp interface {
 	GetLatestTaxiCallRequest(context.Context, string) (entity.DriverLatestTaxiCallRequest, error)
 	AcceptTaxiCallRequest(context.Context, string) error
 	RejectTaxiCallRequest(context.Context, string) error
-	CancelTaxiCallRequest(context.Context, string) error
+	CancelTaxiCallRequest(context.Context, request.CancelTaxiCallRequest) error
 	DriverToArrival(context.Context, string) error
 	DoneTaxiCallRequest(context.Context, request.DoneTaxiCallRequest) error
 
@@ -330,9 +330,13 @@ func (d driverServer) RejectTaxiCallRequest(e echo.Context) error {
 func (d driverServer) CancelTaxiCallRequest(e echo.Context) error {
 	ctx := e.Request().Context()
 
-	taxiCallRequestId := e.Param("taxiCallRequestId")
+	req := request.CancelTaxiCallRequest{}
 
-	err := d.app.driver.CancelTaxiCallRequest(ctx, taxiCallRequestId)
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	err := d.app.driver.CancelTaxiCallRequest(ctx, req)
 	if err != nil {
 		return server.ToResponse(e, err)
 	}

@@ -324,11 +324,11 @@ func (t taxicallApp) RejectTaxiCallRequest(ctx context.Context, driverId string,
 	})
 }
 
-func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId string, taxiCallId string) error {
+func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId string, req request.CancelTaxiCallRequest) error {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, taxiCallId)
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, req.TaxiCallRequestId)
 		if err != nil {
 			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: error while get taxi call:%w", err)
 		}
@@ -336,23 +336,31 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 		if taxiCallRequest.DriverId.String != driverId {
 			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: Invalid request:%w", value.ErrUnAuthorized)
 		}
-
 		taxiCallRequestAcceptTime := taxiCallRequest.UpdateTime
-
-		if err = taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_DRIVER_CANCELLED); err != nil {
-			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: error while cancel taxi call:%w", err)
-		}
-
-		if err = t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
-			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: error while update taxi call:%w", err)
-		}
 
 		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
 		if err != nil {
 			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: error while get taxi call context:%w", err)
 		}
+
+		err = taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_DRIVER_CANCELLED)
+		if err != nil && !errors.Is(err, value.ErrConfirmationNeededStateTransition) {
+			return err
+		}
+		if errors.Is(err, value.ErrConfirmationNeededStateTransition) && !req.ConfirmCancel {
+			return err
+		}
+		if errors.Is(err, value.ErrConfirmationNeededStateTransition) && req.ConfirmCancel {
+			taxiCallRequest.ForceUpdateState(requestTime, enum.TaxiCallState_DRIVER_CANCELLED)
+			driverTaxiCallContext.BlockUntil = requestTime.Add(taxiCallRequest.DriverCancelPaneltyDuration())
+		}
+
 		driverTaxiCallContext.CanReceive = true
 		driverTaxiCallContext.RejectedLastRequestTicket = true
+
+		if err = t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
+			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: error while update taxi call:%w", err)
+		}
 
 		if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
 			return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while upsert taxi call context: %w", err)

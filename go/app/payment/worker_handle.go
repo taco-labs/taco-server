@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
@@ -94,7 +95,11 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 	}
 
 	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		var events []entity.Event
 		transactionRequest, err := p.repository.payment.GetPaymentTransactionRequest(ctx, i, cmd.OrderId)
+		if errors.Is(err, value.ErrNotFound) {
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to get transaction request: %w", err)
 		}
@@ -118,15 +123,14 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to create user payment order: %w", err)
 		}
 
-		notification := NewPaymentSuccessNotification(userPaymentOrder)
-		settlementRequest := command.NewDriverSettlementRequestCommand(
-			transactionRequest.SettlementTargetId,
-			transactionRequest.OrderId,
-			transactionRequest.SettlementAmount,
-			cmd.CreateTime,
-		)
-		if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{notification, settlementRequest}); err != nil {
-			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to create payment success push notification: %w", err)
+		events = append(events, NewPaymentSuccessNotification(userPaymentOrder))
+		if transactionRequest.SettlementTargetId != uuid.Nil.String() && transactionRequest.SettlementAmount > 0 {
+			events = append(events, command.NewDriverSettlementRequestCommand(
+				transactionRequest.SettlementTargetId,
+				transactionRequest.OrderId,
+				transactionRequest.SettlementAmount,
+				cmd.CreateTime,
+			))
 		}
 
 		if transactionRequest.Recovery {
@@ -154,7 +158,7 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 				}
 			}
 
-			recoveryCommand := command.NewUserPaymentTransactionRequestCommand(
+			events = append(events, command.NewUserPaymentTransactionRequestCommand(
 				transactionRequest.UserId,
 				transactionRequest.PaymentSummary.PaymentId,
 				failedOrders[0].OrderId,
@@ -163,11 +167,11 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 				failedOrders[0].Amount,
 				failedOrders[0].SettlementAmount,
 				true,
-			)
+			))
+		}
 
-			if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{recoveryCommand}); err != nil {
-				return fmt.Errorf("app.payment.handleTransactionSuccess: failed to create consecutive payment recovery command: %w", err)
-			}
+		if err := p.repository.event.BatchCreate(ctx, i, events); err != nil {
+			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to create consecutive payment recovery command: %w", err)
 		}
 
 		return nil
