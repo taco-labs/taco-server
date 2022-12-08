@@ -45,5 +45,5 @@ type DoneTaxiCallRequest struct {
 
 type CancelTaxiCallRequest struct {
 	TaxiCallRequestId string `param:"taxiCallRequestId"`
-	ConfirmCancel     bool   `json:"confirmCancel"`
+	ConfirmCancel     bool   `query:"confirmCancel"`
 }
