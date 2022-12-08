@@ -295,7 +295,7 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 		}
 		if errors.Is(err, value.ErrConfirmationNeededStateTransition) && req.ConfirmCancel {
 			taxiCallRequest.ForceUpdateState(requestTime, enum.TaxiCallState_USER_CANCELLED)
-			taxiCallRequest.AdditionalPrice = taxiCallRequest.UserCancelPaneltyPrice(requestTime)
+			taxiCallRequest.AdditionalPrice = taxiCallRequest.UserCancelPenaltyPrice(requestTime)
 		}
 
 		if err = t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {

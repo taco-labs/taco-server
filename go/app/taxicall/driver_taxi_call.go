@@ -352,7 +352,7 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 		}
 		if errors.Is(err, value.ErrConfirmationNeededStateTransition) && req.ConfirmCancel {
 			taxiCallRequest.ForceUpdateState(requestTime, enum.TaxiCallState_DRIVER_CANCELLED)
-			driverTaxiCallContext.BlockUntil = requestTime.Add(taxiCallRequest.DriverCancelPaneltyDuration())
+			driverTaxiCallContext.BlockUntil = requestTime.Add(taxiCallRequest.DriverCancelPenaltyDuration())
 		}
 
 		driverTaxiCallContext.CanReceive = true

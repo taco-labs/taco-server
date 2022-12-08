@@ -73,7 +73,7 @@ func (t TaxiCallRequest) DriverSettlementAdditonalPrice() int {
 }
 
 // TODO (taekyeom) paramterize it
-func (t TaxiCallRequest) UserCancelPaneltyPrice(cancelTime time.Time) int {
+func (t TaxiCallRequest) UserCancelPenaltyPrice(cancelTime time.Time) int {
 	cancelTimeHour := cancelTime.UTC().Hour()
 	// 야간 (22시 ~ 새벽4시 in UTC)
 	if cancelTimeHour >= 13 && cancelTimeHour < 19 {
@@ -82,8 +82,8 @@ func (t TaxiCallRequest) UserCancelPaneltyPrice(cancelTime time.Time) int {
 	return 1000
 }
 
-func (t TaxiCallRequest) DriverCancelPaneltyDuration() time.Duration {
-	return 5 * time.Minute
+func (t TaxiCallRequest) DriverCancelPenaltyDuration() time.Duration {
+	return time.Duration(0)
 }
 
 // TODO (taekyeom) 취소 수수료 같은 로직을 나중에 고려해야 할듯
