@@ -21,7 +21,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestProgress(ctx context.Context, 
 		"updateTime":             cmd.UpdateTime.Format(time.RFC3339),
 	}
 
-	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, "", "", data), nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, "", "", "", data), nil
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, fcmToken string,
@@ -58,7 +58,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		"updateTime":          cmd.UpdateTime.Format(time.RFC3339),
 	}
 
-	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestFailed(ctx context.Context, fcmToken string,
@@ -72,7 +72,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestFailed(ctx context.Context, fc
 		"taxiCallState":     cmd.TaxiCallState,
 	}
 
-	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallDriverToArrival(ctx context.Context, fcmToken string,
@@ -88,7 +88,7 @@ func (t taxiCallPushApp) handleUserTaxiCallDriverToArrival(ctx context.Context, 
 		"updateTime":        cmd.UpdateTime.Format(time.RFC3339),
 	}
 
-	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmToken string,
@@ -105,7 +105,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmT
 		"updateTime":        cmd.UpdateTime.Format(time.RFC3339),
 	}
 
-	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil
 }
 
 func (t taxiCallPushApp) handleDriverTaxiCallRequestCanceled(ctx context.Context, fcmToken string,
@@ -119,5 +119,5 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestCanceled(ctx context.Context
 		"updateTime":        cmd.UpdateTime.Format(time.RFC3339),
 	}
 
-	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil
 }

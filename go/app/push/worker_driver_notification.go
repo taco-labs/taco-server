@@ -69,7 +69,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"updateTime":                   cmd.UpdateTime.Format(time.RFC3339),
 	}
 
-	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "taxicallRequestDistribution", data), nil
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestCanceled(ctx context.Context, fcmToken string,
@@ -84,5 +84,5 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestCanceled(ctx context.Context, 
 		"updateTime":        cmd.UpdateTime.Format(time.RFC3339),
 	}
 
-	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, data), nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil
 }

@@ -51,5 +51,9 @@ func notificationToFcmMessage(notification value.Notification) *messaging.Messag
 		}
 	}
 
+	if notification.MessageKey != "" {
+		message.Android.CollapseKey = notification.MessageKey
+	}
+
 	return &message
 }

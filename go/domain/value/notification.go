@@ -8,10 +8,11 @@ const (
 )
 
 type Notification struct {
-	Principal string              `json:"principal"`
-	Category  string              `json:"category"`
-	Message   NotificationMessage `json:"message"`
-	Data      map[string]string   `json:"data"`
+	Principal  string              `json:"principal"`
+	MessageKey string              `json:"messageKey"`
+	Category   string              `json:"category"`
+	Message    NotificationMessage `json:"message"`
+	Data       map[string]string   `json:"data"`
 }
 
 type NotificationMessage struct {
@@ -19,10 +20,11 @@ type NotificationMessage struct {
 	Body  string `json:"body"`
 }
 
-func NewNotification(principal, category, title, body string, data map[string]string) Notification {
+func NewNotification(principal, category, title, body, messageKey string, data map[string]string) Notification {
 	return Notification{
-		Principal: principal,
-		Category:  category,
+		Principal:  principal,
+		Category:   category,
+		MessageKey: messageKey,
 		Message: NotificationMessage{
 			Title: title,
 			Body:  body,

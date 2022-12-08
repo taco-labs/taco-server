@@ -174,7 +174,7 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 
 		// check sms verification
 		if !smsVerification.Verified {
-			return fmt.Errorf("app.User.Signup: not verified phone:\n%w", value.ErrUnAuthorized)
+			return fmt.Errorf("app.User.Signup: not verified phone:\n%w", value.ErrInvalidOperation)
 		}
 
 		// create user
