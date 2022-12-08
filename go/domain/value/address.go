@@ -1,12 +1,23 @@
 package value
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/ewkbhex"
 )
+
+type number float64
+
+func (n number) MarshalJSON() ([]byte, error) {
+	// check given number is integral
+	if n == number(int(n)) {
+		return []byte(fmt.Sprintf("%.2f", n)), nil
+	}
+	return []byte(fmt.Sprintf("%f", n)), nil
+}
 
 var SupportedServiceRegions = map[string]struct{}{
 	"서울":     {},
@@ -75,6 +86,16 @@ type AddressSummary struct {
 type Point struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
+}
+
+func (p Point) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Latitude  number `json:"latitude"`
+		Longitude number `json:"longitude"`
+	}{
+		Latitude:  number(p.Latitude),
+		Longitude: number(p.Longitude),
+	})
 }
 
 func (p Point) ToEwkbHex() (string, error) {
