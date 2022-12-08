@@ -50,7 +50,7 @@ type DriverSettlementAccount struct {
 	bun.BaseModel `bun:"table:driver_settlement_account"`
 
 	DriverId          string    `bun:"driver_id,pk"`
-	Bank              string    `bun:"bank"` // TODO(taekyeom) maybe enum?
+	Bank              string    `bun:"bank"`
 	AccountNumber     string    `bun:"account_number"`
 	BankTransactionId string    `bun:"bank_transaction_id"`
 	CreateTime        time.Time `bun:"create_time"`

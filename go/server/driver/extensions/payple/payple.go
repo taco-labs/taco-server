@@ -33,7 +33,9 @@ func (p paypleExtension) SettlementTransferCallback(e echo.Context) error {
 	var err error
 	if req.Success() {
 		err = p.app.driversettlement.DriverSettlementTransferSuccessCallback(ctx, request.DriverSettlementTransferSuccessCallbackRequest{
-			DriverId: req.SubId,
+			DriverId:      req.SubId,
+			Bank:          req.Bank,
+			AccountNumber: req.AccountNumber,
 		})
 	} else {
 		err = p.app.driversettlement.DriverSettlementTransferFailureCallback(ctx, request.DriverSettlementTransferFailureCallbackRequest{
@@ -54,9 +56,11 @@ func (p paypleExtension) Apply(e *echo.Echo) {
 }
 
 type paypleSettlementTransferCallbackRequest struct {
-	Result  string `json:"result"`
-	Message string `json:"message"`
-	SubId   string `json:"sub_id"`
+	Result        string `json:"result"`
+	Message       string `json:"message"`
+	Bank          string `json:"bank_code_std"`
+	AccountNumber string `json:"account_num"`
+	SubId         string `json:"sub_id"`
 }
 
 func (p paypleSettlementTransferCallbackRequest) Success() bool {

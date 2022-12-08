@@ -236,6 +236,20 @@ func (d driversettlementApp) handleSettlementTransferSuccess(ctx context.Context
 			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferSuccess: error while delete failed inflight transfer: %w", err)
 		}
 
+		// 3. Add history
+		settlementHistory := entity.DriverSettlementHistory{
+			DriverId:      cmd.DriverId,
+			Amount:        inflightRequest.Amount,
+			Bank:          cmd.Bank,
+			AccountNumber: cmd.AccountNumber,
+			RequestTime:   inflightRequest.CreateTime,
+			CreateTime:    event.CreateTime,
+		}
+
+		if err := d.repository.settlement.CreateDriverSettlementHistory(ctx, i, settlementHistory); err != nil {
+			return fmt.Errorf("app.driversettlementApp.handleSettlementTransferSuccess: error while create settlement history: %w", err)
+		}
+
 		// 4. Notify
 		cmd := settlementTransferSuccessMessage(inflightRequest.DriverId, inflightRequest.Amount)
 		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {

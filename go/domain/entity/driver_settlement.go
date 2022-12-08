@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/value/enum"
@@ -27,10 +28,17 @@ type DriverTotalSettlement struct {
 type DriverSettlementHistory struct {
 	bun.BaseModel `bun:"table:driver_settlement_history"`
 
-	DriverId    string    `bun:"driver_id,pk"`
-	Amount      int       `bun:"amount"`
-	RequestTime time.Time `bun:"request_time"`
-	CreateTime  time.Time `bun:"create_time"`
+	DriverId      string    `bun:"driver_id,pk"`
+	Amount        int       `bun:"amount"`
+	Bank          string    `bun:"bank"`
+	AccountNumber string    `bun:"account_number"`
+	RequestTime   time.Time `bun:"request_time"`
+	CreateTime    time.Time `bun:"create_time"`
+}
+
+func (d DriverSettlementHistory) RedactedAccountNumber() string {
+	lastAccountNumber := d.AccountNumber[len(d.AccountNumber)-4:]
+	return fmt.Sprintf("****%s", lastAccountNumber)
 }
 
 type DriverInflightSettlementTransfer struct {

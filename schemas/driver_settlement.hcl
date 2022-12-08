@@ -196,6 +196,18 @@ table "driver_settlement_history" {
     null = false
   }
 
+  column "bank" {
+    type = text
+    null = false
+    comment = "Bank enum value"
+  }
+
+  column "account_number" {
+    type = text
+    null = false
+    comment = "계좌번호"
+  }
+
   column "request_time" {
     type = timestamp
     null = false

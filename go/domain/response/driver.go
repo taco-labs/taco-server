@@ -100,18 +100,22 @@ func DriverTotalSettlementToResponse(driverTotalSettlement entity.DriverTotalSet
 }
 
 type DriverSettlementHistoryResponse struct {
-	DriverId    string    `json:"driverId"`
-	Amount      int       `json:"amount"`
-	RequestTime time.Time `json:"requestTime"`
-	CreateTime  time.Time `json:"createTime"`
+	DriverId      string    `json:"driverId"`
+	Amount        int       `json:"amount"`
+	Bank          string    `json:"bank"`
+	AccountNumber string    `json:"accountNumber"`
+	RequestTime   time.Time `json:"requestTime"`
+	CreateTime    time.Time `json:"createTime"`
 }
 
 func DriverSettlementHistoryToResponse(settlementHistory entity.DriverSettlementHistory) DriverSettlementHistoryResponse {
 	return DriverSettlementHistoryResponse{
-		DriverId:    settlementHistory.DriverId,
-		Amount:      settlementHistory.Amount,
-		RequestTime: settlementHistory.RequestTime,
-		CreateTime:  settlementHistory.CreateTime,
+		DriverId:      settlementHistory.DriverId,
+		Amount:        settlementHistory.Amount,
+		Bank:          settlementHistory.Bank,
+		AccountNumber: settlementHistory.RedactedAccountNumber(),
+		RequestTime:   settlementHistory.RequestTime,
+		CreateTime:    settlementHistory.CreateTime,
 	}
 }
 

@@ -34,7 +34,9 @@ type DriverSettlementTransferExecutionCommand struct {
 }
 
 type DriverSettlementTransferSuccessCommand struct {
-	DriverId string `json:"driverId"`
+	DriverId      string `json:"driverId"`
+	Bank          string `json:"bank"`
+	AccountNumber string `json:"accountNumber"`
 }
 
 type DriverSettlementTransferFailCommand struct {
@@ -86,9 +88,11 @@ func NewDriverSettlementTransferExecutionCommand(driverId string) entity.Event {
 	}
 }
 
-func NewDriverSettlementTransferSuccessCommand(driverId string) entity.Event {
+func NewDriverSettlementTransferSuccessCommand(driverId, bank, accountNumber string) entity.Event {
 	cmd := DriverSettlementTransferSuccessCommand{
-		DriverId: driverId,
+		DriverId:      driverId,
+		Bank:          bank,
+		AccountNumber: accountNumber,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)

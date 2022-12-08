@@ -38,7 +38,9 @@ func (r ListDriverSettlementHistoryRequest) ToPageTokenTime() time.Time {
 }
 
 type DriverSettlementTransferSuccessCallbackRequest struct {
-	DriverId string
+	DriverId      string
+	Bank          string
+	AccountNumber string
 }
 
 type DriverSettlementTransferFailureCallbackRequest struct {

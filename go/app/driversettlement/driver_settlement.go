@@ -158,7 +158,7 @@ func (d driversettlementApp) RequestSettlementTransfer(ctx context.Context, sett
 
 func (d driversettlementApp) DriverSettlementTransferSuccessCallback(ctx context.Context, req request.DriverSettlementTransferSuccessCallbackRequest) error {
 	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		cmd := command.NewDriverSettlementTransferSuccessCommand(req.DriverId)
+		cmd := command.NewDriverSettlementTransferSuccessCommand(req.DriverId, req.Bank, req.AccountNumber)
 		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
 			return fmt.Errorf("app.driversettlementApp.DriverSettlementTransferSuccessCallback: error while create success command: %w", err)
 		}
