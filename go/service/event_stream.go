@@ -37,6 +37,7 @@ func (s EventSubscriptionStreamService) loop(ctx context.Context) {
 
 SUBSCRIBE:
 	for {
+		fmt.Println("For!!")
 		select {
 		case <-ctx.Done():
 			break SUBSCRIBE

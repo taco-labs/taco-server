@@ -19,6 +19,8 @@ const (
 
 	LogType_UserCancelTaxiCallRequest LogType = "User_CancelTaxiCallRequest"
 
+	LogType_UserTaxiCallRequestFailed LogType = "User_taxiCallRequestFailed"
+
 	LogType_UserPaymentDone LogType = "User_PaymentDone"
 
 	LogType_DriverSignup LogType = "Driver_Signup"

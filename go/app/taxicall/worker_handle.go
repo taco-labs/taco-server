@@ -26,17 +26,12 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 		return fmt.Errorf("app.taxicall.handleEvent: error while unmarshal json: %v", err)
 	}
 
-	recieveTime := time.Now()
-	if until := taxiProgressCmd.DesiredScheduleTime.Sub(recieveTime); until > 0 {
-		recieveTime = taxiProgressCmd.DesiredScheduleTime
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(until):
-		}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case receiveTime := <-time.After(time.Until(taxiProgressCmd.DesiredScheduleTime)):
+		return t.process(ctx, receiveTime, event.Attempt, taxiProgressCmd)
 	}
-
-	return t.process(ctx, recieveTime, event.Attempt, taxiProgressCmd)
 }
 
 func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCount int, cmd command.TaxiCallProcessMessage) error {

@@ -476,8 +476,10 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	eventSubsriberStreamService.Shutdown(ctx)
+	fmt.Printf("shutting down taco backend...")
+
 	eventSubscriber.Shutdown(ctx)
+	eventSubsriberStreamService.Shutdown(ctx)
 
 	outboxApp.Shuwdown()
 

@@ -315,9 +315,10 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 
 		// TODO (taekyeom) 패널티 감수하고 취소했는지 체크 필요
 		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_UserCancelTaxiCallRequest, analytics.UserCancelTaxiCallRequestPayload{
-			UserId:     taxiCallRequest.UserId,
-			Id:         taxiCallRequest.Id,
-			CreateTime: taxiCallRequest.CreateTime,
+			UserId:        taxiCallRequest.UserId,
+			Id:            taxiCallRequest.Id,
+			CancelPanelty: taxiCallRequest.UserCancelPenaltyPrice(requestTime),
+			CreateTime:    taxiCallRequest.CreateTime,
 		})
 
 		return nil

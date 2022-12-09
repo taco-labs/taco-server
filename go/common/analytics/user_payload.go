@@ -25,10 +25,18 @@ type UserTaxiCallRequestPayload struct {
 	RequestMaxAdditionalPrice int
 }
 
+type UserTaxiCallRequestFailedPayload struct {
+	UserId                    string
+	Id                        string
+	FailedTime                time.Time
+	TaxiCallRequestCreateTime time.Time
+}
+
 type UserCancelTaxiCallRequestPayload struct {
-	UserId     string
-	Id         string
-	CreateTime time.Time
+	UserId        string
+	Id            string
+	CancelPanelty int
+	CreateTime    time.Time
 }
 
 type UserPaymentDonePayload struct {
