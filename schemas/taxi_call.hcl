@@ -88,6 +88,11 @@ table "taxi_call_request" {
     null = true
   }
 
+  column "cancel_panelty_price" {
+    type = int
+    null = false
+  }
+
   column "additional_price" {
     type = int
     null = true

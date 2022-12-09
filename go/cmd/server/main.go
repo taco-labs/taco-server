@@ -66,7 +66,6 @@ func main() {
 		fmt.Printf("Failed to initializae logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer logger.Sync()
 	ctx = utils.SetLogger(ctx, logger)
 
 	// Initialize aws sdk v2 session
@@ -187,7 +186,6 @@ func main() {
 	firebasepub := firebasepubsub.OpenFCMTopic(ctx, messagingClient, &firebasepubsub.TopicOptions{
 		DryRun: config.Firebase.DryRun,
 	})
-	defer firebasepub.Shutdown(ctx)
 	notificationService := service.NewFirebaseNotificationService(firebasepub)
 
 	sqsClient := sqs.NewFromConfig(awsconf)
@@ -195,7 +193,6 @@ func main() {
 		WaitTime: time.Second,
 		Raw:      true,
 	})
-	defer eventSubscriber.Shutdown(ctx)
 	eventSubscriberService := service.NewSqsSubService(eventSubscriber)
 	eventSubsriberStreamService := service.NewEventSubscriptionStreamService(eventSubscriberService, eventStreamWorkerPool)
 
@@ -379,13 +376,11 @@ func main() {
 	eventSubsriberStreamService.Add(driverSettlementApp)
 
 	eventSubsriberStreamService.Run(ctx)
-	defer eventSubsriberStreamService.Shutdown(ctx)
 
 	if err := outboxApp.Start(ctx); err != nil {
 		logger.Error("failed to start outbox app", zap.Error(err))
 		os.Exit(1)
 	}
-	defer outboxApp.Shuwdown()
 
 	// Init middlewares
 	loggerMiddleware := server.NewLoggerMiddleware(logger)
@@ -429,7 +424,6 @@ func main() {
 		logger.Error("failed to setup user server", zap.Error(err))
 		os.Exit(1)
 	}
-	defer userServer.Stop(ctx)
 
 	driverServer, err := driverserver.NewDriverServer(
 		driverserver.WithEndpoint("0.0.0.0"),
@@ -444,7 +438,6 @@ func main() {
 		logger.Error("failed to setup driver server", zap.Error(err))
 		os.Exit(1)
 	}
-	defer driverServer.Stop(ctx)
 
 	backofficeServer, err := backofficeserver.NewBackofficeServer(
 		backofficeserver.WithEndpoint("0.0.0.0"),
@@ -458,7 +451,6 @@ func main() {
 		logger.Error("failed to setup backoffice server", zap.Error(err))
 		os.Exit(1)
 	}
-	defer backofficeServer.Stop(ctx)
 
 	go func() {
 		if err := userServer.Run(ctx); err != nil && err != http.ErrServerClosed {
@@ -482,6 +474,19 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
-	fmt.Println("shutting down [Taco-Backend] service... because of interrupt")
+
+	eventSubsriberStreamService.Shutdown(ctx)
+	eventSubscriber.Shutdown(ctx)
+
+	outboxApp.Shuwdown()
+
+	eventPublisher.Shutdown(ctx)
+	firebasepub.Shutdown(ctx)
+
+	userServer.Stop(ctx)
+	driverServer.Stop(ctx)
+	backofficeServer.Stop(ctx)
+
+	logger.Sync()
 	cancel()
 }

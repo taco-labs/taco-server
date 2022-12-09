@@ -17,6 +17,7 @@ import (
 type outboxApp struct {
 	app.Transactor
 	waitCh     chan struct{}
+	shutdownCh chan struct{}
 	repository struct {
 		event repository.EventRepository
 	}
@@ -36,6 +37,7 @@ func (o *outboxApp) Start(ctx context.Context) error {
 }
 
 func (o outboxApp) Shuwdown() error {
+	o.shutdownCh <- struct{}{}
 	<-o.waitCh
 	return nil
 }
@@ -54,11 +56,13 @@ func (o outboxApp) loop(ctx context.Context) error {
 }
 
 func (o outboxApp) sendBestAffort(ctx context.Context) error {
+OUTBOX:
 	for {
 		select {
 		case <-ctx.Done():
-			o.waitCh <- struct{}{}
-			return nil
+			break OUTBOX
+		case <-o.shutdownCh:
+			break OUTBOX
 		default:
 			nonEmpty, err := o.sendMessageBatch(ctx)
 			if err != nil {
@@ -69,6 +73,9 @@ func (o outboxApp) sendBestAffort(ctx context.Context) error {
 			}
 		}
 	}
+	fmt.Println("shutting down Outbox...")
+	o.waitCh <- struct{}{}
+	return nil
 }
 
 func (o outboxApp) sendMessageBatch(ctx context.Context) (bool, error) {
@@ -130,7 +137,8 @@ func (o outboxApp) validateApp() error {
 
 func NewOutboxApp(opts ...outboxAppOption) (outboxApp, error) {
 	app := outboxApp{
-		waitCh: make(chan struct{}),
+		waitCh:     make(chan struct{}),
+		shutdownCh: make(chan struct{}),
 	}
 
 	for _, opt := range opts {

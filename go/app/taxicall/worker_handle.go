@@ -360,7 +360,7 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 			))
 		}
 
-		if taxiCallRequest.AdditionalPrice > 0 {
+		if taxiCallRequest.CancelPaneltyPrice > 0 {
 			events = append(events, command.NewUserPaymentTransactionRequestCommand(
 				taxiCallRequest.UserId,
 				taxiCallRequest.PaymentSummary.PaymentId,
@@ -368,7 +368,7 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 				"타코 택시 취소 수수료",
 				taxiCallRequest.DriverId.String,
 				taxiCallRequest.AdditionalPrice,
-				taxiCallRequest.DriverSettlementAdditonalPrice(),
+				taxiCallRequest.DriverSettlementCancelPaneltyPrice(),
 				false,
 			))
 		}

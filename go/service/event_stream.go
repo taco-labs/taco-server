@@ -21,6 +21,7 @@ type EventSubscriptionStreamService struct {
 	streams           []SubscriberStream
 	workerPoolService WorkerPoolService
 	shutdownCh        chan struct{}
+	waitCh            chan struct{}
 }
 
 func (s *EventSubscriptionStreamService) Add(subscriberStream SubscriberStream) {
@@ -33,12 +34,14 @@ func (s EventSubscriptionStreamService) Run(ctx context.Context) {
 
 func (s EventSubscriptionStreamService) loop(ctx context.Context) {
 	logger := utils.GetLogger(ctx)
+
+SUBSCRIBE:
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("shutting down EventSubscriberStream...")
-			s.shutdownCh <- struct{}{}
-			return
+			break SUBSCRIBE
+		case <-s.shutdownCh:
+			break SUBSCRIBE
 		default:
 			err := s.consume(ctx, logger)
 			if err != nil && errors.Is(err, context.Canceled) {
@@ -46,6 +49,8 @@ func (s EventSubscriptionStreamService) loop(ctx context.Context) {
 			}
 		}
 	}
+	fmt.Println("shutting down EventSubscriberStream...")
+	s.waitCh <- struct{}{}
 }
 
 func (s EventSubscriptionStreamService) consume(ctx context.Context, logger *zap.Logger) error {
@@ -83,7 +88,8 @@ func (s EventSubscriptionStreamService) consume(ctx context.Context, logger *zap
 }
 
 func (s EventSubscriptionStreamService) Shutdown(ctx context.Context) {
-	<-s.shutdownCh
+	s.shutdownCh <- struct{}{}
+	<-s.waitCh
 }
 
 func NewEventSubscriptionStreamService(eventSub EventSubscriptionService, workerPool WorkerPoolService) *EventSubscriptionStreamService {
@@ -92,5 +98,6 @@ func NewEventSubscriptionStreamService(eventSub EventSubscriptionService, worker
 		streams:           make([]SubscriberStream, 0),
 		workerPoolService: workerPool,
 		shutdownCh:        make(chan struct{}),
+		waitCh:            make(chan struct{}),
 	}
 }
