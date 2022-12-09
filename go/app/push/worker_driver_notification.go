@@ -40,6 +40,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"taxiCallRequestId":            cmd.TaxiCallRequestId,
 		"taxiCallState":                cmd.TaxiCallState,
 		"taxiCallTicketId":             cmd.TaxiCallTicketId,
+		"ticketAttempt":                fmt.Sprint(cmd.Attempt),
 		"requestBasePrice":             fmt.Sprint(cmd.RequestBasePrice),
 		"additionalPrice":              fmt.Sprint(cmd.AdditionalPrice),
 		"toArrivalDistance":            fmt.Sprint(cmd.ToArrivalRoute.Distance),
