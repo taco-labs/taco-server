@@ -28,6 +28,7 @@ import (
 	"github.com/taco-labs/taco/go/app/taxicall"
 	"github.com/taco-labs/taco/go/app/user"
 	"github.com/taco-labs/taco/go/app/usersession"
+	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/config"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/server"
@@ -51,14 +52,14 @@ func main() {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	config, err := config.NewServerConfig(ctx)
+	serverConfig, err := config.NewServerConfig(ctx)
 	if err != nil {
 		fmt.Printf("Failed to initialize taco config: %+v\n", err)
 		os.Exit(1)
 	}
 
 	var logger *zap.Logger
-	if config.Env == "prod" {
+	if serverConfig.Env == "prod" {
 		logger, err = zap.NewProduction()
 	} else {
 		logger, err = zap.NewDevelopment()
@@ -69,6 +70,9 @@ func main() {
 	}
 	ctx = utils.SetLogger(ctx, logger)
 
+	// Initialize analytics logger
+	analytics.InitLogger(serverConfig.Env)
+
 	// Initialize aws sdk v2 session
 	awsconf, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -77,12 +81,12 @@ func main() {
 	}
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&search_path=%s",
-		config.Database.UserName,
-		config.Database.Password,
-		config.Database.Host,
-		config.Database.Port,
-		config.Database.Database,
-		config.Database.Schema,
+		serverConfig.Database.UserName,
+		serverConfig.Database.Password,
+		serverConfig.Database.Host,
+		serverConfig.Database.Port,
+		serverConfig.Database.Database,
+		serverConfig.Database.Schema,
 	)
 
 	// TODO (taekyeom) connection pool parameter?
@@ -90,7 +94,7 @@ func main() {
 
 	db := bun.NewDB(sqldb, pgdialect.New())
 
-	if config.Log.Query {
+	if serverConfig.Log.Query {
 		hook := bundebug.NewQueryHook(bundebug.WithVerbose(false))
 		db.AddQueryHook(hook)
 	}
@@ -120,53 +124,53 @@ func main() {
 	// Init services
 
 	smsSenderService := service.NewCoolSmsSenderService(
-		config.SmsSender.Endpoint,
-		config.SmsSender.SenderPhone,
-		config.SmsSender.ApiKey,
-		config.SmsSender.ApiSecret,
+		serverConfig.SmsSender.Endpoint,
+		serverConfig.SmsSender.SenderPhone,
+		serverConfig.SmsSender.ApiKey,
+		serverConfig.SmsSender.ApiSecret,
 	)
 
 	mapRouteService := service.NewNaverMapsRouteService(
-		config.RouteService.Endpoint,
-		config.RouteService.ApiKey,
-		config.RouteService.ApiSecret,
+		serverConfig.RouteService.Endpoint,
+		serverConfig.RouteService.ApiKey,
+		serverConfig.RouteService.ApiSecret,
 	)
 
 	locationService := service.NewKakaoLocationService(
-		config.LocationService.Endpoint,
-		config.LocationService.ApiSecret,
+		serverConfig.LocationService.Endpoint,
+		serverConfig.LocationService.ApiSecret,
 	)
 
 	// TODO(taekyeom) Replace mock to real one
 	payplePaymentService := service.NewPayplePaymentService(
-		config.PaymentService.Endpoint,
-		config.PaymentService.RefererDomain,
-		config.PaymentService.ApiKey,
-		config.PaymentService.ApiSecret,
+		serverConfig.PaymentService.Endpoint,
+		serverConfig.PaymentService.RefererDomain,
+		serverConfig.PaymentService.ApiKey,
+		serverConfig.PaymentService.ApiSecret,
 	)
 
 	var settlementAccountService service.SettlementAccountService
-	switch config.SettlementAccountService.Type {
+	switch serverConfig.SettlementAccountService.Type {
 	case "mock":
 		settlementAccountService = service.NewMockSettlementAccountService(
-			config.SettlementAccountService.Endpoint,
-			config.SettlementAccountService.ApiKey,
-			config.SettlementAccountService.ApiSecret,
-			config.SettlementAccountService.WebhookUrl,
+			serverConfig.SettlementAccountService.Endpoint,
+			serverConfig.SettlementAccountService.ApiKey,
+			serverConfig.SettlementAccountService.ApiSecret,
+			serverConfig.SettlementAccountService.WebhookUrl,
 		)
 	case "payple":
 		settlementAccountService = service.NewPaypleSettlemtnAccountService(
-			config.SettlementAccountService.Endpoint,
-			config.SettlementAccountService.ApiKey,
-			config.SettlementAccountService.ApiSecret,
+			serverConfig.SettlementAccountService.Endpoint,
+			serverConfig.SettlementAccountService.ApiKey,
+			serverConfig.SettlementAccountService.ApiSecret,
 		)
 	default:
-		logger.Error(fmt.Sprintf("invalid settlement account service type '%s'", config.SettlementAccountService.Type))
+		logger.Error(fmt.Sprintf("invalid settlement account service type '%s'", serverConfig.SettlementAccountService.Type))
 		os.Exit(1)
 	}
 
-	eventStreamAntWorkerPool, err := ants.NewPool(config.EventStream.EventStreamWorkerPool.PoolSize,
-		ants.WithPreAlloc(config.EventStream.EventStreamWorkerPool.PreAlloc),
+	eventStreamAntWorkerPool, err := ants.NewPool(serverConfig.EventStream.EventStreamWorkerPool.PoolSize,
+		ants.WithPreAlloc(serverConfig.EventStream.EventStreamWorkerPool.PreAlloc),
 	)
 	if err != nil {
 		logger.Error("failed to instantiate event stream ant worker pool", zap.Error(err))
@@ -185,19 +189,19 @@ func main() {
 		os.Exit(1)
 	}
 	firebasepub := firebasepubsub.OpenFCMTopic(ctx, messagingClient, &firebasepubsub.TopicOptions{
-		DryRun: config.Firebase.DryRun,
+		DryRun: serverConfig.Firebase.DryRun,
 	})
 	notificationService := service.NewFirebaseNotificationService(firebasepub)
 
 	sqsClient := sqs.NewFromConfig(awsconf)
-	eventSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, config.EventStream.EventTopic.Uri, &awssnssqs.SubscriptionOptions{
+	eventSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, serverConfig.EventStream.EventTopic.Uri, &awssnssqs.SubscriptionOptions{
 		WaitTime: time.Second,
 		Raw:      true,
 	})
 	eventSubscriberService := service.NewSqsSubService(eventSubscriber)
 	eventSubsriberStreamService := service.NewEventSubscriptionStreamService(eventSubscriberService, eventStreamWorkerPool)
 
-	eventPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, config.EventStream.EventTopic.Uri, &awssnssqs.TopicOptions{
+	eventPublisher := awssnssqs.OpenSQSTopicV2(ctx, sqsClient, serverConfig.EventStream.EventTopic.Uri, &awssnssqs.TopicOptions{
 		BodyBase64Encoding: awssnssqs.Never,
 	})
 	eventPublisherService := service.NewSqsPubService(eventPublisher)
@@ -206,15 +210,15 @@ func main() {
 	presignedClient := s3.NewPresignClient(s3Client)
 	s3ImagePresignedUrlService := service.NewS3ImagePresignedUrlService(
 		presignedClient,
-		config.ImageUrlService.Timeout,
-		config.ImageUrlService.Bucket,
-		config.ImageUrlService.BasePath,
+		serverConfig.ImageUrlService.Timeout,
+		serverConfig.ImageUrlService.Bucket,
+		serverConfig.ImageUrlService.BasePath,
 	)
 
 	// TODO(taekyeom) unify cache interface regardless of its method
 	downloadImageUrlRistrettoCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: int64(10 * config.ImageUrlService.MaxCacheSizeEntires),
-		MaxCost:     int64(config.ImageUrlService.MaxCacheSizeBytes),
+		NumCounters: int64(10 * serverConfig.ImageUrlService.MaxCacheSizeEntires),
+		MaxCost:     int64(serverConfig.ImageUrlService.MaxCacheSizeBytes),
 		BufferItems: 64,
 	})
 	if err != nil {
@@ -222,13 +226,13 @@ func main() {
 		os.Exit(1)
 	}
 	downloadImageUrlCache := store.NewRistretto(downloadImageUrlRistrettoCache,
-		store.WithExpiration(config.ImageUrlService.Timeout),
+		store.WithExpiration(serverConfig.ImageUrlService.Timeout),
 	)
 	downloadImageUrlCacheManager := cache.New[string](downloadImageUrlCache)
 
 	uploadImageUrlRistrettoCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: int64(10 * config.ImageUrlService.MaxCacheSizeEntires),
-		MaxCost:     int64(config.ImageUrlService.MaxCacheSizeBytes),
+		NumCounters: int64(10 * serverConfig.ImageUrlService.MaxCacheSizeEntires),
+		MaxCost:     int64(serverConfig.ImageUrlService.MaxCacheSizeBytes),
 		BufferItems: 64,
 	})
 	if err != nil {
@@ -236,7 +240,7 @@ func main() {
 		os.Exit(1)
 	}
 	uploadImageUrlCache := store.NewRistretto(uploadImageUrlRistrettoCache,
-		store.WithExpiration(config.ImageUrlService.Timeout),
+		store.WithExpiration(serverConfig.ImageUrlService.Timeout),
 	)
 	uploadImageUrlCacheManager := cache.New[string](uploadImageUrlCache)
 
@@ -292,9 +296,9 @@ func main() {
 		outbox.WithTransactor(transactor),
 		outbox.WithEventRepository(eventRepository),
 		outbox.WithEventPublishService(eventPublisherService),
-		outbox.WithTargetEventUriPrefix(config.EventStream.EventOutbox.EventUriPrefix),
-		outbox.WithPollInterval(config.EventStream.EventOutbox.PollInterval),
-		outbox.WithMaxMessages(config.EventStream.EventOutbox.MaxMessages),
+		outbox.WithTargetEventUriPrefix(serverConfig.EventStream.EventOutbox.EventUriPrefix),
+		outbox.WithPollInterval(serverConfig.EventStream.EventOutbox.PollInterval),
+		outbox.WithMaxMessages(serverConfig.EventStream.EventOutbox.MaxMessages),
 	)
 	if err != nil {
 		logger.Error("failed to setup outbox app", zap.Error(err))
@@ -390,13 +394,13 @@ func main() {
 
 	driverSessionMiddleware := driverserver.NewSessionMiddleware(driverSessionApp)
 
-	backofficeSessionMiddleware := backofficeserver.NewSessionMiddleware(config.Backoffice.Secret)
+	backofficeSessionMiddleware := backofficeserver.NewSessionMiddleware(serverConfig.Backoffice.Secret)
 
 	// Init server extensions
 	userServerPaypleExtension, err := userpaypleextension.NewPaypleExtension(
 		userpaypleextension.WithPayplePaymentApp(userApp),
-		userpaypleextension.WithDomain(config.PaymentService.RefererDomain),
-		userpaypleextension.WithEnv(config.Env),
+		userpaypleextension.WithDomain(serverConfig.PaymentService.RefererDomain),
+		userpaypleextension.WithEnv(serverConfig.Env),
 	)
 	if err != nil {
 		logger.Error("failed to setup user payple extension", zap.Error(err))

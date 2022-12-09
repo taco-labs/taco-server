@@ -2,12 +2,13 @@ package analytics
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
+var loggerSync sync.Once = sync.Once{}
 var logger *zap.Logger
 
 type LogType string
@@ -52,8 +53,12 @@ func WriteAnalyticsLog(ctx context.Context, eventTime time.Time, logType LogType
 	)
 }
 
-func init() {
-	logger, _ = zap.NewProduction(
-		zap.IncreaseLevel(zapcore.InfoLevel),
-	)
+func InitLogger(env string) {
+	loggerSync.Do(func() {
+		fields := []zap.Field{zap.String("kind", "analytics"), zap.String("env", env)}
+		logger, _ = zap.NewProduction(
+			zap.Fields(fields...),
+			zap.IncreaseLevel(zap.InfoLevel),
+		)
+	})
 }
