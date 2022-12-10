@@ -353,6 +353,17 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 				entity.DriverTaxiCallContext{},
 				recieveTime,
 			))
+
+			driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, taxiCallRequest.DriverId.String)
+			if err != nil {
+				return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: error while get taxi call context: %w", taxiCallRequest.Id, err)
+			}
+
+			driverTaxiCallContext.CanReceive = true
+			driverTaxiCallContext.RejectedLastRequestTicket = true
+			if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
+				return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: error while upsert taxi call context: %w", taxiCallRequest.Id, err)
+			}
 		}
 
 		if taxiCallRequest.CancelPaneltyPrice > 0 {
@@ -362,7 +373,7 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 				taxiCallRequest.Id,
 				"타코 택시 취소 수수료",
 				taxiCallRequest.DriverId.String,
-				taxiCallRequest.AdditionalPrice,
+				taxiCallRequest.CancelPaneltyPrice,
 				taxiCallRequest.DriverSettlementCancelPaneltyPrice(),
 				false,
 			))
