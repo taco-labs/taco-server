@@ -158,6 +158,62 @@ func (t taxicallApp) LatestDriverTaxiCallRequest(ctx context.Context, driverId s
 	return latestTaxiCallRequest, nil
 }
 
+// TODO (taekyeom) refactor response
+func (t taxicallApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (value.DriverLatestTaxiCallTicket, error) {
+	var err error
+
+	var driverTaxiCallContext entity.DriverTaxiCallContext
+	var taxiCallTicket entity.TaxiCallTicket
+	var taxiCallRequest entity.TaxiCallRequest
+
+	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverTaxiCallContext, err = t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get driver taxi call context: %w", err)
+		}
+
+		taxiCallTicket, err = t.repository.taxiCallRequest.GetTicketById(ctx, i, driverTaxiCallContext.LastReceivedRequestTicket)
+		if err != nil {
+			return fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get latest taxi call ticket: %w", err)
+		}
+
+		taxiCallRequest, err = t.repository.taxiCallRequest.GetById(ctx, i, taxiCallTicket.TaxiCallRequestId)
+		if err != nil {
+			return fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get latest taxi call request: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return value.DriverLatestTaxiCallTicket{}, err
+	}
+
+	tags, err := slices.MapErr(taxiCallRequest.TagIds, value.GetTagById)
+	if err != nil {
+		return value.DriverLatestTaxiCallTicket{}, fmt.Errorf("app.driver.LatestTaxiCallTicket: invalid tag id: %w", err)
+	}
+
+	routeBetweenDeparture, err := t.service.route.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
+	if err != nil {
+		return value.DriverLatestTaxiCallTicket{}, fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get route between driver location and departure: %w", err)
+	}
+
+	return value.DriverLatestTaxiCallTicket{
+		TaxiCallRequestId: taxiCallRequest.Id,
+		TaxiCallState:     taxiCallRequest.CurrentState,
+		TaxiCallTicketId:  taxiCallTicket.TicketId,
+		TicketAttempt:     taxiCallTicket.Attempt,
+		RequestBasePrice:  taxiCallRequest.RequestBasePrice,
+		AdditionalPrice:   taxiCallTicket.DriverAdditionalPrice(),
+		ToDeparture:       routeBetweenDeparture,
+		ToArrival:         taxiCallRequest.ToArrivalRoute,
+		Tags:              tags,
+		UserTag:           taxiCallRequest.UserTag,
+		UpdateTime:        taxiCallRequest.UpdateTime,
+	}, nil
+}
+
 // TODO (taekyeom) Remove it later!!
 func (t taxicallApp) ForceAcceptTaxiCallRequest(ctx context.Context, driverId, callRequestId string) error {
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {

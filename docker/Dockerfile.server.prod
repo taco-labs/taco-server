@@ -7,6 +7,4 @@ WORKDIR /
 COPY --from=builder /go/src/github.com/taco-labs/taco/main /main
 COPY --from=builder /go/src/github.com/taco-labs/taco/go/templates /go/templates
 
-COPY ./docker/entrypoint.server.sh /entrypoint.sh
-
-ENTRYPOINT ["/main"]
+CMD ["/main"]

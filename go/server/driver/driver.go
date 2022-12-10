@@ -51,6 +51,7 @@ func (d *driverServer) initController() error {
 	driverGroup.POST("/:driverId/settlement_request", d.RequestDriverSettlementTransfer)
 	driverGroup.GET("/:driverId/taxicall_latest", d.GetLatestTaxiCallRequest)
 	driverGroup.GET("/:driverId/taxicall", d.ListTaxiCallRequest)
+	driverGroup.GET("/:driverId/ticket_latest", d.LatestTaxiCallTicket)
 
 	taxiCallGroup := d.echo.Group("/taxicall")
 	taxiCallGroup.PUT("/ticket/:ticketId", d.AcceptTaxiCallRequest)

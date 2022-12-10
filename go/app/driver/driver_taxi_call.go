@@ -5,6 +5,7 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/utils"
 )
 
@@ -46,4 +47,8 @@ func (d driverApp) DoneTaxiCallRequest(ctx context.Context, req request.DoneTaxi
 func (d driverApp) CancelTaxiCallRequest(ctx context.Context, req request.CancelTaxiCallRequest) error {
 	driverId := utils.GetDriverId(ctx)
 	return d.service.taxiCall.DriverCancelTaxiCallRequest(ctx, driverId, req)
+}
+
+func (d driverApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (value.DriverLatestTaxiCallTicket, error) {
+	return d.service.taxiCall.DriverLatestTaxiCallTicket(ctx, driverId)
 }

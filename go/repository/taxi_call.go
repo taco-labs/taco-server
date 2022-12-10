@@ -78,7 +78,9 @@ func (t taxiCallRepository) GetTicketById(ctx context.Context, db bun.IDB, ticke
 	resp := entity.TaxiCallTicket{}
 
 	err := db.NewSelect().Model(&resp).
+		Order("attempt DESC").
 		Where("ticket_id = ?", ticketId).
+		Limit(1).
 		Scan(ctx)
 
 	if errors.Is(sql.ErrNoRows, err) {
