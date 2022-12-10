@@ -30,6 +30,7 @@ type UserTaxiCallRequestResponse struct {
 	RequestMinAdditionalPrice int                    `json:"requestMinAdditionalPrice"`
 	RequestMaxAdditionalPrice int                    `json:"requestMaxAdditionalPrice"`
 	BasePrice                 int                    `json:"basePrice"`
+	CancelPenaltyPrice        int                    `json:"cancelPenaltyPrice"`
 	TollFee                   int                    `json:"tollFee"`
 	AdditionalPrice           int                    `json:"additionalPrice"`
 	CurrentState              string                 `json:"currentState"`
@@ -72,6 +73,7 @@ type DriverTaxiCallRequestResponse struct {
 	RequestMinAdditionalPrice int                    `json:"requestMinAdditionalPrice"`
 	RequestMaxAdditionalPrice int                    `json:"requestMaxAdditionalPrice"`
 	BasePrice                 int                    `json:"basePrice"`
+	CancelPenaltyPrice        int                    `json:"cancelPenaltyPrice"`
 	TollFee                   int                    `json:"tollFee"`
 	AdditionalPrice           int                    `json:"additionalPrice"`
 	CurrentState              string                 `json:"currentState"`
@@ -104,6 +106,7 @@ func UserTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) UserT
 		BasePrice:                 taxiCallRequest.BasePrice,
 		TollFee:                   taxiCallRequest.TollFee,
 		AdditionalPrice:           taxiCallRequest.UserAdditionalPrice(),
+		CancelPenaltyPrice:        taxiCallRequest.CancelPenaltyPrice,
 		CurrentState:              string(taxiCallRequest.CurrentState),
 		CreateTime:                taxiCallRequest.CreateTime,
 		UpdateTime:                taxiCallRequest.UpdateTime,
@@ -134,6 +137,7 @@ func DriverTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) Dri
 		RequestMinAdditionalPrice: taxiCallRequest.RequestMinAdditionalPrice,
 		RequestMaxAdditionalPrice: taxiCallRequest.RequestMaxAdditionalPrice,
 		BasePrice:                 taxiCallRequest.BasePrice,
+		CancelPenaltyPrice:        taxiCallRequest.DriverSettlementCancelPenaltyPrice(),
 		TollFee:                   taxiCallRequest.TollFee,
 		AdditionalPrice:           taxiCallRequest.DriverSettlementAdditonalPrice(),
 		CurrentState:              string(taxiCallRequest.CurrentState),
