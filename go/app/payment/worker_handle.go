@@ -40,29 +40,7 @@ func (p paymentApp) handleTransactionRequest(ctx context.Context, event entity.E
 		}
 		userPayment = up
 
-		return nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	paymentTransaction := value.Payment{
-		OrderId:   cmd.OrderId,
-		Amount:    cmd.Amount,
-		OrderName: cmd.OrderName,
-	}
-
-	_, err = p.service.payment.Transaction(ctx, userPayment, paymentTransaction)
-	if errors.Is(err, value.ErrPaymentDuplicatedOrder) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("app.payment.handleTransactionRequest: error while execute payment trasaction: %w", err)
-	}
-
-	err = p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		transactionRequest := entity.UserPaymentTransactionRequest{
+		transactionRequest = entity.UserPaymentTransactionRequest{
 			OrderId:            cmd.OrderId,
 			UserId:             cmd.UserId,
 			PaymentSummary:     userPayment.ToSummary(),
@@ -83,6 +61,20 @@ func (p paymentApp) handleTransactionRequest(ctx context.Context, event entity.E
 
 	if err != nil {
 		return err
+	}
+
+	paymentTransaction := value.Payment{
+		OrderId:   cmd.OrderId,
+		Amount:    cmd.Amount,
+		OrderName: cmd.OrderName,
+	}
+
+	_, err = p.service.payment.Transaction(ctx, userPayment, paymentTransaction)
+	if errors.Is(err, value.ErrPaymentDuplicatedOrder) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("app.payment.handleTransactionRequest: error while execute payment trasaction: %w", err)
 	}
 
 	return nil

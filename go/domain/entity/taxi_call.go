@@ -52,7 +52,7 @@ type TaxiCallRequest struct {
 	RequestMaxAdditionalPrice int                  `bun:"request_max_additional_price"`
 	BasePrice                 int                  `bun:"base_price"`
 	TollFee                   int                  `bun:"toll_fee"`
-	CancelPaneltyPrice        int                  `bun:"cancel_panelty_price"`
+	CancelPenaltyPrice        int                  `bun:"cancel_penalty_price"`
 	AdditionalPrice           int                  `bun:"additional_price"`
 	CurrentState              enum.TaxiCallState   `bun:"taxi_call_state"`
 	ToDepartureRoute          value.Route          `bun:"to_departure_route"`
@@ -73,8 +73,8 @@ func (t TaxiCallRequest) DriverSettlementAdditonalPrice() int {
 	return CalculateDriverAdditionalPrice(t.AdditionalPrice)
 }
 
-func (t TaxiCallRequest) DriverSettlementCancelPaneltyPrice() int {
-	return CalculateDriverAdditionalPrice(t.CancelPaneltyPrice)
+func (t TaxiCallRequest) DriverSettlementCancelPenaltyPrice() int {
+	return CalculateDriverAdditionalPrice(t.CancelPenaltyPrice)
 }
 
 // TODO (taekyeom) paramterize it

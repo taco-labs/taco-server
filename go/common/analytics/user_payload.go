@@ -35,7 +35,7 @@ type UserTaxiCallRequestFailedPayload struct {
 type UserCancelTaxiCallRequestPayload struct {
 	UserId        string
 	Id            string
-	CancelPanelty int
+	CancelPenalty int
 	CreateTime    time.Time
 }
 
