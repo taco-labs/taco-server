@@ -40,7 +40,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		return value.Notification{}, err
 	}
 
-	messageTitle := fmt.Sprintf("배차 완료 (약 %d분)", int(cmd.ToArrivalRoute.ETA.Minutes()))
+	messageTitle := fmt.Sprintf("배차 완료. 택시 기사님이 이동중입니다.")
 	messageBody := fmt.Sprintf("%s (추가 요금 %d)", cmd.Departure.Address.AddressName, cmd.AdditionalPrice)
 
 	data := map[string]string{
@@ -51,6 +51,12 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		"driverCarNumber":     driver.CarNumber,
 		"requestBasePrice":    fmt.Sprint(cmd.RequestBasePrice),
 		"additionalPrice":     fmt.Sprint(cmd.AdditionalPrice),
+		"driverLatitude":      fmt.Sprint(cmd.DriverLocation.Latitude),
+		"driverLongitude":     fmt.Sprint(cmd.DriverLocation.Longitude),
+		"departureLatitude":   fmt.Sprint(cmd.Departure.Point.Latitude),
+		"departureLongitude":  fmt.Sprint(cmd.Departure.Point.Longitude),
+		"arrivalLatitude":     fmt.Sprint(cmd.Arrival.Point.Latitude),
+		"arrivalLongitude":    fmt.Sprint(cmd.Arrival.Point.Longitude),
 		"toDepartureDistance": fmt.Sprint(cmd.ToDepartureRoute.Distance),
 		"toDepartureETA":      fmt.Sprint(cmd.ToDepartureRoute.ETA.Nanoseconds()),
 		"toArrivalDistance":   fmt.Sprint(cmd.ToArrivalRoute.Distance),
