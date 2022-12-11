@@ -53,7 +53,7 @@ type driverTaxiCallInterface interface {
 	DriverToArrival(ctx context.Context, driverId string, callRequestId string) error
 	DoneTaxiCallRequest(ctx context.Context, driverId string, req request.DoneTaxiCallRequest) error
 	DriverCancelTaxiCallRequest(context.Context, string, request.CancelTaxiCallRequest) error
-	DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (value.DriverLatestTaxiCallTicket, error)
+	DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (entity.DriverLatestTaxiCallRequestTicket, error)
 }
 
 type driverSettlementInterface interface {

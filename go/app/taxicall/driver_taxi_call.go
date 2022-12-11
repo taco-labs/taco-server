@@ -159,59 +159,64 @@ func (t taxicallApp) LatestDriverTaxiCallRequest(ctx context.Context, driverId s
 }
 
 // TODO (taekyeom) refactor response
-func (t taxicallApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (value.DriverLatestTaxiCallTicket, error) {
+func (t taxicallApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (entity.DriverLatestTaxiCallRequestTicket, error) {
+	var latestTaxiCallRequest entity.DriverLatestTaxiCallRequestTicket
 	var err error
 
-	var driverTaxiCallContext entity.DriverTaxiCallContext
-	var taxiCallTicket entity.TaxiCallTicket
-	var taxiCallRequest entity.TaxiCallRequest
-
 	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		driverTaxiCallContext, err = t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
+		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
 		if err != nil {
 			return fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get driver taxi call context: %w", err)
 		}
 
-		taxiCallTicket, err = t.repository.taxiCallRequest.GetTicketById(ctx, i, driverTaxiCallContext.LastReceivedRequestTicket)
+		taxiCallTicket, err := t.repository.taxiCallRequest.GetTicketById(ctx, i, driverTaxiCallContext.LastReceivedRequestTicket)
 		if err != nil {
 			return fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get latest taxi call ticket: %w", err)
 		}
 
-		taxiCallRequest, err = t.repository.taxiCallRequest.GetById(ctx, i, taxiCallTicket.TaxiCallRequestId)
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, taxiCallTicket.TaxiCallRequestId)
 		if err != nil {
 			return fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get latest taxi call request: %w", err)
+		}
+
+		tags, err := slices.MapErr(taxiCallRequest.TagIds, value.GetTagById)
+		if err != nil {
+			return fmt.Errorf("app.driver.LatestTaxiCallTicket: invalid tag id: %w", err)
+		}
+		taxiCallRequest.Tags = tags
+
+		user, err := t.service.userGetter.GetUser(ctx, taxiCallRequest.UserId)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.LatestTaxiCallTicket: error while get user: %w", err)
+		}
+
+		routeBetweenDeparture, err := t.service.route.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
+		if err != nil {
+			return fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get route between driver location and departure: %w", err)
+		}
+
+		taxiCallRequest.AdditionalPrice = taxiCallTicket.AdditionalPrice
+		taxiCallRequest.ToDepartureRoute = routeBetweenDeparture
+		taxiCallRequest.UpdateTime = taxiCallTicket.CreateTime
+		taxiCallRequest.DriverId.String = driverId
+		taxiCallRequest.DriverId.Valid = true
+
+		latestTaxiCallRequest = entity.DriverLatestTaxiCallRequestTicket{
+			DriverLatestTaxiCallRequest: entity.DriverLatestTaxiCallRequest{
+				TaxiCallRequest: taxiCallRequest,
+				UserPhone:       user.Phone,
+			},
+			Attempt: taxiCallTicket.Attempt,
 		}
 
 		return nil
 	})
 
 	if err != nil {
-		return value.DriverLatestTaxiCallTicket{}, err
+		return entity.DriverLatestTaxiCallRequestTicket{}, err
 	}
 
-	tags, err := slices.MapErr(taxiCallRequest.TagIds, value.GetTagById)
-	if err != nil {
-		return value.DriverLatestTaxiCallTicket{}, fmt.Errorf("app.driver.LatestTaxiCallTicket: invalid tag id: %w", err)
-	}
-
-	routeBetweenDeparture, err := t.service.route.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
-	if err != nil {
-		return value.DriverLatestTaxiCallTicket{}, fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get route between driver location and departure: %w", err)
-	}
-
-	return value.DriverLatestTaxiCallTicket{
-		TaxiCallRequestId: taxiCallRequest.Id,
-		TaxiCallState:     taxiCallRequest.CurrentState,
-		TaxiCallTicketId:  taxiCallTicket.TicketId,
-		TicketAttempt:     taxiCallTicket.Attempt,
-		RequestBasePrice:  taxiCallRequest.RequestBasePrice,
-		AdditionalPrice:   taxiCallTicket.DriverAdditionalPrice(),
-		ToDeparture:       routeBetweenDeparture,
-		ToArrival:         taxiCallRequest.ToArrivalRoute,
-		Tags:              tags,
-		UserTag:           taxiCallRequest.UserTag,
-		UpdateTime:        taxiCallRequest.UpdateTime,
-	}, nil
+	return latestTaxiCallRequest, nil
 }
 
 // TODO (taekyeom) Remove it later!!

@@ -57,28 +57,27 @@ func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummar
 }
 
 type DriverTaxiCallRequestResponse struct {
-	Dryrun                    bool                   `json:"dryrun"`
-	ToArrivalDistance         int                    `json:"toArrivalDistance"`
-	ToArrivalETA              time.Duration          `json:"toArrivalEta"`
-	ToArrivalPath             []value.Point          `json:"toArrivalPath"`
-	Id                        string                 `json:"id"`
-	UserId                    string                 `json:"userId"`
-	DriverId                  string                 `json:"driverId"`
-	Departure                 value.Location         `json:"departure"`
-	Arrival                   value.Location         `json:"arrival"`
-	Tags                      []string               `json:"tags"`
-	UserTag                   string                 `json:"userTag"`
-	Payment                   PaymentSummaryResponse `json:"payment"`
-	RequestBasePrice          int                    `json:"requestBasePrice"`
-	RequestMinAdditionalPrice int                    `json:"requestMinAdditionalPrice"`
-	RequestMaxAdditionalPrice int                    `json:"requestMaxAdditionalPrice"`
-	BasePrice                 int                    `json:"basePrice"`
-	CancelPenaltyPrice        int                    `json:"cancelPenaltyPrice"`
-	TollFee                   int                    `json:"tollFee"`
-	AdditionalPrice           int                    `json:"additionalPrice"`
-	CurrentState              string                 `json:"currentState"`
-	CreateTime                time.Time              `json:"createTime"`
-	UpdateTime                time.Time              `json:"updateTime"`
+	Dryrun                    bool           `json:"dryrun"`
+	ToArrivalDistance         int            `json:"toArrivalDistance"`
+	ToArrivalETA              time.Duration  `json:"toArrivalEta"`
+	ToArrivalPath             []value.Point  `json:"toArrivalPath"`
+	Id                        string         `json:"id"`
+	UserId                    string         `json:"userId"`
+	DriverId                  string         `json:"driverId"`
+	Departure                 value.Location `json:"departure"`
+	Arrival                   value.Location `json:"arrival"`
+	Tags                      []string       `json:"tags"`
+	UserTag                   string         `json:"userTag"`
+	RequestBasePrice          int            `json:"requestBasePrice"`
+	RequestMinAdditionalPrice int            `json:"requestMinAdditionalPrice"`
+	RequestMaxAdditionalPrice int            `json:"requestMaxAdditionalPrice"`
+	BasePrice                 int            `json:"basePrice"`
+	CancelPenaltyPrice        int            `json:"cancelPenaltyPrice"`
+	TollFee                   int            `json:"tollFee"`
+	AdditionalPrice           int            `json:"additionalPrice"`
+	CurrentState              string         `json:"currentState"`
+	CreateTime                time.Time      `json:"createTime"`
+	UpdateTime                time.Time      `json:"updateTime"`
 }
 
 func UserTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) UserTaxiCallRequestResponse {
@@ -183,5 +182,17 @@ func DriverLatestTaxiCallRequestToResponse(driverLatestTaxiCallRequest entity.Dr
 		ToDepartureDistance:           driverLatestTaxiCallRequest.ToDepartureRoute.Distance,
 		ToDepartureETA:                driverLatestTaxiCallRequest.ToDepartureRoute.ETA,
 		ToDeparturePath:               append([]value.Point{}, driverLatestTaxiCallRequest.ToDepartureRoute.Path...),
+	}
+}
+
+type DriverLatestTaxiCallRequestTicketResponse struct {
+	DriverLatestTaxiCallRequestResponse
+	Attempt int `json:"attempt"`
+}
+
+func DriverLatestTaxiCallRequestTicketToResponse(driverLatestTaxiCallRequestTicket entity.DriverLatestTaxiCallRequestTicket) DriverLatestTaxiCallRequestTicketResponse {
+	return DriverLatestTaxiCallRequestTicketResponse{
+		DriverLatestTaxiCallRequestResponse: DriverLatestTaxiCallRequestToResponse(driverLatestTaxiCallRequestTicket.DriverLatestTaxiCallRequest),
+		Attempt:                             driverLatestTaxiCallRequestTicket.Attempt,
 	}
 }

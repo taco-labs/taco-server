@@ -36,7 +36,7 @@ type driverApp interface {
 	CancelTaxiCallRequest(context.Context, request.CancelTaxiCallRequest) error
 	DriverToArrival(context.Context, string) error
 	DoneTaxiCallRequest(context.Context, request.DoneTaxiCallRequest) error
-	DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (value.DriverLatestTaxiCallTicket, error)
+	DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (entity.DriverLatestTaxiCallRequestTicket, error)
 
 	GetExpectedDriverSettlement(context.Context, string) (entity.DriverTotalSettlement, error)
 	ListDriverSettlementHistory(context.Context, request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error)
@@ -380,10 +380,12 @@ func (d driverServer) LatestTaxiCallTicket(e echo.Context) error {
 
 	driverId := e.Param("driverId")
 
-	resp, err := d.app.driver.DriverLatestTaxiCallTicket(ctx, driverId)
+	latestTicket, err := d.app.driver.DriverLatestTaxiCallTicket(ctx, driverId)
 	if err != nil {
 		return server.ToResponse(e, err)
 	}
+
+	resp := response.DriverLatestTaxiCallRequestTicketToResponse(latestTicket)
 
 	return e.JSON(http.StatusOK, resp)
 }
