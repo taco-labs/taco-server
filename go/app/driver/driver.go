@@ -92,7 +92,7 @@ func (d driverApp) SmsVerificationRequest(ctx context.Context, req request.SmsVe
 			return fmt.Errorf("app.Driver.SmsVerificationRequest: error while create sms verification:\n%w", err)
 		}
 
-		if err := d.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerificationCode); err != nil {
+		if err := d.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerficationMessage()); err != nil {
 			return fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
 		}
 		return nil

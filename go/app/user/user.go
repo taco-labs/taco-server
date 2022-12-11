@@ -78,7 +78,7 @@ func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVeri
 			return fmt.Errorf("app.User.SmsVerificationRequest: error while create sms verification:\n%w", err)
 		}
 
-		if err := u.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerificationCode); err != nil {
+		if err := u.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerficationMessage()); err != nil {
 			return fmt.Errorf("app.User.SmsVerificationRequest: error while send sms message:\n%w", err)
 		}
 		return nil

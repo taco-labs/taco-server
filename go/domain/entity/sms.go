@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -20,6 +21,10 @@ type SmsVerification struct {
 	Verified         bool      `bun:"verified"`
 	Phone            string    `bun:"phone"`
 	ExpireTime       time.Time `bun:"expire_time"`
+}
+
+func (s SmsVerification) VerficationMessage() string {
+	return fmt.Sprintf("[타코] 인증 코드 [%s]를 입력해주세요.", s.VerificationCode)
 }
 
 func NewSmsVerification(id string, currentTime time.Time, phone string) SmsVerification {
