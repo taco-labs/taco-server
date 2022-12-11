@@ -187,12 +187,14 @@ func DriverLatestTaxiCallRequestToResponse(driverLatestTaxiCallRequest entity.Dr
 
 type DriverLatestTaxiCallRequestTicketResponse struct {
 	DriverLatestTaxiCallRequestResponse
-	Attempt int `json:"attempt"`
+	TaxiCallTicketId string `json:"taxiCallTicketId"`
+	Attempt          int    `json:"attempt"`
 }
 
 func DriverLatestTaxiCallRequestTicketToResponse(driverLatestTaxiCallRequestTicket entity.DriverLatestTaxiCallRequestTicket) DriverLatestTaxiCallRequestTicketResponse {
 	return DriverLatestTaxiCallRequestTicketResponse{
 		DriverLatestTaxiCallRequestResponse: DriverLatestTaxiCallRequestToResponse(driverLatestTaxiCallRequestTicket.DriverLatestTaxiCallRequest),
+		TaxiCallTicketId:                    driverLatestTaxiCallRequestTicket.TicketId,
 		Attempt:                             driverLatestTaxiCallRequestTicket.Attempt,
 	}
 }

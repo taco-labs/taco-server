@@ -28,7 +28,8 @@ type DriverLatestTaxiCallRequest struct {
 
 type DriverLatestTaxiCallRequestTicket struct {
 	DriverLatestTaxiCallRequest
-	Attempt int
+	TicketId string
+	Attempt  int
 }
 
 type UserLatestTaxiCallRequest struct {

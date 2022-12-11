@@ -206,7 +206,8 @@ func (t taxicallApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId st
 				TaxiCallRequest: taxiCallRequest,
 				UserPhone:       user.Phone,
 			},
-			Attempt: taxiCallTicket.Attempt,
+			TicketId: taxiCallTicket.TicketId,
+			Attempt:  taxiCallTicket.Attempt,
 		}
 
 		return nil
