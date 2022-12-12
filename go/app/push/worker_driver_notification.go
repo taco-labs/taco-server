@@ -33,8 +33,8 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		return value.Notification{}, err
 	}
 
-	messageTitle := fmt.Sprintf("배차 요청 (약 %d분)", int(routeBetweenDeparture.ETA.Minutes()))
-	messageBody := fmt.Sprintf("%s (추가 요금 %d)", cmd.Departure.Address.AddressName, cmd.AdditionalPrice)
+	messageTitle := fmt.Sprintf("배차 요청 %d타코 (탑승지 까지 약 %d분)", cmd.AdditionalPrice, int(routeBetweenDeparture.ETA.Minutes()))
+	messageBody := fmt.Sprintf("목적지: %s", cmd.Departure.Address.AddressName)
 
 	data := map[string]string{
 		"taxiCallRequestId":            cmd.TaxiCallRequestId,
