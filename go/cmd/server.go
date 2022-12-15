@@ -1,0 +1,438 @@
+package cmd
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"net/http"
+	"os"
+	"time"
+
+	firebase "firebase.google.com/go"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/dgraph-io/ristretto"
+	"github.com/eko/gocache/v3/cache"
+	"github.com/eko/gocache/v3/store"
+	"github.com/panjf2000/ants/v2"
+	"github.com/taco-labs/taco/go/app"
+	"github.com/taco-labs/taco/go/app/driver"
+	"github.com/taco-labs/taco/go/app/driversession"
+	"github.com/taco-labs/taco/go/app/driversettlement"
+	"github.com/taco-labs/taco/go/app/payment"
+	"github.com/taco-labs/taco/go/app/push"
+	"github.com/taco-labs/taco/go/app/taxicall"
+	"github.com/taco-labs/taco/go/app/user"
+	"github.com/taco-labs/taco/go/app/usersession"
+	"github.com/taco-labs/taco/go/common/analytics"
+	"github.com/taco-labs/taco/go/config"
+	"github.com/taco-labs/taco/go/repository"
+	"github.com/taco-labs/taco/go/server"
+	backofficeserver "github.com/taco-labs/taco/go/server/backoffice"
+	driverserver "github.com/taco-labs/taco/go/server/driver"
+	driverpaypleextension "github.com/taco-labs/taco/go/server/driver/extensions/payple"
+	userserver "github.com/taco-labs/taco/go/server/user"
+	userpaypleextension "github.com/taco-labs/taco/go/server/user/extensions/payple"
+	"github.com/taco-labs/taco/go/service"
+	"github.com/taco-labs/taco/go/utils"
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/pgdialect"
+	"github.com/uptrace/bun/driver/pgdriver"
+	"github.com/uptrace/bun/extra/bundebug"
+	"go.uber.org/zap"
+	"gocloud.dev/pubsub/awssnssqs"
+	firebasepubsub "gocloud.dev/pubsub/firebase"
+)
+
+func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *zap.Logger, quit <-chan (os.Signal)) error {
+	ctx = utils.SetLogger(ctx, logger)
+
+	// Initialize analytics logger
+	analytics.InitLogger(serverConfig.Env)
+
+	// Initialize aws sdk v2 session
+	awsconf, err := awsconfig.LoadDefaultConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("Failed to load default aws config: %w", err)
+	}
+
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&search_path=%s",
+		serverConfig.Database.UserName,
+		serverConfig.Database.Password,
+		serverConfig.Database.Host,
+		serverConfig.Database.Port,
+		serverConfig.Database.Database,
+		serverConfig.Database.Schema,
+	)
+
+	// TODO (taekyeom) connection pool parameter?
+	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
+
+	db := bun.NewDB(sqldb, pgdialect.New())
+
+	if serverConfig.Log.Query {
+		hook := bundebug.NewQueryHook(bundebug.WithVerbose(false))
+		db.AddQueryHook(hook)
+	}
+
+	transactor := app.NewDefaultTranscator(db)
+
+	// Init repositories
+
+	smsVerificationRepository := repository.NewSmsVerificationRepository()
+
+	userRepository := repository.NewUserRepository()
+	userSessionRepository := repository.NewUserSessionRepository()
+	userPaymentRepository := repository.NewUserPaymentRepository()
+	referralRepository := repository.NewReferralRepository()
+
+	taxiCallRequestRepository := repository.NewTaxiCallRepository()
+
+	driverRepository := repository.NewDriverRepository()
+	driverLocationRepository := repository.NewDriverLocationRepository()
+	driverSettlementAccountRepository := repository.NewDriverSettlementAccountRepository()
+	driverSettlementRepository := repository.NewDriverSettlementRepository()
+	driverSessionRepository := repository.NewDriverSessionRepository()
+
+	eventRepository := repository.NewEventRepository()
+
+	pushTokenRepository := repository.NewPushTokenRepository()
+
+	// Init services
+	smsSenderService := service.NewCoolSmsSenderService(
+		serverConfig.SmsSender.Endpoint,
+		serverConfig.SmsSender.SenderPhone,
+		serverConfig.SmsSender.ApiKey,
+		serverConfig.SmsSender.ApiSecret,
+	)
+
+	mapRouteService := service.NewNaverMapsRouteService(
+		serverConfig.RouteService.Endpoint,
+		serverConfig.RouteService.ApiKey,
+		serverConfig.RouteService.ApiSecret,
+	)
+
+	locationService := service.NewKakaoLocationService(
+		serverConfig.LocationService.Endpoint,
+		serverConfig.LocationService.ApiSecret,
+	)
+
+	// TODO(taekyeom) Replace mock to real one
+	payplePaymentService := service.NewPayplePaymentService(
+		serverConfig.PaymentService.Endpoint,
+		serverConfig.PaymentService.RefererDomain,
+		serverConfig.PaymentService.ApiKey,
+		serverConfig.PaymentService.ApiSecret,
+	)
+
+	var settlementAccountService service.SettlementAccountService
+	switch serverConfig.SettlementAccountService.Type {
+	case "mock":
+		settlementAccountService = service.NewMockSettlementAccountService(
+			serverConfig.SettlementAccountService.Endpoint,
+			serverConfig.SettlementAccountService.ApiKey,
+			serverConfig.SettlementAccountService.ApiSecret,
+			serverConfig.SettlementAccountService.WebhookUrl,
+		)
+	case "payple":
+		settlementAccountService = service.NewPaypleSettlemtnAccountService(
+			serverConfig.SettlementAccountService.Endpoint,
+			serverConfig.SettlementAccountService.ApiKey,
+			serverConfig.SettlementAccountService.ApiSecret,
+		)
+	default:
+		return fmt.Errorf(fmt.Sprintf("invalid settlement account service type '%s'", serverConfig.SettlementAccountService.Type))
+	}
+
+	eventStreamAntWorkerPool, err := ants.NewPool(serverConfig.EventStream.EventStreamWorkerPool.PoolSize,
+		ants.WithPreAlloc(serverConfig.EventStream.EventStreamWorkerPool.PreAlloc),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to instantiate event stream ant worker pool: %w", err)
+	}
+	eventStreamWorkerPool := service.NewAntWorkerPoolService(eventStreamAntWorkerPool)
+
+	firebaseApp, err := firebase.NewApp(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to instantiate firebase: %w", err)
+	}
+
+	messagingClient, err := firebaseApp.Messaging(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to instantiate firebase cloud messaging client: %w", err)
+	}
+	firebasepub := firebasepubsub.OpenFCMTopic(ctx, messagingClient, &firebasepubsub.TopicOptions{
+		DryRun: serverConfig.Firebase.DryRun,
+	})
+	notificationService := service.NewFirebaseNotificationService(firebasepub)
+
+	sqsClient := sqs.NewFromConfig(awsconf)
+	eventSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, serverConfig.EventStream.EventTopic.Uri, &awssnssqs.SubscriptionOptions{
+		WaitTime: time.Second,
+		Raw:      true,
+	})
+	eventSubscriberService := service.NewSqsSubService(eventSubscriber)
+	eventSubsriberStreamService := service.NewEventSubscriptionStreamService(eventSubscriberService, eventStreamWorkerPool)
+
+	s3Client := s3.NewFromConfig(awsconf)
+	presignedClient := s3.NewPresignClient(s3Client)
+	s3ImagePresignedUrlService := service.NewS3ImagePresignedUrlService(
+		presignedClient,
+		serverConfig.ImageUrlService.Timeout,
+		serverConfig.ImageUrlService.Bucket,
+		serverConfig.ImageUrlService.BasePath,
+	)
+
+	// TODO(taekyeom) unify cache interface regardless of its method
+	downloadImageUrlRistrettoCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: int64(10 * serverConfig.ImageUrlService.MaxCacheSizeEntires),
+		MaxCost:     int64(serverConfig.ImageUrlService.MaxCacheSizeBytes),
+		BufferItems: 64,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to setup download url ristretto cache: %w", err)
+	}
+	downloadImageUrlCache := store.NewRistretto(downloadImageUrlRistrettoCache,
+		store.WithExpiration(serverConfig.ImageUrlService.Timeout),
+	)
+	downloadImageUrlCacheManager := cache.New[string](downloadImageUrlCache)
+
+	uploadImageUrlRistrettoCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: int64(10 * serverConfig.ImageUrlService.MaxCacheSizeEntires),
+		MaxCost:     int64(serverConfig.ImageUrlService.MaxCacheSizeBytes),
+		BufferItems: 64,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to setup upload url ristretto cache: %w", err)
+	}
+	uploadImageUrlCache := store.NewRistretto(uploadImageUrlRistrettoCache,
+		store.WithExpiration(serverConfig.ImageUrlService.Timeout),
+	)
+	uploadImageUrlCacheManager := cache.New[string](uploadImageUrlCache)
+
+	cachedS3ImagePresignedUrlService := service.NewCachedUrlService(
+		downloadImageUrlCacheManager,
+		uploadImageUrlCacheManager,
+		s3ImagePresignedUrlService)
+
+	kmsClient := kms.NewFromConfig(awsconf)
+	kmsEncryptionService := service.NewAwsKMSEncryptionService(kmsClient, serverConfig.EncryptionService.KeyId)
+
+	// Init apps
+	userAppDelegator := user.NewUserAppDelegator()
+	driverAppDelegator := driver.NewDriverAppDelegator()
+
+	pushApp, err := push.NewPushApp(
+		push.WithTransactor(transactor),
+		push.WithRouteService(mapRouteService),
+		push.WithNotificationService(notificationService),
+		push.WithPushTokenRepository(pushTokenRepository),
+		push.WithUserGetterService(userAppDelegator),
+		push.WithDriverGetterService(driverAppDelegator),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup push app: %w", err)
+	}
+
+	paymentApp, err := payment.NewPaymentApp(
+		payment.WithTransactor(transactor),
+		payment.WithPaymentRepository(userPaymentRepository),
+		payment.WithEventRepository(eventRepository),
+		payment.WithPaymentService(payplePaymentService),
+		payment.WithReferralRepository(referralRepository),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup user payment app: %w", err)
+	}
+
+	taxicallApp, err := taxicall.NewTaxicallApp(
+		taxicall.WithTransactor(transactor),
+		taxicall.WithDriverLocationRepository(driverLocationRepository),
+		taxicall.WithTaxiCallRequestRepository(taxiCallRequestRepository),
+		taxicall.WithEventRepository(eventRepository),
+		taxicall.WithRouteServie(mapRouteService),
+		taxicall.WithLocationService(locationService),
+		taxicall.WithUserGetterService(userAppDelegator),
+		taxicall.WithDriverGetterService(driverAppDelegator),
+		taxicall.WithPaymentAppService(paymentApp),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup taxi call app: %w", err)
+	}
+
+	userSessionApp, err := usersession.NewUserSessionApp(
+		usersession.WithTransactor(transactor),
+		usersession.WithUserSessionRepository(userSessionRepository),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup user session app: %w", err)
+	}
+
+	driverSessionApp, err := driversession.NewDriverSessionApp(
+		driversession.WithTransactor(transactor),
+		driversession.WithDriverSessionRepository(driverSessionRepository),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup driver session app: %w", err)
+	}
+
+	driverSettlementApp, err := driversettlement.NewDriverSettlementApp(
+		driversettlement.WithTransactor(transactor),
+		driversettlement.WithSettlementRepository(driverSettlementRepository),
+		driversettlement.WithEventRepository(eventRepository),
+		driversettlement.WithSettlementAccountService(settlementAccountService),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup driver settlement app: %w", err)
+	}
+
+	userApp, err := user.NewUserApp(
+		user.WithTransactor(transactor),
+		user.WithUserRepository(userRepository),
+		user.WithSessionService(userSessionApp),
+		user.WithSmsVerificationRepository(smsVerificationRepository),
+		user.WithSmsSenderService(smsSenderService),
+		user.WithMapRouteService(mapRouteService),
+		user.WithLocationService(locationService),
+		user.WithPushService(pushApp),
+		user.WithTaxiCallService(taxicallApp),
+		user.WithUserPaymentService(paymentApp),
+		user.WithDriverAppService(driverAppDelegator),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup user app: %w", err)
+	}
+
+	driverApp, err := driver.NewDriverApp(
+		driver.WithTransactor(transactor),
+		driver.WithDriverRepository(driverRepository),
+		driver.WithSettlementAccountRepository(driverSettlementAccountRepository),
+		driver.WithSessionService(driverSessionApp),
+		driver.WithSmsSenderService(smsSenderService),
+		driver.WithSmsVerificationRepository(smsVerificationRepository),
+		driver.WithEventRepository(eventRepository),
+		driver.WithPushService(pushApp),
+		driver.WithTaxiCallService(taxicallApp),
+		driver.WithImageUrlService(cachedS3ImagePresignedUrlService),
+		driver.WithSettlementAccountService(settlementAccountService),
+		driver.WithDriverSettlementService(driverSettlementApp),
+		driver.WithUserPaymentAppService(paymentApp),
+		driver.WithEncryptionService(kmsEncryptionService),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup driver app: %w", err)
+	}
+
+	// Run apps
+	userAppDelegator.Set(userApp)
+	driverAppDelegator.Set(driverApp)
+
+	// Run subscription stream
+	eventSubsriberStreamService.Add(pushApp)
+	eventSubsriberStreamService.Add(taxicallApp)
+	eventSubsriberStreamService.Add(paymentApp)
+	eventSubsriberStreamService.Add(driverSettlementApp)
+
+	eventSubsriberStreamService.Run(ctx)
+
+	// Init middlewares
+	loggerMiddleware := server.NewLoggerMiddleware(logger)
+
+	userSessionMiddleware := userserver.NewSessionMiddleware(userSessionApp)
+
+	driverSessionMiddleware := driverserver.NewSessionMiddleware(driverSessionApp)
+
+	backofficeSessionMiddleware := backofficeserver.NewSessionMiddleware(serverConfig.Backoffice.Secret)
+
+	// Init server extensions
+	userServerPaypleExtension, err := userpaypleextension.NewPaypleExtension(
+		userpaypleextension.WithPayplePaymentApp(userApp),
+		userpaypleextension.WithDomain(serverConfig.PaymentService.RefererDomain),
+		userpaypleextension.WithEnv(serverConfig.Env),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup user payple extension: %w", err)
+	}
+
+	driverServerPaypleExtension, err := driverpaypleextension.NewPaypleExtension(
+		driverpaypleextension.WithDriverSEttlementApp(driverSettlementApp),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup driver payple extension: %w", err)
+	}
+
+	// Init servers
+	userServer, err := userserver.NewUserServer(
+		userserver.WithEndpoint("0.0.0.0"),
+		userserver.WithPort(18881),
+		userserver.WithUserApp(userApp),
+		userserver.WithMiddleware(loggerMiddleware.Process),
+		userserver.WithMiddleware(userSessionMiddleware.Get()),
+		userserver.WithMiddleware(userserver.UserIdChecker),
+		userserver.WithExtension(userServerPaypleExtension.Apply),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup user server: %w", err)
+	}
+
+	driverServer, err := driverserver.NewDriverServer(
+		driverserver.WithEndpoint("0.0.0.0"),
+		driverserver.WithPort(18882),
+		driverserver.WithDriverApp(driverApp),
+		driverserver.WithMiddleware(loggerMiddleware.Process),
+		driverserver.WithMiddleware(driverSessionMiddleware.Get()),
+		driverserver.WithMiddleware(driverserver.DriverIdChecker),
+		driverserver.WithExtension(driverServerPaypleExtension.Apply),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup driver server: %w", err)
+	}
+
+	backofficeServer, err := backofficeserver.NewBackofficeServer(
+		backofficeserver.WithEndpoint("0.0.0.0"),
+		backofficeserver.WithPort(18883),
+		backofficeserver.WithDriverApp(driverApp),
+		backofficeserver.WithUserApp(userApp),
+		backofficeserver.WithMiddleware(loggerMiddleware.Process),
+		backofficeserver.WithMiddleware(backofficeSessionMiddleware.Get()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup backoffice server: %w", err)
+	}
+
+	go func() {
+		if err := userServer.Run(ctx); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("shutting down user server", zap.Error(err))
+		}
+	}()
+
+	go func() {
+		if err := driverServer.Run(ctx); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("shutting down driver server", zap.Error(err))
+		}
+	}()
+
+	go func() {
+		if err := backofficeServer.Run(ctx); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("shutting down backoffice server", zap.Error(err))
+		}
+	}()
+
+	<-quit
+	fmt.Printf("shutting down taco backend...")
+
+	eventSubscriber.Shutdown(ctx)
+	eventSubsriberStreamService.Shutdown(ctx)
+
+	firebasepub.Shutdown(ctx)
+
+	userServer.Stop(ctx)
+	driverServer.Stop(ctx)
+	backofficeServer.Stop(ctx)
+
+	logger.Sync()
+
+	return nil
+}

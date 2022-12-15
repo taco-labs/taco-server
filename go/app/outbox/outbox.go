@@ -33,6 +33,7 @@ type outboxApp struct {
 
 func (o *outboxApp) Start(ctx context.Context) error {
 	go o.loop(ctx)
+	fmt.Printf("outbox app started...\n")
 	return nil
 }
 

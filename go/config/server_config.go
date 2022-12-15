@@ -23,9 +23,8 @@ type ServerConfig struct {
 }
 
 type EventStreamConfig struct {
-	EventTopic            TopicConfig       `env:",prefix=TACO_EVENT_"`
-	EventOutbox           EventOutboxConfig `env:",prefix=TACO_EVENT_OUTBOX_"`
-	EventStreamWorkerPool WorkerPoolConfig  `env:",prefix=TACO_EVENT_STREAM_WORKER_"`
+	EventTopic            TopicConfig      `env:",prefix=TACO_EVENT_"`
+	EventStreamWorkerPool WorkerPoolConfig `env:",prefix=TACO_EVENT_STREAM_WORKER_"`
 }
 
 func NewServerConfig(ctx context.Context) (ServerConfig, error) {

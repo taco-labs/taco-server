@@ -37,4 +37,4 @@ TACO_ENABLE_QUERY_DEBUG_LOG=true \
   TACO_IMAGE_URL_SERVICE_MAX_CACHE_SIZE_BYTES="10000" \
   TACO_IMAGE_URL_SERVICE_MAX_CACHE_SIZE_ENTRIES="1000" \
   TACO_ENCRYPTION_SERVICE_KEY_ID="arn:aws:kms:ap-northeast-2:069049357473:key/95cf6d57-fd82-4201-b03a-04c1915ab3be" \
-  go run go/cmd/server/main.go
+  go run go/cmd/local/main.go

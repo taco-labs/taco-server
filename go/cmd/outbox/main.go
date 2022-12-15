@@ -15,15 +15,15 @@ import (
 func main() {
 	ctx := context.Background()
 
-	serverConfig, err := config.NewServerConfig(ctx)
+	outboxConfig, err := config.NewOutboxConfig(ctx)
 	if err != nil {
-		fmt.Printf("Failed to initialize taco config: %v\n", err)
+		fmt.Printf("Failed to initialize outbox config: %v\n", err)
 		os.Exit(1)
 	}
 
 	var logger *zap.Logger
 
-	if serverConfig.Env == "prod" {
+	if outboxConfig.Env == "prod" {
 		logger, err = zap.NewProduction()
 	} else {
 		logger, err = zap.NewDevelopment()
@@ -38,7 +38,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
-	err = cmd.RunServer(ctx, serverConfig, logger, quit)
+	err = cmd.RunOutbox(ctx, outboxConfig, logger, quit)
 	if err != nil {
 		fmt.Printf("Error while start server: %v\n", err)
 		os.Exit(1)
