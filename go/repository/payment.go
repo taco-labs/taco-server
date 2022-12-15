@@ -122,7 +122,9 @@ func (u userPaymentRepository) ListUserPayment(ctx context.Context, db bun.IDB, 
 
 	err := db.NewSelect().
 		Model(&payments).
-		Where("user_id = ?", userId).Scan(ctx)
+		Where("user_id = ?", userId).
+		OrderExpr("last_use_time DESC, create_time DESC").
+		Scan(ctx)
 
 	if err != nil {
 		return []entity.UserPayment{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)

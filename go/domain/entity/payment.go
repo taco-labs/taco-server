@@ -34,6 +34,7 @@ type UserPayment struct {
 	InvalidErrorCode    string    `bun:"invalid_error_code"`
 	InvalidErrorMessage string    `bun:"invalid_error_message"`
 	CreateTime          time.Time `bun:"create_time"`
+	LastUseTime         time.Time `bun:"last_use_time"`
 }
 
 func (u UserPayment) ToSummary() value.PaymentSummary {

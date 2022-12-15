@@ -51,6 +51,11 @@ table "user_payment" {
     null = false
   }
 
+  column "last_use_time" {
+    type = timestamp
+    null = false
+  }
+
   primary_key {
     columns = [
       column.id,

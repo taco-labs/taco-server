@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -90,6 +91,7 @@ func (u paymentApp) RegistrationCallback(ctx context.Context, req request.Paymen
 			BillingKey:         req.BillingKey,
 			Invalid:            false,
 			CreateTime:         requestTime,
+			LastUseTime:        time.Time{},
 		}
 
 		if err := u.repository.payment.CreateUserPayment(ctx, i, userPayment); err != nil {
