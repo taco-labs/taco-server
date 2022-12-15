@@ -123,9 +123,8 @@ func (t taxicallApp) ListDriverTaxiCallRequest(ctx context.Context, req request.
 
 func (t taxicallApp) LatestDriverTaxiCallRequest(ctx context.Context, driverId string) (entity.DriverLatestTaxiCallRequest, error) {
 	var latestTaxiCallRequest entity.DriverLatestTaxiCallRequest
-	var err error
 
-	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		taxiCallRequest, err := t.repository.taxiCallRequest.GetLatestByDriverId(ctx, i, driverId)
 		if err != nil {
 			return fmt.Errorf("app.driver.LatestDriverTaxiCallRequest: error while get latest taxi call:\n%w", err)
@@ -161,9 +160,8 @@ func (t taxicallApp) LatestDriverTaxiCallRequest(ctx context.Context, driverId s
 // TODO (taekyeom) refactor response
 func (t taxicallApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (entity.DriverLatestTaxiCallRequestTicket, error) {
 	var latestTaxiCallRequest entity.DriverLatestTaxiCallRequestTicket
-	var err error
 
-	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
 		if err != nil {
 			return fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get driver taxi call context: %w", err)
@@ -221,8 +219,9 @@ func (t taxicallApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId st
 }
 
 // TODO (taekyeom) Remove it later!!
-func (t taxicallApp) ForceAcceptTaxiCallRequest(ctx context.Context, driverId, callRequestId string) error {
-	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+func (t taxicallApp) ForceAcceptTaxiCallRequest(ctx context.Context, driverId, callRequestId string) (entity.DriverLatestTaxiCallRequest, error) {
+	var driverLatestTaxiCallRequest entity.DriverLatestTaxiCallRequest
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		ticket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, callRequestId)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.ForceAcceptTaxiCallRequest: error while find latest ticket by request id: %w", err)
@@ -240,20 +239,24 @@ func (t taxicallApp) ForceAcceptTaxiCallRequest(ctx context.Context, driverId, c
 			return fmt.Errorf("app.taxiCall.ForceAcceptTaxiCallRequest: error while upsert taxi call context: %w", value.ErrInvalidOperation)
 		}
 
-		return t.AcceptTaxiCallRequest(ctx, driverId, ticket.TicketId)
+		driverLatestTaxiCallRequest, err = t.AcceptTaxiCallRequest(ctx, driverId, ticket.TicketId)
+		return err
 	})
+
+	if err != nil {
+		return entity.DriverLatestTaxiCallRequest{}, err
+	}
+
+	return driverLatestTaxiCallRequest, nil
 }
 
-// TODO (taekyeom) Add route between driver location & departure?
-func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string, ticketId string) error {
+func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string, ticketId string) (entity.DriverLatestTaxiCallRequest, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
-	var taxiCallRequest entity.TaxiCallRequest
-	var driverTaxiCallContext entity.DriverTaxiCallContext
-	var err error
+	var driverLatestTaxiCallRequest entity.DriverLatestTaxiCallRequest
 
-	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// TODO(taeykeom) Do we need check on duty & last call request?
-		driverTaxiCallContext, err = t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
+		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get taxi call context:%w", err)
 		}
@@ -271,7 +274,7 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get taxi call ticket:%w", err)
 		}
 
-		taxiCallRequest, err = t.repository.taxiCallRequest.GetById(ctx, i, receivedTicket.TaxiCallRequestId)
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, receivedTicket.TaxiCallRequestId)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get taxi call request:%w", err)
 		}
@@ -289,7 +292,7 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: invalid state change:%w", err)
 		}
 
-		// TODO (taekyeom) seperate external api call
+		// TODO (taekyeom) call outside of transaction
 		routeToDeparture, err := t.service.route.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get route between departure:%w", err)
@@ -301,6 +304,20 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			Valid:  true,
 			String: driverId,
 		}
+
+		userPoint, err := t.service.payment.UseUserPaymentPoint(ctx, taxiCallRequest.UserId, taxiCallRequest.AdditionalPrice)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while use user payment point :%w", err)
+		}
+		taxiCallRequest.UserUsedPoint = userPoint
+
+		driverAdditionalReward, err := t.service.payment.UseDriverReferralReward(ctx, driverId,
+			taxiCallRequest.DriverSettlementAdditonalPrice())
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while use driver additional reward :%w", err)
+		}
+		taxiCallRequest.DriverAdditionalRewardPrice = driverAdditionalReward
+
 		if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while update taxi call request :%w", err)
 		}
@@ -314,6 +331,15 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 
 		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while create taxi call process event: %w", err)
+		}
+
+		user, err := t.service.userGetter.GetUser(ctx, taxiCallRequest.UserId)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get user: %w", err)
+		}
+		driverLatestTaxiCallRequest = entity.DriverLatestTaxiCallRequest{
+			TaxiCallRequest: taxiCallRequest,
+			UserPhone:       user.Phone,
 		}
 
 		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiCallTicketAccept, analytics.DriverTaxiCallTicketAcceptPayload{
@@ -335,10 +361,10 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 	})
 
 	if err != nil {
-		return err
+		return entity.DriverLatestTaxiCallRequest{}, err
 	}
 
-	return nil
+	return driverLatestTaxiCallRequest, nil
 }
 
 func (t taxicallApp) RejectTaxiCallRequest(ctx context.Context, driverId string, ticketId string) error {
@@ -422,6 +448,14 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 
 		if err = t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: error while update taxi call:%w", err)
+		}
+
+		if err := t.service.payment.AddUserPaymentPoint(ctx, taxiCallRequest.UserId, taxiCallRequest.UserUsedPoint); err != nil {
+			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while add user used payment point: %w", err)
+		}
+
+		if err := t.service.payment.CancelDriverReferralReward(ctx, driverId, taxiCallRequest.DriverAdditionalRewardPrice); err != nil {
+			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while cancel used driver referral reward: %w", err)
 		}
 
 		if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {

@@ -63,9 +63,8 @@ func (t taxicallApp) ListUserTaxiCallRequest(ctx context.Context, req request.Li
 
 func (t taxicallApp) LatestUserTaxiCallRequest(ctx context.Context, userId string) (entity.UserLatestTaxiCallRequest, error) {
 	var latestTaxiCallRequest entity.UserLatestTaxiCallRequest
-	var err error
 
-	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		taxiCallRequest, err := t.repository.taxiCallRequest.GetLatestByUserId(ctx, i, userId)
 		if err != nil {
 			return fmt.Errorf("app.taxCall.LatestUserTaxiCallRequest: error while get latest taxi call:\n%w", err)
@@ -300,6 +299,14 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 
 		if err = t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxCall.CancelTaxiCall: error while update taxi call:%w", err)
+		}
+
+		if err := t.service.payment.AddUserPaymentPoint(ctx, userId, taxiCallRequest.UserUsedPoint); err != nil {
+			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while add user used payment point: %w", err)
+		}
+
+		if err := t.service.payment.CancelDriverReferralReward(ctx, taxiCallRequest.DriverId.String, taxiCallRequest.DriverAdditionalRewardPrice); err != nil {
+			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while cancel used driver referral reward: %w", err)
 		}
 
 		events = append(events, command.NewTaxiCallProgressCommand(

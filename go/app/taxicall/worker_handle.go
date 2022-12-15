@@ -315,7 +315,9 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, reciev
 				"타코 이용 요금", // TODO (taekyeom) order name generation?
 				taxiCallRequest.DriverId.String,
 				taxiCallRequest.UserAdditionalPrice(),
+				taxiCallRequest.UserUsedPoint,
 				taxiCallRequest.DriverSettlementAdditonalPrice(),
+				taxiCallRequest.DriverAdditionalRewardPrice,
 				false,
 			))
 		}
@@ -374,7 +376,9 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 				"타코 택시 취소 수수료",
 				taxiCallRequest.DriverId.String,
 				taxiCallRequest.CancelPenaltyPrice,
+				0,
 				taxiCallRequest.DriverSettlementCancelPenaltyPrice(),
+				0,
 				false,
 			))
 		}

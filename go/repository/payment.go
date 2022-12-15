@@ -37,6 +37,10 @@ type PaymentRepository interface {
 	CreateFailedOrder(context.Context, bun.IDB, entity.UserPaymentFailedOrder) error
 	DeleteFailedOrder(context.Context, bun.IDB, entity.UserPaymentFailedOrder) error
 	GetFailedOrdersByUserId(context.Context, bun.IDB, string) ([]entity.UserPaymentFailedOrder, error)
+
+	GetUserPaymentPoint(context.Context, bun.IDB, string) (entity.UserPaymentPoint, error)
+	CreateUserPaymentPoint(context.Context, bun.IDB, entity.UserPaymentPoint) error
+	UpdateUserPaymentPoint(context.Context, bun.IDB, entity.UserPaymentPoint) error
 }
 
 type userPaymentRepository struct{}
@@ -332,6 +336,59 @@ func (u userPaymentRepository) GetFailedOrdersByUserId(ctx context.Context, db b
 	}
 
 	return resp, nil
+}
+
+func (u userPaymentRepository) GetUserPaymentPoint(ctx context.Context, db bun.IDB, userId string) (entity.UserPaymentPoint, error) {
+	resp := entity.UserPaymentPoint{
+		UserId: userId,
+	}
+
+	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.UserPaymentPoint{}, value.ErrNotFound
+	}
+	if err != nil {
+		return entity.UserPaymentPoint{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (u userPaymentRepository) CreateUserPaymentPoint(ctx context.Context, db bun.IDB, userPaymentPoint entity.UserPaymentPoint) error {
+	res, err := db.NewInsert().Model(&userPaymentPoint).Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (u userPaymentRepository) UpdateUserPaymentPoint(ctx context.Context, db bun.IDB, userPaymentPoint entity.UserPaymentPoint) error {
+	res, err := db.NewUpdate().Model(&userPaymentPoint).WherePK().Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
 }
 
 func NewUserPaymentRepository() *userPaymentRepository {

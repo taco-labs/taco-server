@@ -11,6 +11,7 @@ type UserSignupRequest struct {
 	AppVersion              string `json:"appVersion"`
 	AppFcmToken             string `json:"appFcmToken"`
 	SmsVerificationStateKey string `json:"smsVerificationStateKey"`
+	ReferralCode            string `json:"referralCode"`
 }
 
 type UserUpdateRequest struct {

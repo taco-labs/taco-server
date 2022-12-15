@@ -71,6 +71,12 @@ func WithUserPaymentService(svc userPaymentInterface) userAppOption {
 	}
 }
 
+func WithDriverAppService(svc driverAppInterface) userAppOption {
+	return func(ua *userApp) {
+		ua.service.driver = svc
+	}
+}
+
 func (u userApp) validateApp() error {
 	if u.Transactor == nil {
 		return errors.New("user app need transator")
@@ -110,6 +116,10 @@ func (u userApp) validateApp() error {
 
 	if u.service.userPayment == nil {
 		return errors.New("user app need user payment service")
+	}
+
+	if u.service.driver == nil {
+		return errors.New("user app need driver app service")
 	}
 
 	return nil

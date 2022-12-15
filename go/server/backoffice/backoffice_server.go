@@ -20,7 +20,10 @@ func (b backofficeServer) GetDriver(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp := response.DriverToResponse(driver)
+	resp, err := response.DriverToResponse(driver)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
 
 	return e.JSON(http.StatusOK, resp)
 }
@@ -58,7 +61,13 @@ func (b backofficeServer) GetUser(e echo.Context) error {
 	if err != nil {
 		return server.ToResponse(e, err)
 	}
-	return e.JSON(http.StatusOK, response.UserToResponse(user))
+
+	resp, err := response.UserToResponse(user)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, resp)
 }
 
 func (b backofficeServer) DeleteUser(e echo.Context) error {
@@ -80,12 +89,14 @@ func (b backofficeServer) ForceAcceptTaxiCallRequest(e echo.Context) error {
 	driverId := e.Param("driverId")
 	taxiCallRequestId := e.Param("taxiCallRequestId")
 
-	err := b.app.driver.ForceAcceptTaxiCallRequest(ctx, driverId, taxiCallRequestId)
+	driverLatestTaxiCallRequest, err := b.app.driver.ForceAcceptTaxiCallRequest(ctx, driverId, taxiCallRequestId)
 	if err != nil {
 		return server.ToResponse(e, err)
 	}
 
-	return e.JSON(http.StatusOK, struct{}{})
+	resp := response.DriverLatestTaxiCallRequestToResponse(driverLatestTaxiCallRequest)
+
+	return e.JSON(http.StatusOK, resp)
 }
 
 func (b backofficeServer) DriverToArrival(e echo.Context) error {

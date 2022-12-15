@@ -82,6 +82,12 @@ func WithDriverSettlementService(svc driverSettlementInterface) driverAppOption 
 	}
 }
 
+func WithUserPaymentAppService(svc userPaymentApp) driverAppOption {
+	return func(da *driverApp) {
+		da.service.payment = svc
+	}
+}
+
 func (d driverApp) validateApp() error {
 	if d.Transactor == nil {
 		return errors.New("driver app need transactor")
@@ -129,6 +135,10 @@ func (d driverApp) validateApp() error {
 
 	if d.service.driverSettlement == nil {
 		return errors.New("driver app need driver settlement service")
+	}
+
+	if d.service.payment == nil {
+		return errors.New("driver app need user payment app service")
 	}
 
 	return nil

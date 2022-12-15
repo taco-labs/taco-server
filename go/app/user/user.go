@@ -24,6 +24,10 @@ type sessionServiceInterface interface {
 	CreateSession(context.Context, entity.UserSession) error
 }
 
+type driverAppInterface interface {
+	GetDriverByUserUniqueKey(ctx context.Context, uniqueKey string) (entity.DriverDto, error)
+}
+
 type pushServiceInterface interface {
 	CreatePushToken(context.Context, request.CreatePushTokenRequest) (entity.PushToken, error)
 	UpdatePushToken(context.Context, request.UpdatePushTokenRequest) error
@@ -48,6 +52,10 @@ type userPaymentInterface interface {
 	BatchDeleteUserPayment(context.Context, entity.User) error
 	PaymentTransactionSuccessCallback(ctx context.Context, req request.PaymentTransactionSuccessCallbackRequest) error
 	PaymentTransactionFailCallback(ctx context.Context, req request.PaymentTransactionFailCallbackRequest) error
+	CreateUserPaymentPoint(ctx context.Context, userPaymentPoint entity.UserPaymentPoint) error
+	GetUserPaymentPoint(ctx context.Context, userId string) (entity.UserPaymentPoint, error)
+	CreateUserReferral(ctx context.Context, fromUserId string, toUserId string) error
+	AddDriverReferralReward(ctx context.Context, driverId string) error
 }
 
 type userApp struct {
@@ -58,6 +66,7 @@ type userApp struct {
 	}
 
 	service struct {
+		driver      driverAppInterface
 		smsSender   service.SmsSenderService
 		session     sessionServiceInterface
 		route       service.MapRouteService
@@ -196,6 +205,32 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			return fmt.Errorf("app.User.Signup: error while create user:\n %w", err)
 		}
 
+		if req.ReferralCode != "" {
+			referralCode, err := value.DecodeReferralCode(req.ReferralCode)
+			if err != nil {
+				return fmt.Errorf("app.User.Signup: invalid refferral code: %w (%v)", value.ErrInvalidReferralCode, err)
+			}
+
+			switch referralCode.ReferralType {
+			case enum.ReferralType_User:
+				referralUser, err := u.repository.user.FindByUserUniqueKey(ctx, i, referralCode.PhoneNumber)
+				if err != nil {
+					return fmt.Errorf("app.User.Signup: error while get referral user: %w", err)
+				}
+				if err := u.service.userPayment.CreateUserReferral(ctx, newUser.Id, referralUser.Id); err != nil {
+					return fmt.Errorf("app.User.Signup: error while create user referral: %w", err)
+				}
+			case enum.ReferralType_Driver:
+				driver, err := u.service.driver.GetDriverByUserUniqueKey(ctx, referralCode.PhoneNumber)
+				if err != nil {
+					return fmt.Errorf("app.User.Signup: error while get driver by unique key: %w", err)
+				}
+				if err := u.service.userPayment.AddDriverReferralReward(ctx, driver.Id); err != nil {
+					return fmt.Errorf("app.User.Signup: error while update driver referral: %w", err)
+				}
+			}
+		}
+
 		// Create push token
 		if _, err := u.service.push.CreatePushToken(ctx, request.CreatePushTokenRequest{
 			PrincipalId: newUser.Id,
@@ -204,10 +239,18 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			return fmt.Errorf("app.User.Signup: error while create push token: %w", err)
 		}
 
+		// Create user payment point
+		if err := u.service.userPayment.CreateUserPaymentPoint(ctx, entity.UserPaymentPoint{
+			UserId: newUser.Id,
+			Point:  0,
+		}); err != nil {
+			return fmt.Errorf("app.User.Signup: error while create user payment point: %w", err)
+		}
+
 		userSession = entity.UserSession{
 			Id:         utils.MustNewUUID(),
 			UserId:     newUser.Id,
-			ExpireTime: requestTime.AddDate(0, 1, 0), // TODO(taekyeom) Configurable expire time
+			ExpireTime: requestTime.AddDate(0, 1, 0),
 		}
 		if err = u.service.session.CreateSession(ctx, userSession); err != nil {
 			return fmt.Errorf("app.User.Signup: error while create new session:\n %w", err)
@@ -280,6 +323,13 @@ func (u userApp) GetUser(ctx context.Context, userId string) (entity.User, error
 			return fmt.Errorf("app.user.GetUser: error while find user by id:\n %w", err)
 		}
 
+		userPaymentPoint, err := u.service.userPayment.GetUserPaymentPoint(ctx, userId)
+		if err != nil {
+			return fmt.Errorf("app.user.GetUser: error while find user payment point:\n %w", err)
+		}
+
+		user.UserPoint = userPaymentPoint.Point
+
 		return nil
 	})
 
@@ -314,16 +364,12 @@ func (u userApp) DeleteUser(ctx context.Context, userId string) error {
 	})
 }
 
-func NewUserApp(opts ...userAppOption) (userApp, error) {
-	ua := userApp{}
+func NewUserApp(opts ...userAppOption) (*userApp, error) {
+	ua := &userApp{}
 
 	for _, opt := range opts {
-		opt(&ua)
+		opt(ua)
 	}
 
-	if err := ua.validateApp(); err != nil {
-		return userApp{}, err
-	}
-
-	return ua, nil
+	return ua, ua.validateApp()
 }

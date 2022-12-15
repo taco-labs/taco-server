@@ -18,7 +18,7 @@ type driverApp interface {
 
 	// TODO(taekyeom) Must remove before production
 	DriverToArrival(context.Context, string) error
-	ForceAcceptTaxiCallRequest(context.Context, string, string) error
+	ForceAcceptTaxiCallRequest(context.Context, string, string) (entity.DriverLatestTaxiCallRequest, error)
 	DoneTaxiCallRequest(context.Context, request.DoneTaxiCallRequest) error
 }
 

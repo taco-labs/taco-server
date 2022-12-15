@@ -128,7 +128,17 @@ table "user_payment_transaction_request" {
     null = false
   }
 
+  column "used_point" {
+    type = int
+    null = false
+  }
+
   column "settlement_amount" {
+    type = int
+    null = false
+  }
+
+  column "additional_settlement_amount" {
     type = int
     null = false
   }
@@ -195,6 +205,11 @@ table "user_payment_order" {
     null = false
   }
 
+  column "used_point" {
+    type = int
+    null = false
+  }
+
   column "payment_key" {
     type = text
     null = false
@@ -251,7 +266,17 @@ table "user_payment_failed_order" {
     null = false
   }
 
+  column "used_point" {
+    type = int
+    null = false
+  }
+
   column "settlement_amount" {
+    type = int
+    null = false
+  }
+
+  column "additional_settlement_amount" {
     type = int
     null = false
   }
@@ -281,6 +306,37 @@ table "user_payment_failed_order" {
   }
 
   foreign_key "user_payment_failed_order_user_id_fk" {
+    columns = [
+      column.user_id,
+    ]
+    ref_columns = [
+      table.user.column.id,
+    ]
+    on_delete = CASCADE
+    on_update = NO_ACTION
+  }
+}
+
+table "user_payment_point" {
+  schema = schema.taco
+
+  column "user_id" {
+    type = uuid
+    null = false
+  }
+
+  column "point" {
+    type = int
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.user_id,
+    ]
+  }
+
+  foreign_key "user_payment_point_user_id_fk" {
     columns = [
       column.user_id,
     ]

@@ -24,6 +24,7 @@ type UserApp interface {
 	ListUserPayment(context.Context, string) ([]entity.UserPayment, error)
 	TryRecoverUserPayment(context.Context, string) error
 	DeleteUserPayment(context.Context, string) error
+	GetUserPaymentPoint(ctx context.Context, userId string) (entity.UserPaymentPoint, error)
 
 	ListTags(context.Context) ([]value.Tag, error)
 	ListTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
@@ -67,10 +68,18 @@ func (u userServer) SmsSignin(e echo.Context) error {
 	}
 
 	user, token, err := u.app.user.SmsSignin(ctx, req)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	userResp, err := response.UserToResponse(user)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
 
 	resp := response.UserSignupResponse{
 		Token: token,
-		User:  response.UserToResponse(user),
+		User:  userResp,
 	}
 
 	if err != nil {
@@ -96,9 +105,18 @@ func (u userServer) Signup(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
+	userResp, err := response.UserToResponse(user)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
 	resp := response.UserSignupResponse{
 		Token: token,
-		User:  response.UserToResponse(user),
+		User:  userResp,
+	}
+
+	if err != nil {
+		return server.ToResponse(e, err)
 	}
 
 	return e.JSON(http.StatusOK, resp)
@@ -111,7 +129,17 @@ func (u userServer) GetUser(e echo.Context) error {
 	if err != nil {
 		return server.ToResponse(e, err)
 	}
-	return e.JSON(http.StatusOK, response.UserToResponse(user))
+
+	resp, err := response.UserToResponse(user)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, resp)
 }
 
 func (u userServer) UpdateUser(e echo.Context) error {
@@ -128,7 +156,16 @@ func (u userServer) UpdateUser(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	return e.JSON(http.StatusOK, response.UserToResponse(user))
+	resp, err := response.UserToResponse(user)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, resp)
 }
 
 func (u userServer) ListUserPayment(e echo.Context) error {
@@ -283,6 +320,21 @@ func (u userServer) GetAddress(e echo.Context) error {
 	if err != nil {
 		return server.ToResponse(e, err)
 	}
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (u userServer) GetUserPaymentPoint(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	userId := e.Param("userId")
+
+	userPoint, err := u.app.user.GetUserPaymentPoint(ctx, userId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	resp := response.UserPaymentPointToResponse(userPoint)
 
 	return e.JSON(http.StatusOK, resp)
 }

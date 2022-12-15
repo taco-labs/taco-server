@@ -17,7 +17,7 @@ func (d driverApp) GetLatestTaxiCallRequest(ctx context.Context, driverId string
 }
 
 // TODO (taekyeom) Remove it later!!
-func (d driverApp) ForceAcceptTaxiCallRequest(ctx context.Context, driverId, callRequestId string) error {
+func (d driverApp) ForceAcceptTaxiCallRequest(ctx context.Context, driverId, callRequestId string) (entity.DriverLatestTaxiCallRequest, error) {
 	return d.service.taxiCall.ForceAcceptTaxiCallRequest(ctx, driverId, callRequestId)
 }
 
@@ -26,7 +26,7 @@ func (d driverApp) DriverToArrival(ctx context.Context, callRequestId string) er
 	return d.service.taxiCall.DriverToArrival(ctx, driverId, callRequestId)
 }
 
-func (d driverApp) AcceptTaxiCallRequest(ctx context.Context, ticketId string) error {
+func (d driverApp) AcceptTaxiCallRequest(ctx context.Context, ticketId string) (entity.DriverLatestTaxiCallRequest, error) {
 	driverId := utils.GetDriverId(ctx)
 	return d.service.taxiCall.AcceptTaxiCallRequest(ctx, driverId, ticketId)
 }

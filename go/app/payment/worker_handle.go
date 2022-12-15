@@ -19,14 +19,19 @@ func (p paymentApp) handleTransactionRequest(ctx context.Context, event entity.E
 		return fmt.Errorf("app.payment.handleTransactionRequest: failed to unmarshal command: %w", err)
 	}
 
+	if cmd.Amount-cmd.UsedPoint == 0 {
+		return p.ApplyUserReferralReward(ctx, cmd.UserId, cmd.Amount)
+	}
+
 	var userPayment entity.UserPayment
+	var transactionRequest entity.UserPaymentTransactionRequest
 
 	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		transactionRequest, err := p.repository.payment.GetPaymentTransactionRequest(ctx, i, cmd.OrderId)
+		tr, err := p.repository.payment.GetPaymentTransactionRequest(ctx, i, cmd.OrderId)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.payment.handleTransactionRequest: failed to get transaction request: %w", err)
 		}
-		if transactionRequest.OrderId != "" {
+		if tr.OrderId != "" {
 			return nil
 		}
 
@@ -40,21 +45,25 @@ func (p paymentApp) handleTransactionRequest(ctx context.Context, event entity.E
 		}
 		userPayment = up
 
-		transactionRequest = entity.UserPaymentTransactionRequest{
-			OrderId:            cmd.OrderId,
-			UserId:             cmd.UserId,
-			PaymentSummary:     userPayment.ToSummary(),
-			OrderName:          cmd.OrderName,
-			Amount:             cmd.Amount,
-			SettlementAmount:   cmd.SettlementAmount,
-			SettlementTargetId: cmd.SettlementTargetId,
-			Recovery:           cmd.Recovery,
-			CreateTime:         event.CreateTime,
+		tr = entity.UserPaymentTransactionRequest{
+			OrderId:                    cmd.OrderId,
+			UserId:                     cmd.UserId,
+			PaymentSummary:             userPayment.ToSummary(),
+			OrderName:                  cmd.OrderName,
+			Amount:                     cmd.Amount,
+			UsedPoint:                  cmd.UsedPoint,
+			SettlementAmount:           cmd.SettlementAmount,
+			AdditionalSettlementAmount: cmd.AdditonalSettlementAmount,
+			SettlementTargetId:         cmd.SettlementTargetId,
+			Recovery:                   cmd.Recovery,
+			CreateTime:                 event.CreateTime,
 		}
 
-		if err := p.repository.payment.CreatePaymentTransactionRequest(ctx, i, transactionRequest); err != nil {
+		if err := p.repository.payment.CreatePaymentTransactionRequest(ctx, i, tr); err != nil {
 			return fmt.Errorf("app.payment.handleTransactionRequest: error while create payment request: %w", err)
 		}
+
+		transactionRequest = tr
 
 		return nil
 	})
@@ -64,9 +73,9 @@ func (p paymentApp) handleTransactionRequest(ctx context.Context, event entity.E
 	}
 
 	paymentTransaction := value.Payment{
-		OrderId:   cmd.OrderId,
-		Amount:    cmd.Amount,
-		OrderName: cmd.OrderName,
+		OrderId:   transactionRequest.OrderId,
+		Amount:    transactionRequest.GetPaymentAmount(),
+		OrderName: transactionRequest.OrderName,
 	}
 
 	_, err = p.service.payment.Transaction(ctx, userPayment, paymentTransaction)
@@ -106,6 +115,7 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 			PaymentSummary: transactionRequest.PaymentSummary,
 			OrderName:      transactionRequest.OrderName,
 			Amount:         transactionRequest.Amount,
+			UsedPoint:      transactionRequest.UsedPoint,
 			PaymentKey:     cmd.PaymentKey,
 			ReceiptUrl:     cmd.ReceiptUrl,
 			CreateTime:     cmd.CreateTime,
@@ -120,10 +130,16 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 			events = append(events, command.NewDriverSettlementRequestCommand(
 				transactionRequest.SettlementTargetId,
 				transactionRequest.OrderId,
-				transactionRequest.SettlementAmount,
+				transactionRequest.GetSettlementAmount(),
 				cmd.CreateTime,
 			))
 		}
+
+		if err := p.ApplyUserReferralReward(ctx, transactionRequest.UserId, transactionRequest.Amount); err != nil {
+			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to apply user referral: %w", err)
+		}
+
+		// Give reward to referral user
 
 		if transactionRequest.Recovery {
 			err = p.repository.payment.DeleteFailedOrder(ctx, i, entity.UserPaymentFailedOrder{OrderId: transactionRequest.OrderId})
@@ -157,7 +173,9 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 				failedOrders[0].OrderName,
 				failedOrders[0].SettlementTargetId,
 				failedOrders[0].Amount,
+				failedOrders[0].UsedPoint,
 				failedOrders[0].SettlementAmount,
+				failedOrders[0].AdditionalSettlementAmount,
 				true,
 			))
 		}
@@ -221,7 +239,9 @@ func (p paymentApp) handleTransactionFail(ctx context.Context, event entity.Even
 					transactionRequest.OrderName,
 					transactionRequest.SettlementTargetId,
 					transactionRequest.Amount,
+					transactionRequest.UsedPoint,
 					transactionRequest.SettlementAmount,
+					transactionRequest.AdditionalSettlementAmount,
 					false,
 				)
 				fallbackTransactionPush := NewPaymentFallbackNotification(userPayment, fallbackUserPayment)
@@ -234,13 +254,15 @@ func (p paymentApp) handleTransactionFail(ctx context.Context, event entity.Even
 
 		// There is no valid payment
 		failedOrder := entity.UserPaymentFailedOrder{
-			OrderId:            transactionRequest.OrderId,
-			UserId:             transactionRequest.UserId,
-			OrderName:          transactionRequest.OrderName,
-			SettlementTargetId: transactionRequest.SettlementTargetId,
-			Amount:             transactionRequest.Amount,
-			SettlementAmount:   transactionRequest.SettlementAmount,
-			CreateTime:         event.CreateTime,
+			OrderId:                    transactionRequest.OrderId,
+			UserId:                     transactionRequest.UserId,
+			OrderName:                  transactionRequest.OrderName,
+			SettlementTargetId:         transactionRequest.SettlementTargetId,
+			Amount:                     transactionRequest.Amount,
+			UsedPoint:                  transactionRequest.UsedPoint,
+			SettlementAmount:           transactionRequest.SettlementAmount,
+			AdditionalSettlementAmount: transactionRequest.AdditionalSettlementAmount,
+			CreateTime:                 event.CreateTime,
 		}
 
 		if err := p.repository.payment.CreateFailedOrder(ctx, i, failedOrder); err != nil {

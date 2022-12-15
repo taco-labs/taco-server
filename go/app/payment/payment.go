@@ -22,8 +22,9 @@ type paymentApp struct {
 	app.Transactor
 
 	repository struct {
-		payment repository.PaymentRepository
-		event   repository.EventRepository
+		payment  repository.PaymentRepository
+		referral repository.ReferralRepository
+		event    repository.EventRepository
 	}
 
 	service struct {
@@ -109,7 +110,9 @@ func (u paymentApp) RegistrationCallback(ctx context.Context, req request.Paymen
 					i.OrderName,
 					i.SettlementTargetId,
 					i.Amount,
+					i.UsedPoint,
 					i.SettlementAmount,
+					i.AdditionalSettlementAmount,
 					false,
 				)
 			})
@@ -214,7 +217,9 @@ func (p paymentApp) TryRecoverUserPayment(ctx context.Context, userId string, us
 				failedOrders[0].OrderName,
 				failedOrders[0].SettlementTargetId,
 				failedOrders[0].Amount,
+				failedOrders[0].UsedPoint,
 				failedOrders[0].SettlementAmount,
+				failedOrders[0].AdditionalSettlementAmount,
 				true,
 			)
 			if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{recoveryCommand}); err != nil {
@@ -294,6 +299,209 @@ func (p paymentApp) PaymentTransactionFailCallback(ctx context.Context, req requ
 		if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
 			return fmt.Errorf("app.paymentApp.PaymentTransactionFailCallback: error while create fail event: %w", err)
 		}
+		return nil
+	})
+}
+
+func (p paymentApp) CreateUserPaymentPoint(ctx context.Context, userPaymentPoint entity.UserPaymentPoint) error {
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := p.repository.payment.CreateUserPaymentPoint(ctx, i, userPaymentPoint); err != nil {
+			return fmt.Errorf("app.paymentApp.CreateUserPaymentPoint: error while create user payment point: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (p paymentApp) GetUserPaymentPoint(ctx context.Context, userId string) (entity.UserPaymentPoint, error) {
+	var userPaymentPoint entity.UserPaymentPoint
+	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		up, err := p.repository.payment.GetUserPaymentPoint(ctx, i, userId)
+		if err != nil {
+			return fmt.Errorf("app.paymentApp.GetUserPaymentPoint: error while get user payment point: %w", err)
+		}
+
+		userPaymentPoint = up
+
+		return nil
+	})
+
+	if err != nil {
+		return entity.UserPaymentPoint{}, err
+	}
+
+	return userPaymentPoint, nil
+}
+
+func (p paymentApp) UseUserPaymentPoint(ctx context.Context, userId string, price int) (int, error) {
+	// short circuit
+	if price == 0 {
+		return 0, nil
+	}
+
+	var usedPoint int
+	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		userPaymentPoint, err := p.repository.payment.GetUserPaymentPoint(ctx, i, userId)
+		if err != nil {
+			return fmt.Errorf("app.paymentApp.UseUserPaymentPoint: error while get user payment point: %w", err)
+		}
+		usedPoint = userPaymentPoint.UsePoint(price)
+
+		if usedPoint > 0 {
+			if err := p.repository.payment.UpdateUserPaymentPoint(ctx, i, userPaymentPoint); err != nil {
+				return fmt.Errorf("app.paymentApp.UseUserPaymentPoint: error while update user payment point: %w", err)
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+	return usedPoint, nil
+}
+
+func (p paymentApp) AddUserPaymentPoint(ctx context.Context, userId string, point int) error {
+	if point == 0 {
+		return nil
+	}
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		userPaymentPoint, err := p.repository.payment.GetUserPaymentPoint(ctx, i, userId)
+		if err != nil {
+			return fmt.Errorf("app.paymentApp.CancelUserPaymentPoint: error while get user payment point: %w", err)
+		}
+		userPaymentPoint.AddPoint(point)
+
+		if err := p.repository.payment.UpdateUserPaymentPoint(ctx, i, userPaymentPoint); err != nil {
+			return fmt.Errorf("app.paymentApp.CancelUserPaymentPoint: error while update user payment point: %w", err)
+		}
+		return nil
+	})
+}
+
+func (p paymentApp) CreateUserReferral(ctx context.Context, fromUserId string, toUserId string) error {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		userReferral := entity.UserReferral{
+			FromUserId:    fromUserId,
+			ToUserId:      toUserId,
+			CurrentReward: 0,
+			RewardLimit:   entity.UserReferralRewardLimit,
+			RewardRate:    entity.UserReferralRewardRate,
+			CreateTime:    requestTime,
+		}
+
+		if err := p.repository.referral.CreateUserReferral(ctx, i, userReferral); err != nil {
+			return fmt.Errorf("app.paymentApp.CreateUserReferral: error while create user referral: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId string, price int) error {
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		userReferralReward, err := p.repository.referral.GetUserReferral(ctx, i, userId)
+		if errors.Is(err, value.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while get user referral reward: %w", err)
+		}
+		reward := userReferralReward.UseReward(price)
+		if err := p.repository.referral.UpdateUserReferral(ctx, i, userReferralReward); err != nil {
+			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while update user referral reward: %w", err)
+		}
+
+		userPaymentPoint, err := p.repository.payment.GetUserPaymentPoint(ctx, i, userReferralReward.ToUserId)
+		if err != nil {
+			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while get user payment point: %w", err)
+		}
+		userPaymentPoint.Point += reward
+		if err := p.repository.payment.UpdateUserPaymentPoint(ctx, i, userPaymentPoint); err != nil {
+			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while update user payment point: %w", err)
+		}
+
+		referralRewardNotification := NewReferralRewardNotification(userReferralReward.ToUserId, reward)
+		if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{referralRewardNotification}); err != nil {
+			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while add notification event: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (p paymentApp) CreateDriverReferral(ctx context.Context, driverId string) error {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverReferral := entity.DriverReferral{
+			DriverId:      driverId,
+			CurrentReward: 0,
+			RewardLimit:   0,
+			RewardRate:    entity.DriverReferralRewardRate,
+			CreateTime:    requestTime,
+		}
+
+		if err := p.repository.referral.CreateDriverReferral(ctx, i, driverReferral); err != nil {
+			return fmt.Errorf("app.paymentApp.CreateUserReferral: error while create user referral: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (p paymentApp) AddDriverReferralReward(ctx context.Context, driverId string) error {
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverReferral, err := p.repository.referral.GetDriverReferral(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.paymentApp.AddDriverReferralReward: error while get driver referral: %w", err)
+		}
+
+		driverReferral.RewardLimit += entity.DriverReferralRewardLimit
+		if err := p.repository.referral.UpdateDriverReferral(ctx, i, driverReferral); err != nil {
+			return fmt.Errorf("app.paymentApp.AddDriverReferralReward: error while update driver referra: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (p paymentApp) UseDriverReferralReward(ctx context.Context, driverId string, price int) (int, error) {
+	var reward int
+	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverReferral, err := p.repository.referral.GetDriverReferral(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.paymentApp.UseDriverReferralReward: error while get driver referral: %w", err)
+		}
+
+		reward = driverReferral.UseReweard(price)
+
+		if err := p.repository.referral.UpdateDriverReferral(ctx, i, driverReferral); err != nil {
+			return fmt.Errorf("app.paymentApp.UseDriverReferralReward: error while update driver referra: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return reward, nil
+}
+
+func (p paymentApp) CancelDriverReferralReward(ctx context.Context, driverId string, cancelReward int) error {
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverReferral, err := p.repository.referral.GetDriverReferral(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.paymentApp.CancelDriverReferralReward: error while get driver referral: %w", err)
+		}
+
+		driverReferral.CancelReward(cancelReward)
+		if err := p.repository.referral.UpdateDriverReferral(ctx, i, driverReferral); err != nil {
+			return fmt.Errorf("app.paymentApp.CancelDriverReferralReward: error while update driver referra: %w", err)
+		}
+
 		return nil
 	})
 }

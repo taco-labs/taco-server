@@ -47,8 +47,8 @@ type driverTaxiCallInterface interface {
 	UpdateDriverLocation(ctx context.Context, req request.DriverLocationUpdateRequest) error
 	ListDriverTaxiCallRequest(ctx context.Context, req request.ListDriverTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	LatestDriverTaxiCallRequest(ctx context.Context, driverId string) (entity.DriverLatestTaxiCallRequest, error)
-	ForceAcceptTaxiCallRequest(ctx context.Context, driverId, callRequestId string) error
-	AcceptTaxiCallRequest(ctx context.Context, driverId string, ticketId string) error
+	ForceAcceptTaxiCallRequest(ctx context.Context, driverId, callRequestId string) (entity.DriverLatestTaxiCallRequest, error)
+	AcceptTaxiCallRequest(ctx context.Context, driverId string, ticketId string) (entity.DriverLatestTaxiCallRequest, error)
 	RejectTaxiCallRequest(ctx context.Context, driverId string, ticketId string) error
 	DriverToArrival(ctx context.Context, driverId string, callRequestId string) error
 	DoneTaxiCallRequest(ctx context.Context, driverId string, req request.DoneTaxiCallRequest) error
@@ -60,6 +60,10 @@ type driverSettlementInterface interface {
 	GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverTotalSettlement, error)
 	ListDriverSettlementHistory(ctx context.Context, req request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error)
 	RequestSettlementTransfer(ctx context.Context, settlementAccount entity.DriverSettlementAccount) (int, error)
+}
+
+type userPaymentApp interface {
+	CreateDriverReferral(ctx context.Context, driverId string) error
 }
 
 type driverApp struct {
@@ -79,6 +83,7 @@ type driverApp struct {
 		imageUrl          service.ImageUrlService
 		settlementAccount service.SettlementAccountService // TODO (taekyeom) settlement app으로 이동
 		driverSettlement  driverSettlementInterface
+		payment           userPaymentApp
 	}
 }
 
@@ -244,6 +249,11 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: error while create push token: %w", err)
 		}
 
+		// Create driver referral reward
+		if err := d.service.payment.CreateDriverReferral(ctx, driver.Id); err != nil {
+			return fmt.Errorf("app.Driver.Signup: error while create driver referral: %w", err)
+		}
+
 		driverSession = entity.DriverSession{
 			Id:         utils.MustNewUUID(),
 			DriverId:   newDriverDto.Id,
@@ -311,6 +321,25 @@ func (d driverApp) GetDriver(ctx context.Context, driverId string) (entity.Drive
 	}
 
 	return driver, nil
+}
+
+func (d driverApp) GetDriverByUserUniqueKey(ctx context.Context, uniqueKey string) (entity.DriverDto, error) {
+	var driverDto entity.DriverDto
+	var err error
+	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverDto, err = d.repository.driver.FindByUserUniqueKey(ctx, i, uniqueKey)
+		if err != nil {
+			return fmt.Errorf("app.Driver.GetDriverByUserUniqueKey: error while find driver by user unique key:\n%w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return entity.DriverDto{}, err
+	}
+
+	return driverDto, nil
 }
 
 func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateRequest) (entity.Driver, error) {
@@ -493,11 +522,11 @@ func (d driverApp) ActivateDriver(ctx context.Context, driverId string) error {
 	})
 }
 
-func NewDriverApp(opts ...driverAppOption) (driverApp, error) {
-	da := driverApp{}
+func NewDriverApp(opts ...driverAppOption) (*driverApp, error) {
+	da := &driverApp{}
 
 	for _, opt := range opts {
-		opt(&da)
+		opt(da)
 	}
 
 	return da, da.validateApp()

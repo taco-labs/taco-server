@@ -23,6 +23,7 @@ type PushUserTaxiCallCommand struct {
 	TaxiCallState        string         `json:"taxiCallState"`
 	RequestBasePrice     int            `json:"requestBasePrice,omitempty"`
 	AdditionalPrice      int            `json:"additionalPrice,omitempty"`
+	UsedPoint            int            `json:"usedPoint"`
 	DriverId             string         `json:"driverId,omitempty"`
 	BasePrice            int            `json:"basePrice,omitempty"`
 	DriverLocation       value.Point    `json:"driverLocation,omitempty"`
@@ -35,21 +36,22 @@ type PushUserTaxiCallCommand struct {
 }
 
 type PushDriverTaxiCallCommand struct {
-	DriverId          string         `json:"driverId"`
-	UserId            string         `json:"userId"`
-	TaxiCallRequestId string         `json:"taxiCallRequestId"`
-	TaxiCallTicketId  string         `json:"taxiCallTicketId"`
-	TaxiCallState     string         `json:"taxiCallState"`
-	DriverLocation    value.Point    `json:"driverLocation"`
-	RequestBasePrice  int            `json:"requestBasePrice,omitempty"`
-	AdditionalPrice   int            `json:"additionalPrice,omitempty"`
-	Departure         value.Location `json:"departureAddress,omitempty"`
-	Arrival           value.Location `json:"arrivalAddress,omitempty"`
-	ToArrivalRoute    value.Route    `json:"toArrivalRoute"`
-	Tags              []string       `json:"tags"`
-	UserTag           string         `json:"userTag"`
-	Attempt           int            `json:"attempt"`
-	UpdateTime        time.Time      `json:"updateTime"`
+	DriverId                    string         `json:"driverId"`
+	UserId                      string         `json:"userId"`
+	TaxiCallRequestId           string         `json:"taxiCallRequestId"`
+	TaxiCallTicketId            string         `json:"taxiCallTicketId"`
+	TaxiCallState               string         `json:"taxiCallState"`
+	DriverLocation              value.Point    `json:"driverLocation"`
+	RequestBasePrice            int            `json:"requestBasePrice,omitempty"`
+	AdditionalPrice             int            `json:"additionalPrice,omitempty"`
+	DriverAdditionalRewardPrice int            `json:"driverAdditionalRewardPrice"`
+	Departure                   value.Location `json:"departureAddress,omitempty"`
+	Arrival                     value.Location `json:"arrivalAddress,omitempty"`
+	ToArrivalRoute              value.Route    `json:"toArrivalRoute"`
+	Tags                        []string       `json:"tags"`
+	UserTag                     string         `json:"userTag"`
+	Attempt                     int            `json:"attempt"`
+	UpdateTime                  time.Time      `json:"updateTime"`
 }
 
 type PushRawCommand struct {
@@ -71,6 +73,7 @@ func NewPushUserTaxiCallCommand(taxiCallRequest entity.TaxiCallRequest,
 		TaxiCallState:        string(taxiCallRequest.CurrentState),
 		RequestBasePrice:     taxiCallRequest.RequestBasePrice,
 		AdditionalPrice:      taxiCallTicket.UserAdditionalPrice(),
+		UsedPoint:            taxiCallRequest.UserUsedPoint,
 		DriverId:             taxiCallRequest.DriverId.String,
 		BasePrice:            taxiCallRequest.BasePrice,
 		DriverLocation:       driverTaxiCallContext.Location,
@@ -101,21 +104,22 @@ func NewPushDriverTaxiCallCommand(
 ) entity.Event {
 
 	cmd := PushDriverTaxiCallCommand{
-		DriverId:          driverId,
-		Attempt:           taxiCallTicket.Attempt,
-		UserId:            taxiCallRequest.UserId,
-		TaxiCallRequestId: taxiCallRequest.Id,
-		TaxiCallTicketId:  taxiCallTicket.TicketId,
-		TaxiCallState:     string(taxiCallRequest.CurrentState),
-		DriverLocation:    driverTaxiCallContext.Location,
-		RequestBasePrice:  taxiCallRequest.RequestBasePrice,
-		AdditionalPrice:   taxiCallTicket.DriverAdditionalPrice(),
-		Departure:         taxiCallRequest.Departure,
-		Arrival:           taxiCallRequest.Arrival,
-		ToArrivalRoute:    taxiCallRequest.ToArrivalRoute,
-		Tags:              taxiCallRequest.Tags,
-		UserTag:           taxiCallRequest.UserTag,
-		UpdateTime:        updateTime,
+		DriverId:                    driverId,
+		Attempt:                     taxiCallTicket.Attempt,
+		UserId:                      taxiCallRequest.UserId,
+		TaxiCallRequestId:           taxiCallRequest.Id,
+		TaxiCallTicketId:            taxiCallTicket.TicketId,
+		TaxiCallState:               string(taxiCallRequest.CurrentState),
+		DriverLocation:              driverTaxiCallContext.Location,
+		RequestBasePrice:            taxiCallRequest.RequestBasePrice,
+		AdditionalPrice:             taxiCallTicket.DriverAdditionalPrice(),
+		DriverAdditionalRewardPrice: taxiCallRequest.DriverAdditionalRewardPrice,
+		Departure:                   taxiCallRequest.Departure,
+		Arrival:                     taxiCallRequest.Arrival,
+		ToArrivalRoute:              taxiCallRequest.ToArrivalRoute,
+		Tags:                        taxiCallRequest.Tags,
+		UserTag:                     taxiCallRequest.UserTag,
+		UpdateTime:                  updateTime,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)

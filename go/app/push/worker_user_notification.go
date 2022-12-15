@@ -40,7 +40,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		return value.Notification{}, err
 	}
 
-	messageTitle := fmt.Sprintf("배차 완료. 택시 기사님이 이동중입니다.")
+	messageTitle := "배차 완료. 택시 기사님이 이동중입니다."
 	messageBody := fmt.Sprintf("%s (추가 요금 %d)", cmd.Departure.Address.AddressName, cmd.AdditionalPrice)
 
 	data := map[string]string{
@@ -51,6 +51,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		"driverCarNumber":     driver.CarNumber,
 		"requestBasePrice":    fmt.Sprint(cmd.RequestBasePrice),
 		"additionalPrice":     fmt.Sprint(cmd.AdditionalPrice),
+		"usedPoint":           fmt.Sprint(cmd.UsedPoint),
 		"driverLatitude":      fmt.Sprint(cmd.DriverLocation.Latitude),
 		"driverLongitude":     fmt.Sprint(cmd.DriverLocation.Longitude),
 		"departureLatitude":   fmt.Sprint(cmd.Departure.Point.Latitude),

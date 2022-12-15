@@ -30,3 +30,10 @@ func NewPaymentFailedNotification(userId string) entity.Event {
 
 	return command.NewRawMessageCommand(userId, value.NotificationCategory_Payment, messageTitle, messageBody, map[string]string{})
 }
+
+func NewReferralRewardNotification(userId string, amount int) entity.Event {
+	messageTitle := fmt.Sprintf("추천인 택시 탑승 적립금 %d타코가 적립되었습니다.", amount)
+	messageBody := ""
+
+	return command.NewRawMessageCommand(userId, value.NotificationCategory_Payment, messageTitle, messageBody, map[string]string{})
+}

@@ -58,6 +58,12 @@ func WithDriverGetterService(svc driverGetterInterface) taxicallAppOption {
 	}
 }
 
+func WithPaymentAppService(svc paymentAppInterface) taxicallAppOption {
+	return func(ta *taxicallApp) {
+		ta.service.payment = svc
+	}
+}
+
 func (t taxicallApp) validateApp() error {
 	if t.Transactor == nil {
 		return errors.New("taxi call app needs transactor ")
@@ -84,11 +90,15 @@ func (t taxicallApp) validateApp() error {
 	}
 
 	if t.service.userGetter == nil {
-		return errors.New("taxi call push app need user getter")
+		return errors.New("taxi call app needs user getter")
 	}
 
 	if t.service.driverGetter == nil {
-		return errors.New("taxi call push app need driver getter")
+		return errors.New("taxi call app needs driver getter")
+	}
+
+	if t.service.payment == nil {
+		return errors.New("taxi call app needs payment service")
 	}
 
 	return nil

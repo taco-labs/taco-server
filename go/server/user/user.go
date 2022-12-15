@@ -40,6 +40,7 @@ func (u *userServer) initController() error {
 	userGroup.GET("/:userId", u.GetUser)
 	userGroup.PUT("/:userId", u.UpdateUser)
 	userGroup.GET("/:userId/payment", u.ListUserPayment)
+	userGroup.GET("/:userId/payment_point", u.GetUserPaymentPoint)
 	userGroup.GET("/:userId/taxicall_latest", u.GetLatestTaxiCallRequest)
 	userGroup.GET("/:userId/taxicall", u.ListTaxiCallRequest)
 

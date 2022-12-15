@@ -92,3 +92,7 @@ func (u userApp) PaymentTransactionSuccessCallback(ctx context.Context, req requ
 func (u userApp) PaymentTransactionFailCallback(ctx context.Context, req request.PaymentTransactionFailCallbackRequest) error {
 	return u.service.userPayment.PaymentTransactionFailCallback(ctx, req)
 }
+
+func (u userApp) GetUserPaymentPoint(ctx context.Context, userId string) (entity.UserPaymentPoint, error) {
+	return u.service.userPayment.GetUserPaymentPoint(ctx, userId)
+}

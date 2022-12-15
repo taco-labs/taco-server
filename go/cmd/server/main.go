@@ -108,6 +108,7 @@ func main() {
 	userRepository := repository.NewUserRepository()
 	userSessionRepository := repository.NewUserSessionRepository()
 	userPaymentRepository := repository.NewUserPaymentRepository()
+	referralRepository := repository.NewReferralRepository()
 
 	taxiCallRequestRepository := repository.NewTaxiCallRepository()
 
@@ -250,19 +251,31 @@ func main() {
 		s3ImagePresignedUrlService)
 
 	// Init apps
-	userGetterDelegator := push.NewUserGetterDelegator()
-	driverGetterDelegator := push.NewDriverGetterDelegator()
+	userAppDelegator := user.NewUserAppDelegator()
+	driverAppDelegator := driver.NewDriverAppDelegator()
 
 	pushApp, err := push.NewPushApp(
 		push.WithTransactor(transactor),
 		push.WithRouteService(mapRouteService),
 		push.WithNotificationService(notificationService),
 		push.WithPushTokenRepository(pushTokenRepository),
-		push.WithUserGetterService(userGetterDelegator),
-		push.WithDriverGetterService(driverGetterDelegator),
+		push.WithUserGetterService(userAppDelegator),
+		push.WithDriverGetterService(driverAppDelegator),
 	)
 	if err != nil {
 		logger.Error("failed to setup push app", zap.Error(err))
+		os.Exit(1)
+	}
+
+	paymentApp, err := payment.NewPaymentApp(
+		payment.WithTransactor(transactor),
+		payment.WithPaymentRepository(userPaymentRepository),
+		payment.WithEventRepository(eventRepository),
+		payment.WithPaymentService(payplePaymentService),
+		payment.WithReferralRepository(referralRepository),
+	)
+	if err != nil {
+		logger.Error("failed to setup user payment app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -273,22 +286,12 @@ func main() {
 		taxicall.WithEventRepository(eventRepository),
 		taxicall.WithRouteServie(mapRouteService),
 		taxicall.WithLocationService(locationService),
-		taxicall.WithUserGetterService(userGetterDelegator),
-		taxicall.WithDriverGetterService(driverGetterDelegator),
+		taxicall.WithUserGetterService(userAppDelegator),
+		taxicall.WithDriverGetterService(driverAppDelegator),
+		taxicall.WithPaymentAppService(paymentApp),
 	)
 	if err != nil {
 		logger.Error("failed to setup taxi call app", zap.Error(err))
-		os.Exit(1)
-	}
-
-	paymentApp, err := payment.NewPaymentApp(
-		payment.WithTransactor(transactor),
-		payment.WithPaymentRepository(userPaymentRepository),
-		payment.WithEventRepository(eventRepository),
-		payment.WithPaymentService(payplePaymentService),
-	)
-	if err != nil {
-		logger.Error("failed to setup user payment app", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -345,6 +348,7 @@ func main() {
 		user.WithPushService(pushApp),
 		user.WithTaxiCallService(taxicallApp),
 		user.WithUserPaymentService(paymentApp),
+		user.WithDriverAppService(driverAppDelegator),
 	)
 	if err != nil {
 		logger.Error("failed to setup user app", zap.Error(err))
@@ -364,6 +368,7 @@ func main() {
 		driver.WithImageUrlService(cachedS3ImagePresignedUrlService),
 		driver.WithSettlementAccountService(settlementAccountService),
 		driver.WithDriverSettlementService(driverSettlementApp),
+		driver.WithUserPaymentAppService(paymentApp),
 	)
 	if err != nil {
 		logger.Error("failed to setup driver app", zap.Error(err))
@@ -371,8 +376,8 @@ func main() {
 	}
 
 	// Run apps
-	userGetterDelegator.Set(userApp)
-	driverGetterDelegator.Set(driverApp)
+	userAppDelegator.Set(userApp)
+	driverAppDelegator.Set(driverApp)
 
 	// Run subscription stream
 	eventSubsriberStreamService.Add(pushApp)

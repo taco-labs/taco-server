@@ -22,4 +22,7 @@ type User struct {
 	CreateTime    time.Time   `bun:"create_time"`
 	UpdateTime    time.Time   `bun:"update_time"`
 	DeleteTime    time.Time   `bun:"delete_time"`
+
+	// TODO (taekyeom) seperate entity & make dto
+	UserPoint int `bun:"-"`
 }

@@ -31,7 +31,7 @@ type driverApp interface {
 	ActivateDriver(context.Context, string) error
 	ListTaxiCallRequest(context.Context, request.ListDriverTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	GetLatestTaxiCallRequest(context.Context, string) (entity.DriverLatestTaxiCallRequest, error)
-	AcceptTaxiCallRequest(context.Context, string) error
+	AcceptTaxiCallRequest(context.Context, string) (entity.DriverLatestTaxiCallRequest, error)
 	RejectTaxiCallRequest(context.Context, string) error
 	CancelTaxiCallRequest(context.Context, request.CancelTaxiCallRequest) error
 	DriverToArrival(context.Context, string) error
@@ -80,9 +80,14 @@ func (d driverServer) SmsSignin(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
+	driverResp, err := response.DriverToResponse(driver)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
 	resp := response.DriverSignupResponse{
 		Token:  token,
-		Driver: response.DriverToResponse(driver),
+		Driver: driverResp,
 	}
 
 	return e.JSON(http.StatusOK, resp)
@@ -103,9 +108,14 @@ func (d driverServer) Signup(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
+	driverResp, err := response.DriverToResponse(driver)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
 	resp := response.DriverSignupResponse{
 		Token:  token,
-		Driver: response.DriverToResponse(driver),
+		Driver: driverResp,
 	}
 
 	return e.JSON(http.StatusOK, resp)
@@ -121,7 +131,10 @@ func (d driverServer) GetDriver(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp := response.DriverToResponse(driver)
+	resp, err := response.DriverToResponse(driver)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
 
 	return e.JSON(http.StatusOK, resp)
 }
@@ -140,7 +153,10 @@ func (d driverServer) UpdateDriver(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp := response.DriverToResponse(driver)
+	resp, err := response.DriverToResponse(driver)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
 
 	return e.JSON(http.StatusOK, resp)
 }
@@ -307,12 +323,14 @@ func (d driverServer) AcceptTaxiCallRequest(e echo.Context) error {
 
 	ticketId := e.Param("ticketId")
 
-	err := d.app.driver.AcceptTaxiCallRequest(ctx, ticketId)
+	taxiCallRequest, err := d.app.driver.AcceptTaxiCallRequest(ctx, ticketId)
 	if err != nil {
 		return server.ToResponse(e, err)
 	}
 
-	return e.JSON(http.StatusOK, struct{}{})
+	resp := response.DriverLatestTaxiCallRequestToResponse(taxiCallRequest)
+
+	return e.JSON(http.StatusOK, resp)
 }
 
 func (d driverServer) RejectTaxiCallRequest(e echo.Context) error {

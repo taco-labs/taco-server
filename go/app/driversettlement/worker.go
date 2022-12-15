@@ -49,7 +49,7 @@ func (d driversettlementApp) Process(ctx context.Context, event entity.Event) er
 		case command.EventUri_DriverSettlementTransferFail:
 			err = d.handleSettlementTransferFail(ctx, event)
 		default:
-			return fmt.Errorf("Invalid event uri '%s': %w", event.EventUri, value.ErrInvalidOperation)
+			return fmt.Errorf("invalid event uri '%s': %w", event.EventUri, value.ErrInvalidOperation)
 		}
 		return err
 	}
@@ -184,6 +184,10 @@ func (d driversettlementApp) handleSettlementTransferExecution(ctx context.Conte
 
 		return nil
 	})
+
+	if err != nil {
+		return fmt.Errorf("app.driversettlementApp.handleSettlementTransferExecution: error while update state: %w", err)
+	}
 
 	settlementTransferExecution := value.SettlementTransfer{ExecutionKey: inflightRequest.ExecutionKey}
 	if err := d.service.settlementAccount.TransferExecution(ctx, settlementTransferExecution); err != nil {
