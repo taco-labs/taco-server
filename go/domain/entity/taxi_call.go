@@ -222,7 +222,8 @@ type DriverTaxiCallContext struct {
 	BlockUntil                time.Time `bun:"block_until"`
 
 	// Read Only
-	Location value.Point `bun:"-"`
+	Location            value.Point `bun:"-"`
+	ToDepartureDistance int         `bun:"-"` // In meter
 }
 
 func NewEmptyDriverTaxiCallContext(driverId string, canReceive bool, t time.Time) DriverTaxiCallContext {

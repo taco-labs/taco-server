@@ -48,6 +48,7 @@ type PushDriverTaxiCallCommand struct {
 	Departure                   value.Location `json:"departureAddress,omitempty"`
 	Arrival                     value.Location `json:"arrivalAddress,omitempty"`
 	ToArrivalRoute              value.Route    `json:"toArrivalRoute"`
+	ToDepartureDistance         int            `json:"toDepartureDistance"`
 	Tags                        []string       `json:"tags"`
 	UserTag                     string         `json:"userTag"`
 	Attempt                     int            `json:"attempt"`
@@ -117,6 +118,7 @@ func NewPushDriverTaxiCallCommand(
 		Departure:                   taxiCallRequest.Departure,
 		Arrival:                     taxiCallRequest.Arrival,
 		ToArrivalRoute:              taxiCallRequest.ToArrivalRoute,
+		ToDepartureDistance:         driverTaxiCallContext.ToDepartureDistance,
 		Tags:                        taxiCallRequest.Tags,
 		UserTag:                     taxiCallRequest.UserTag,
 		UpdateTime:                  updateTime,

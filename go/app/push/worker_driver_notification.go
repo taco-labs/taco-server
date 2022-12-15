@@ -15,13 +15,8 @@ import (
 func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushDriverTaxiCallCommand) (value.Notification, error) {
 
-	routeBetweenDeparture, err := t.service.route.GetRoute(ctx, cmd.DriverLocation, cmd.Departure.Point)
-	if err != nil {
-		return value.Notification{}, fmt.Errorf("service.TaxiCallPush.handleDriverTaxiCallRequestTicketDistribution: error while get route between driver location and departure: %w", err)
-	}
-
 	var user entity.User
-	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		u, err := t.service.userGetter.GetUser(ctx, cmd.UserId)
 		if err != nil {
 			return fmt.Errorf("service.TaxiCallPush.handleDriverTaxiCallRequestTicketDistribution: error while get user: %w", err)
@@ -33,7 +28,13 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		return value.Notification{}, err
 	}
 
-	messageTitle := fmt.Sprintf("배차 요청 %d타코 (탑승지 까지 약 %d분)", cmd.AdditionalPrice, int(routeBetweenDeparture.ETA.Minutes()))
+	var messageTitle string
+
+	if cmd.ToDepartureDistance < 1000 {
+		messageTitle = fmt.Sprintf("배차 요청 %d타코 (탑승지 까지 약 %d m)", cmd.AdditionalPrice, int(cmd.ToDepartureDistance))
+	} else {
+		messageTitle = fmt.Sprintf("배차 요청 %d타코 (탑승지 까지 약 %.2f km)", cmd.AdditionalPrice, float64(cmd.ToDepartureDistance)/float64(1000))
+	}
 	messageBody := fmt.Sprintf("목적지: %s", cmd.Departure.Address.AddressName)
 
 	data := map[string]string{
@@ -45,8 +46,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"additionalPrice":              fmt.Sprint(cmd.AdditionalPrice),
 		"toArrivalDistance":            fmt.Sprint(cmd.ToArrivalRoute.Distance),
 		"toArrivalETA":                 fmt.Sprint(cmd.ToArrivalRoute.ETA.Nanoseconds()),
-		"toDepartureDistance":          fmt.Sprint(routeBetweenDeparture.Distance),
-		"toDepartureETA":               fmt.Sprint(routeBetweenDeparture.ETA.Nanoseconds()),
+		"toDepartureDistance":          fmt.Sprint(cmd.ToDepartureDistance),
 		"departureLatitude":            fmt.Sprint(cmd.Departure.Point.Latitude),
 		"departureLongitude":           fmt.Sprint(cmd.Departure.Point.Longitude),
 		"departureAddressRegionDepth1": cmd.Departure.Address.RegionDepth1,
