@@ -15,6 +15,7 @@ type ServerConfig struct {
 	SettlementAccountService SettlementAccountServiceConfig
 	RouteService             RouteServiceConfig
 	LocationService          LocationServiceConfig
+	EncryptionService        EncryptionServiceConfig
 	Backoffice               BackofficeConfig
 	Firebase                 FirebaseConfig
 	EventStream              EventStreamConfig

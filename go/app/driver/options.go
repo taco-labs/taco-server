@@ -88,6 +88,12 @@ func WithUserPaymentAppService(svc userPaymentApp) driverAppOption {
 	}
 }
 
+func WithEncryptionService(svc service.EncryptionService) driverAppOption {
+	return func(da *driverApp) {
+		da.service.encryption = svc
+	}
+}
+
 func (d driverApp) validateApp() error {
 	if d.Transactor == nil {
 		return errors.New("driver app need transactor")
@@ -139,6 +145,10 @@ func (d driverApp) validateApp() error {
 
 	if d.service.payment == nil {
 		return errors.New("driver app need user payment app service")
+	}
+
+	if d.service.encryption == nil {
+		return errors.New("driver app need encryption service")
 	}
 
 	return nil

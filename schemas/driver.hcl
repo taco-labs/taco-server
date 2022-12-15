@@ -140,6 +140,40 @@ table "driver" {
   }
 }
 
+table "driver_resident_registration_number" {
+  schema = schema.taco
+
+  column "driver_id" {
+    type = uuid
+    null = false
+  }
+
+  column "encrypted_resident_registration_number" {
+    type = bytea
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.driver_id,
+    ]
+  }
+
+  foreign_key "driver_resident_registration_number_driver_fk" {
+    columns = [
+      column.driver_id,
+    ]
+
+    ref_columns = [
+      table.driver.column.id,
+    ]
+
+    on_delete = CASCADE
+
+    on_update = NO_ACTION
+  }
+}
+
 table "driver_settlement_account" {
   schema = schema.taco
 

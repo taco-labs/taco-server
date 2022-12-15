@@ -2,21 +2,22 @@ package request
 
 // TODO(taekyeom) validation
 type DriverSignupRequest struct {
-	DriverType                string `json:"driverType"`
-	FirstName                 string `json:"firstName"`
-	LastName                  string `json:"lastName"`
-	Gender                    string `json:"gender"`
-	Birthday                  string `json:"birthday"`
-	Phone                     string `json:"phone"`
-	AppOs                     string `json:"appOs"`
-	AppVersion                string `json:"appVersion"`
-	AppFcmToken               string `json:"appFcmToken"`
-	DriverLicenseId           string `json:"driverLicenseId"`
-	SmsVerificationStateKey   string `json:"smsVerificationStateKey"`
-	CompanyRegistrationNumber string `json:"CompanyRegistrationNumber"`
-	CompanyName               string `json:"companyName"`
-	CarNumber                 string `json:"CarNumber"`
-	ServiceRegion             string `json:"serviceRegion"`
+	DriverType                 string `json:"driverType"`
+	FirstName                  string `json:"firstName"`
+	LastName                   string `json:"lastName"`
+	Gender                     string `json:"gender"`
+	Birthday                   string `json:"birthday"`
+	Phone                      string `json:"phone"`
+	AppOs                      string `json:"appOs"`
+	AppVersion                 string `json:"appVersion"`
+	AppFcmToken                string `json:"appFcmToken"`
+	DriverLicenseId            string `json:"driverLicenseId"`
+	SmsVerificationStateKey    string `json:"smsVerificationStateKey"`
+	CompanyRegistrationNumber  string `json:"CompanyRegistrationNumber"`
+	CompanyName                string `json:"companyName"`
+	CarNumber                  string `json:"CarNumber"`
+	ServiceRegion              string `json:"serviceRegion"`
+	ResidentRegistrationNumber string `json:"residentRegistrationNumber"`
 }
 
 type DriverUpdateRequest struct {

@@ -125,7 +125,6 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to create user payment order: %w", err)
 		}
 
-		events = append(events, NewPaymentSuccessNotification(userPaymentOrder))
 		if transactionRequest.SettlementTargetId != uuid.Nil.String() && transactionRequest.SettlementAmount > 0 {
 			events = append(events, command.NewDriverSettlementRequestCommand(
 				transactionRequest.SettlementTargetId,

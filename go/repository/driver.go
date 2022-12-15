@@ -18,6 +18,8 @@ type DriverRepository interface {
 	Create(context.Context, bun.IDB, entity.DriverDto) error
 	Update(context.Context, bun.IDB, entity.DriverDto) error
 	Delete(context.Context, bun.IDB, entity.DriverDto) error
+
+	CreateDriverRegistrationNumber(context.Context, bun.IDB, entity.DriverResidentRegistrationNumber) error
 }
 
 type driverRepository struct{}
@@ -96,6 +98,24 @@ func (u driverRepository) Delete(ctx context.Context, db bun.IDB, driver entity.
 	if errors.Is(sql.ErrNoRows, err) {
 		return value.ErrDriverNotFound
 	}
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (u driverRepository) CreateDriverRegistrationNumber(ctx context.Context, db bun.IDB, registrationNumber entity.DriverResidentRegistrationNumber) error {
+	res, err := db.NewInsert().Model(&registrationNumber).Exec(ctx)
+
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
 	}

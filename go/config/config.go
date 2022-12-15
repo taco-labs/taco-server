@@ -50,6 +50,10 @@ type LocationServiceConfig struct {
 	ApiSecret string `env:"TACO_LOCATION_SERVICE_API_SECRET,required"`
 }
 
+type EncryptionServiceConfig struct {
+	KeyId string `env:"TACO_ENCRYPTION_SERVICE_KEY_ID,required"`
+}
+
 type BackofficeConfig struct {
 	Secret string `env:"TACO_BACKOFFICE_SECRET,required"`
 }

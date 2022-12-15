@@ -12,6 +12,7 @@ import (
 
 	firebase "firebase.google.com/go"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/dgraph-io/ristretto"
@@ -250,6 +251,9 @@ func main() {
 		uploadImageUrlCacheManager,
 		s3ImagePresignedUrlService)
 
+	kmsClient := kms.NewFromConfig(awsconf)
+	kmsEncryptionService := service.NewAwsKMSEncryptionService(kmsClient, serverConfig.EncryptionService.KeyId)
+
 	// Init apps
 	userAppDelegator := user.NewUserAppDelegator()
 	driverAppDelegator := driver.NewDriverAppDelegator()
@@ -369,6 +373,7 @@ func main() {
 		driver.WithSettlementAccountService(settlementAccountService),
 		driver.WithDriverSettlementService(driverSettlementApp),
 		driver.WithUserPaymentAppService(paymentApp),
+		driver.WithEncryptionService(kmsEncryptionService),
 	)
 	if err != nil {
 		logger.Error("failed to setup driver app", zap.Error(err))

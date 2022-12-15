@@ -67,3 +67,10 @@ type DriverLocation struct {
 	DriverId   string
 	UpdateTime time.Time
 }
+
+type DriverResidentRegistrationNumber struct {
+	bun.BaseModel `bun:"table:driver_resident_registration_number"`
+
+	DriverId                            string `bun:"driver_id,pk"`
+	EncryptedResidentRegistrationNumber []byte `bun:"encrypted_resident_registration_number"`
+}

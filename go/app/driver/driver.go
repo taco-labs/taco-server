@@ -84,6 +84,7 @@ type driverApp struct {
 		settlementAccount service.SettlementAccountService // TODO (taekyeom) settlement app으로 이동
 		driverSettlement  driverSettlementInterface
 		payment           userPaymentApp
+		encryption        service.EncryptionService
 	}
 }
 
@@ -189,7 +190,12 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 	var newDriverDto entity.DriverDto
 	var driverSession entity.DriverSession
 
-	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	encryptedResidentRegistrationNumber, err := d.service.encryption.Encrypt(ctx, req.ResidentRegistrationNumber)
+	if err != nil {
+		return entity.Driver{}, "", fmt.Errorf("app.Driver.Signup: error while encrypt user resident registration number: %w", err)
+	}
+
+	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driver, err := d.repository.driver.FindByUserUniqueKey(ctx, i, req.Phone)
 		if !errors.Is(err, value.ErrDriverNotFound) {
 			return fmt.Errorf("app.Driver.Signup: error while find driver by unique key:%w", err)
@@ -241,6 +247,13 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: error while create driver:%w", err)
 		}
 
+		if err := d.repository.driver.CreateDriverRegistrationNumber(ctx, i, entity.DriverResidentRegistrationNumber{
+			DriverId:                            newDriverDto.Id,
+			EncryptedResidentRegistrationNumber: encryptedResidentRegistrationNumber,
+		}); err != nil {
+			return fmt.Errorf("app.Driver.Signup: error while create driver registration number:%w", err)
+		}
+
 		// Create push token
 		if _, err := d.service.push.CreatePushToken(ctx, request.CreatePushTokenRequest{
 			PrincipalId: newDriverDto.Id,
@@ -250,7 +263,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 		}
 
 		// Create driver referral reward
-		if err := d.service.payment.CreateDriverReferral(ctx, driver.Id); err != nil {
+		if err := d.service.payment.CreateDriverReferral(ctx, newDriverDto.Id); err != nil {
 			return fmt.Errorf("app.Driver.Signup: error while create driver referral: %w", err)
 		}
 

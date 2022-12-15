@@ -8,12 +8,6 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 )
 
-func NewPaymentSuccessNotification(paymentOrder entity.UserPaymentOrder) entity.Event {
-	messageTitle := fmt.Sprintf("타코 서비스에 대한 이요 요금 %d 원이 결제 결제되었습니다.", paymentOrder.Amount)
-
-	return command.NewRawMessageCommand(paymentOrder.UserId, value.NotificationCategory_Payment, messageTitle, "", map[string]string{})
-}
-
 func NewPaymentFallbackNotification(
 	failedUserPayment entity.UserPayment, fallbackUserPayment entity.UserPayment,
 ) entity.Event {
