@@ -8,6 +8,15 @@ import (
 	"github.com/uptrace/bun"
 )
 
+const (
+	DriverSettlementTaxRateNumerator   = 33
+	DriverSettlementTaxRateDenominator = 1000
+)
+
+func ExpectedSettlementAmountWithoutTax(amount int) int {
+	return amount * (DriverSettlementTaxRateDenominator - DriverSettlementTaxRateNumerator) / DriverSettlementTaxRateDenominator
+}
+
 type DriverSettlementRequest struct {
 	bun.BaseModel `bun:"table:driver_settlement_request"`
 
@@ -28,12 +37,13 @@ type DriverTotalSettlement struct {
 type DriverSettlementHistory struct {
 	bun.BaseModel `bun:"table:driver_settlement_history"`
 
-	DriverId      string    `bun:"driver_id,pk"`
-	Amount        int       `bun:"amount"`
-	Bank          string    `bun:"bank"`
-	AccountNumber string    `bun:"account_number"`
-	RequestTime   time.Time `bun:"request_time"`
-	CreateTime    time.Time `bun:"create_time"`
+	DriverId         string    `bun:"driver_id,pk"`
+	Amount           int       `bun:"amount"`
+	AmountWithoutTax int       `bun:"amoun_without_tax"`
+	Bank             string    `bun:"bank"`
+	AccountNumber    string    `bun:"account_number"`
+	RequestTime      time.Time `bun:"request_time"`
+	CreateTime       time.Time `bun:"create_time"`
 }
 
 func (d DriverSettlementHistory) RedactedAccountNumber() string {
@@ -49,6 +59,7 @@ type DriverInflightSettlementTransfer struct {
 	ExecutionKey      string                              `bun:"execution_key"`
 	BankTransactionId string                              `bun:"bank_transaction_id"`
 	Amount            int                                 `bun:"amount"`
+	AmountWithoutTax  int                                 `bun:"amoun_without_tax"`
 	Message           string                              `bun:"message"`
 	State             enum.SettlementTransferProcessState `bun:"state"`
 	CreateTime        time.Time                           `bun:"create_time"`
@@ -63,6 +74,7 @@ type DriverFailedSettlementTransfer struct {
 	ExecutionKey      string    `bun:"execution_key"`
 	BankTransactionId string    `bun:"bank_transaction_id"`
 	Amount            int       `bun:"amount"`
+	AmountWithoutTax  int       `bun:"amoun_without_tax"`
 	Message           string    `bun:"message"`
 	FailureMessage    string    `bun:"failure_message"`
 	CreateTime        time.Time `bun:"create_time"`

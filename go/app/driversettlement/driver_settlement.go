@@ -129,6 +129,7 @@ func (d driversettlementApp) RequestSettlementTransfer(ctx context.Context, sett
 			DriverId:          settlementAccount.DriverId,
 			BankTransactionId: settlementAccount.BankTransactionId,
 			Amount:            transferAmount,
+			AmountWithoutTax:  entity.ExpectedSettlementAmountWithoutTax(transferAmount),
 			Message:           "타코 정산", // TODO (taekyeom) more precise message?
 			State:             enum.SettlementTransferProcessState_Received,
 			CreateTime:        requestTime,

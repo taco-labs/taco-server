@@ -96,36 +96,42 @@ type DriverImageUrlResponse struct {
 }
 
 type DriverTotalSettlementResponse struct {
-	DriverId          string `json:"driverId"`
-	TotalAmount       int    `json:"totalAmount"`
-	RequestableAmount int    `json:"requestableAmount"`
+	DriverId                    string `json:"driverId"`
+	TotalAmount                 int    `json:"totalAmount"`
+	TotalAmountWithoutTax       int    `json:"TotalAmountWithoutTax"`
+	RequestableAmount           int    `json:"requestableAmount"`
+	RequestableAmountWithoutTax int    `json:"requestableAmountWithoutTax"`
 }
 
 func DriverTotalSettlementToResponse(driverTotalSettlement entity.DriverTotalSettlement) DriverTotalSettlementResponse {
 	return DriverTotalSettlementResponse{
-		DriverId:          driverTotalSettlement.DriverId,
-		TotalAmount:       driverTotalSettlement.TotalAmount,
-		RequestableAmount: driverTotalSettlement.RequestableAmount,
+		DriverId:                    driverTotalSettlement.DriverId,
+		TotalAmount:                 driverTotalSettlement.TotalAmount,
+		TotalAmountWithoutTax:       entity.ExpectedSettlementAmountWithoutTax(driverTotalSettlement.TotalAmount),
+		RequestableAmount:           driverTotalSettlement.RequestableAmount,
+		RequestableAmountWithoutTax: entity.ExpectedSettlementAmountWithoutTax(driverTotalSettlement.RequestableAmount),
 	}
 }
 
 type DriverSettlementHistoryResponse struct {
-	DriverId      string    `json:"driverId"`
-	Amount        int       `json:"amount"`
-	Bank          string    `json:"bank"`
-	AccountNumber string    `json:"accountNumber"`
-	RequestTime   time.Time `json:"requestTime"`
-	CreateTime    time.Time `json:"createTime"`
+	DriverId         string    `json:"driverId"`
+	Amount           int       `json:"amount"`
+	AmountWithoutTax int       `json:"amountWithoutTax"`
+	Bank             string    `json:"bank"`
+	AccountNumber    string    `json:"accountNumber"`
+	RequestTime      time.Time `json:"requestTime"`
+	CreateTime       time.Time `json:"createTime"`
 }
 
 func DriverSettlementHistoryToResponse(settlementHistory entity.DriverSettlementHistory) DriverSettlementHistoryResponse {
 	return DriverSettlementHistoryResponse{
-		DriverId:      settlementHistory.DriverId,
-		Amount:        settlementHistory.Amount,
-		Bank:          settlementHistory.Bank,
-		AccountNumber: settlementHistory.RedactedAccountNumber(),
-		RequestTime:   settlementHistory.RequestTime,
-		CreateTime:    settlementHistory.CreateTime,
+		DriverId:         settlementHistory.DriverId,
+		Amount:           settlementHistory.Amount,
+		AmountWithoutTax: settlementHistory.AmountWithoutTax,
+		Bank:             settlementHistory.Bank,
+		AccountNumber:    settlementHistory.RedactedAccountNumber(),
+		RequestTime:      settlementHistory.RequestTime,
+		CreateTime:       settlementHistory.CreateTime,
 	}
 }
 

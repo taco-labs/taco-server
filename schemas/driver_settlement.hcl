@@ -36,6 +36,11 @@ table "driver_inflight_settlement_transfer" {
     null = false
   }
 
+  column "amount_without_tax" {
+    type = int
+    null = false
+  }
+
   column "message" {
     type = varchar(10)
     null = false
@@ -93,6 +98,11 @@ table "driver_failed_settlement_transfer" {
   }
 
   column "amount" {
+    type = int
+    null = false
+  }
+
+  column "amount_without_tax" {
     type = int
     null = false
   }
@@ -192,6 +202,11 @@ table "driver_settlement_history" {
   }
 
   column "amount" {
+    type = int
+    null = false
+  }
+
+  column "amount_without_tax" {
     type = int
     null = false
   }

@@ -129,7 +129,7 @@ func (d driversettlementApp) handleSettlementTransferRequest(ctx context.Context
 		DriverId:          inflightRequest.DriverId,
 		TransferKey:       inflightRequest.TransferId,
 		BankTransactionId: inflightRequest.BankTransactionId,
-		Amount:            inflightRequest.Amount,
+		Amount:            inflightRequest.AmountWithoutTax,
 		Message:           inflightRequest.Message,
 	}
 
@@ -242,12 +242,13 @@ func (d driversettlementApp) handleSettlementTransferSuccess(ctx context.Context
 
 		// 3. Add history
 		settlementHistory := entity.DriverSettlementHistory{
-			DriverId:      cmd.DriverId,
-			Amount:        inflightRequest.Amount,
-			Bank:          cmd.Bank,
-			AccountNumber: cmd.AccountNumber,
-			RequestTime:   inflightRequest.CreateTime,
-			CreateTime:    event.CreateTime,
+			DriverId:         cmd.DriverId,
+			Amount:           inflightRequest.Amount,
+			AmountWithoutTax: inflightRequest.AmountWithoutTax,
+			Bank:             cmd.Bank,
+			AccountNumber:    cmd.AccountNumber,
+			RequestTime:      inflightRequest.CreateTime,
+			CreateTime:       event.CreateTime,
 		}
 
 		if err := d.repository.settlement.CreateDriverSettlementHistory(ctx, i, settlementHistory); err != nil {
@@ -289,6 +290,7 @@ func (d driversettlementApp) handleSettlementTransferFail(ctx context.Context, e
 			ExecutionKey:      inflightRequest.ExecutionKey,
 			BankTransactionId: inflightRequest.BankTransactionId,
 			Amount:            inflightRequest.Amount,
+			AmountWithoutTax:  inflightRequest.AmountWithoutTax,
 			Message:           inflightRequest.Message,
 			FailureMessage:    cmd.FailureMessage,
 			CreateTime:        event.CreateTime,
