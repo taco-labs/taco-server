@@ -300,7 +300,8 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 	type tempModel struct {
 		entity.DriverTaxiCallContext `bun:",extend"`
 
-		EwkbHex string `bun:"location"`
+		Distance int    `bun:"distance"`
+		EwkbHex  string `bun:"location"`
 	}
 
 	var resp []tempModel
@@ -334,7 +335,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		Model(&resp).
 		ColumnExpr("driver_taxi_call_context.*").
 		ColumnExpr("location").
-		Column("distance::int").
+		ColumnExpr("CAST(distance AS int) as distance").
 		Join("JOIN driver_distance_filtered AS t2 ON t2.driver_id = ?TableName.driver_id").
 		Join("JOIN driver_service_region AS t3 ON t3.id = ?TableName.driver_id").
 		Where("block_until is NULL or block_until < ?", requestTime).
@@ -352,6 +353,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		if err := i.Location.FromEwkbHex(i.EwkbHex); err != nil {
 			return entity.DriverTaxiCallContext{}, err
 		}
+		i.DriverTaxiCallContext.ToDepartureDistance = i.Distance
 
 		return i.DriverTaxiCallContext, nil
 	})
