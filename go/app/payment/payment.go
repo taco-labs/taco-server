@@ -176,6 +176,16 @@ func (u paymentApp) GetUserPayment(ctx context.Context, userId string, userPayme
 	return userPayment, nil
 }
 
+func (u paymentApp) UpdateUserPayment(ctx context.Context, userPayment entity.UserPayment) error {
+	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := u.repository.payment.UpdateUserPayment(ctx, i, userPayment); err != nil {
+			return fmt.Errorf("app.paymentApp.UpdateUserPayment: error while update user payment: %w", err)
+		}
+
+		return nil
+	})
+}
+
 func (u paymentApp) ListUserPayment(ctx context.Context, userId string) ([]entity.UserPayment, error) {
 	var userPayments []entity.UserPayment
 	var err error

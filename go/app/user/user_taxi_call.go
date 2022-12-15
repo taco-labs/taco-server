@@ -30,12 +30,7 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 
 	userId := utils.GetUserId(ctx)
 
-	userPayment, err := u.service.userPayment.GetUserPayment(ctx, userId, req.PaymentId)
-	if err != nil {
-		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while get user payment:\n%w", err)
-	}
-
-	taxiCallRequest, err := u.service.taxiCall.CreateTaxiCallRequest(ctx, userId, userPayment, req)
+	taxiCallRequest, err := u.service.taxiCall.CreateTaxiCallRequest(ctx, userId, req)
 	if err != nil {
 		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while create taxi call request:%w", err)
 	}

@@ -138,12 +138,6 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to apply user referral: %w", err)
 		}
 
-		userPayment, err := p.repository.payment.GetUserPayment(ctx, i, transactionRequest.PaymentSummary.PaymentId)
-		if err != nil {
-			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to get user payment: %w", err)
-		}
-		userPayment.LastUseTime = cmd.CreateTime
-
 		if transactionRequest.Recovery {
 			err = p.repository.payment.DeleteFailedOrder(ctx, i, entity.UserPaymentFailedOrder{OrderId: transactionRequest.OrderId})
 			if err != nil {
@@ -156,9 +150,19 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 			}
 
 			if len(failedOrders) == 0 {
+				userPayment, err := p.repository.payment.GetUserPayment(ctx, i, transactionRequest.PaymentSummary.PaymentId)
+				if err != nil {
+					return fmt.Errorf("app.payment.handleTransactionSuccess: failed to get user payment: %w", err)
+				}
+
 				userPayment.Invalid = false
 				userPayment.InvalidErrorCode = ""
 				userPayment.InvalidErrorMessage = ""
+
+				if err := p.repository.payment.UpdateUserPayment(ctx, i, userPayment); err != nil {
+					return fmt.Errorf("app.payment.handleTransactionSuccess: failed to update user payment to valid: %w", err)
+				}
+
 			} else {
 				events = append(events, command.NewUserPaymentTransactionRequestCommand(
 					transactionRequest.UserId,
@@ -173,10 +177,6 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 					true,
 				))
 			}
-		}
-
-		if err := p.repository.payment.UpdateUserPayment(ctx, i, userPayment); err != nil {
-			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to update user payment to valid: %w", err)
 		}
 
 		if err := p.repository.event.BatchCreate(ctx, i, events); err != nil {

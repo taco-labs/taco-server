@@ -102,7 +102,7 @@ func (t taxicallApp) LatestUserTaxiCallRequest(ctx context.Context, userId strin
 	return latestTaxiCallRequest, nil
 }
 
-func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, userPayment entity.UserPayment, req request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error) {
+func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, req request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	tags, err := slices.MapErr(req.TagIds, value.GetTagById)
@@ -206,6 +206,15 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, u
 
 	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// create taxi call request
+		userPayment, err := t.service.payment.GetUserPayment(ctx, userId, req.PaymentId)
+		if err != nil {
+			return fmt.Errorf("app.taxCall.CreateTaxiCallRequest: error while get user payment: %w", err)
+		}
+		userPayment.LastUseTime = requestTime
+		if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
+			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while update user payment: %w", err)
+		}
+
 		taxiCallRequest = entity.TaxiCallRequest{
 			Dryrun:         req.Dryrun,
 			ToArrivalRoute: route,

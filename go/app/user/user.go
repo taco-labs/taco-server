@@ -38,14 +38,13 @@ type taxiCallInterface interface {
 	ListTags(context.Context) ([]value.Tag, error)
 	ListUserTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	LatestUserTaxiCallRequest(context.Context, string) (entity.UserLatestTaxiCallRequest, error)
-	CreateTaxiCallRequest(context.Context, string, entity.UserPayment, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
+	CreateTaxiCallRequest(context.Context, string, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	UserCancelTaxiCallRequest(context.Context, string, request.CancelTaxiCallRequest) error
 }
 
 type userPaymentInterface interface {
 	GetCardRegistrationRequestParam(context.Context, entity.User) (value.PaymentRegistrationRequestParam, error)
 	RegistrationCallback(context.Context, request.PaymentRegistrationCallbackRequest) (entity.UserPayment, error)
-	GetUserPayment(context.Context, string, string) (entity.UserPayment, error)
 	ListUserPayment(context.Context, string) ([]entity.UserPayment, error)
 	TryRecoverUserPayment(context.Context, string, string) error
 	DeleteUserPayment(context.Context, entity.User, string) error

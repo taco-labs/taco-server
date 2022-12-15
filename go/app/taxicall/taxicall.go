@@ -18,6 +18,8 @@ type driverGetterInterface interface {
 }
 
 type paymentAppInterface interface {
+	GetUserPayment(context.Context, string, string) (entity.UserPayment, error)
+	UpdateUserPayment(ctx context.Context, userPayment entity.UserPayment) error
 	UseUserPaymentPoint(ctx context.Context, userId string, price int) (int, error)
 	AddUserPaymentPoint(ctx context.Context, userId string, point int) error
 	UseDriverReferralReward(ctx context.Context, driverId string, price int) (int, error)
