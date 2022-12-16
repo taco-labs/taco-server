@@ -20,10 +20,7 @@ func (b backofficeServer) GetDriver(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp, err := response.DriverToResponse(driver)
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
+	resp := response.DriverToResponse(driver)
 
 	return e.JSON(http.StatusOK, resp)
 }
@@ -62,10 +59,7 @@ func (b backofficeServer) GetUser(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp, err := response.UserToResponse(user)
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
+	resp := response.UserToResponse(user)
 
 	return e.JSON(http.StatusOK, resp)
 }

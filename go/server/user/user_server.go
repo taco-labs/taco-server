@@ -72,18 +72,9 @@ func (u userServer) SmsSignin(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	userResp, err := response.UserToResponse(user)
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
-
 	resp := response.UserSignupResponse{
 		Token: token,
-		User:  userResp,
-	}
-
-	if err != nil {
-		return server.ToResponse(e, err)
+		User:  response.UserToResponse(user),
 	}
 
 	return e.JSON(http.StatusOK, resp)
@@ -105,18 +96,9 @@ func (u userServer) Signup(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	userResp, err := response.UserToResponse(user)
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
-
 	resp := response.UserSignupResponse{
 		Token: token,
-		User:  userResp,
-	}
-
-	if err != nil {
-		return server.ToResponse(e, err)
+		User:  response.UserToResponse(user),
 	}
 
 	return e.JSON(http.StatusOK, resp)
@@ -130,14 +112,7 @@ func (u userServer) GetUser(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp, err := response.UserToResponse(user)
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
-
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
+	resp := response.UserToResponse(user)
 
 	return e.JSON(http.StatusOK, resp)
 }
@@ -156,14 +131,7 @@ func (u userServer) UpdateUser(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp, err := response.UserToResponse(user)
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
-
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
+	resp := response.UserToResponse(user)
 
 	return e.JSON(http.StatusOK, resp)
 }

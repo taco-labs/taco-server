@@ -4,8 +4,6 @@ import (
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
-	"github.com/taco-labs/taco/go/domain/value"
-	"github.com/taco-labs/taco/go/domain/value/enum"
 )
 
 type SmsVerificationRequestResponse struct {
@@ -26,15 +24,7 @@ type UserResponse struct {
 	ReferralCode string `json:"referralCode"`
 }
 
-func UserToResponse(user entity.User) (UserResponse, error) {
-	referralCode, err := value.EncodeReferralCode(value.ReferralCode{
-		ReferralType: enum.ReferralType_User,
-		PhoneNumber:  user.Phone,
-	})
-	if err != nil {
-		return UserResponse{}, err
-	}
-
+func UserToResponse(user entity.User) UserResponse {
 	return UserResponse{
 		Id:           user.Id,
 		FirstName:    user.FirstName,
@@ -45,8 +35,8 @@ func UserToResponse(user entity.User) (UserResponse, error) {
 		AppOs:        string(user.AppOs),
 		AppVersion:   user.AppVersion,
 		UserPoint:    user.UserPoint,
-		ReferralCode: referralCode,
-	}, nil
+		ReferralCode: user.ReferralCode(),
+	}
 }
 
 type UserSignupResponse struct {

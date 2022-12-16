@@ -3,6 +3,7 @@ package entity
 import (
 	"time"
 
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/uptrace/bun"
 )
@@ -25,4 +26,13 @@ type User struct {
 
 	// TODO (taekyeom) seperate entity & make dto
 	UserPoint int `bun:"-"`
+}
+
+func (u User) ReferralCode() string {
+	referralCode, _ := value.EncodeReferralCode(value.ReferralCode{
+		ReferralType: enum.ReferralType_User,
+		PhoneNumber:  u.Phone,
+	})
+
+	return referralCode
 }

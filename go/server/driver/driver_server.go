@@ -75,19 +75,13 @@ func (d driverServer) SmsSignin(e echo.Context) error {
 	}
 
 	driver, token, err := d.app.driver.SmsSignin(ctx, req)
-
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
-
-	driverResp, err := response.DriverToResponse(driver)
 	if err != nil {
 		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverSignupResponse{
 		Token:  token,
-		Driver: driverResp,
+		Driver: response.DriverToResponse(driver),
 	}
 
 	return e.JSON(http.StatusOK, resp)
@@ -103,19 +97,13 @@ func (d driverServer) Signup(e echo.Context) error {
 	}
 
 	driver, token, err := d.app.driver.Signup(ctx, req)
-
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
-
-	driverResp, err := response.DriverToResponse(driver)
 	if err != nil {
 		return server.ToResponse(e, err)
 	}
 
 	resp := response.DriverSignupResponse{
 		Token:  token,
-		Driver: driverResp,
+		Driver: response.DriverToResponse(driver),
 	}
 
 	return e.JSON(http.StatusOK, resp)
@@ -131,10 +119,7 @@ func (d driverServer) GetDriver(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp, err := response.DriverToResponse(driver)
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
+	resp := response.DriverToResponse(driver)
 
 	return e.JSON(http.StatusOK, resp)
 }
@@ -153,10 +138,7 @@ func (d driverServer) UpdateDriver(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp, err := response.DriverToResponse(driver)
-	if err != nil {
-		return server.ToResponse(e, err)
-	}
+	resp := response.DriverToResponse(driver)
 
 	return e.JSON(http.StatusOK, resp)
 }

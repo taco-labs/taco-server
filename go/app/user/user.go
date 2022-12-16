@@ -213,6 +213,10 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			switch referralCode.ReferralType {
 			case enum.ReferralType_User:
 				referralUser, err := u.repository.user.FindByUserUniqueKey(ctx, i, referralCode.PhoneNumber)
+				if errors.Is(err, value.ErrNotFound) {
+					return fmt.Errorf("app.User.Signup: user not found: %w",
+						value.NewTacoError(value.ERR_NOTFOUND_REFERRAL_CODE, "user referral not found"))
+				}
 				if err != nil {
 					return fmt.Errorf("app.User.Signup: error while get referral user: %w", err)
 				}
@@ -221,6 +225,10 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 				}
 			case enum.ReferralType_Driver:
 				driver, err := u.service.driver.GetDriverByUserUniqueKey(ctx, referralCode.PhoneNumber)
+				if errors.Is(err, value.ErrNotFound) {
+					return fmt.Errorf("app.User.Signup: driver not found: %w",
+						value.NewTacoError(value.ERR_NOTFOUND_REFERRAL_CODE, "driver referral not found"))
+				}
 				if err != nil {
 					return fmt.Errorf("app.User.Signup: error while get driver by unique key: %w", err)
 				}

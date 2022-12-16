@@ -6,7 +6,6 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
-	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils/slices"
 )
 
@@ -39,14 +38,7 @@ type DriverSignupResponse struct {
 	Driver DriverResponse `json:"driver"`
 }
 
-func DriverToResponse(driver entity.Driver) (DriverResponse, error) {
-	referralCode, err := value.EncodeReferralCode(value.ReferralCode{
-		ReferralType: enum.ReferralType_Driver,
-		PhoneNumber:  driver.Phone,
-	})
-	if err != nil {
-		return DriverResponse{}, err
-	}
+func DriverToResponse(driver entity.Driver) DriverResponse {
 	return DriverResponse{
 		Id:                         driver.Id,
 		DriverType:                 string(driver.DriverType),
@@ -68,8 +60,8 @@ func DriverToResponse(driver entity.Driver) (DriverResponse, error) {
 		DriverProfileImageUploaded: driver.DriverProfileImageUploaded,
 		UploadUrls:                 driver.UploadUrls,
 		DownloadUrls:               driver.DownloadUrls,
-		ReferralCode:               referralCode,
-	}, nil
+		ReferralCode:               driver.ReferralCode(),
+	}
 }
 
 type DriverSettlemtnAccountResponse struct {

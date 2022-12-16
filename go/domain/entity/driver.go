@@ -46,6 +46,15 @@ func (d DriverDto) FullName() string {
 	return fmt.Sprintf("%s%s", d.LastName, d.FirstName)
 }
 
+func (d DriverDto) ReferralCode() string {
+	referralCode, _ := value.EncodeReferralCode(value.ReferralCode{
+		ReferralType: enum.ReferralType_Driver,
+		PhoneNumber:  d.Phone,
+	})
+
+	return referralCode
+}
+
 type DriverSettlementAccount struct {
 	bun.BaseModel `bun:"table:driver_settlement_account"`
 
