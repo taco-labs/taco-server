@@ -34,6 +34,12 @@ func WithEventRepository(repo repository.EventRepository) taxicallAppOption {
 	}
 }
 
+func WithAnalyticsRepository(repo repository.AnalyticsRepository) taxicallAppOption {
+	return func(ta *taxicallApp) {
+		ta.repository.analytics = repo
+	}
+}
+
 func WithRouteServie(svc service.MapRouteService) taxicallAppOption {
 	return func(ta *taxicallApp) {
 		ta.service.route = svc
@@ -79,6 +85,10 @@ func (t taxicallApp) validateApp() error {
 
 	if t.repository.event == nil {
 		return errors.New("taxi call app needs event repository")
+	}
+
+	if t.repository.analytics == nil {
+		return errors.New("taxi call app needs analytics repository")
 	}
 
 	if t.service.route == nil {

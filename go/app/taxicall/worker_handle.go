@@ -183,19 +183,23 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 		events = append(events, userCmd)
 		events = append(events, driverCmds...)
 
-		// logging distribution
-		for _, driverContext := range driverTaxiCallContexts {
-			analytics.WriteAnalyticsLog(ctx, eventTime, analytics.LogType_DriverTaxiCallTicketDistribution, analytics.DriverTaxicallTicketDistributionPayload{
-				DriverId:                  driverContext.DriverId,
+		ticketDistributionAnalytics := slices.Map(driverTaxiCallContexts, func(i entity.DriverTaxiCallContext) entity.Analytics {
+			return entity.NewAnalytics(receiveTime, analytics.DriverTaxicallTicketDistributionPayload{
+				DriverId:                  i.DriverId,
 				RequestUserId:             taxiCallRequest.UserId,
 				TaxiCallRequestId:         taxiCallRequest.Id,
 				TaxiCallRequestTicketId:   taxiCallTicket.TicketId,
 				TicketAttempt:             taxiCallTicket.Attempt,
 				RequestBasePrice:          taxiCallRequest.RequestBasePrice,
 				AdditionalPrice:           taxiCallTicket.AdditionalPrice,
-				DriverLocation:            driverContext.Location,
+				DriverLocation:            i.Location,
 				TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
+				DistanceToDeparture:       i.ToDepartureDistance,
+				DistanceToArrival:         taxiCallRequest.ToDepartureRoute.Distance,
 			})
+		})
+		if err := t.repository.analytics.BatchCreate(ctx, i, ticketDistributionAnalytics); err != nil {
+			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while create ticket distribution analytics events: %w", taxiCallRequest.Id, err)
 		}
 
 		return nil

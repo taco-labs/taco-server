@@ -40,6 +40,12 @@ func WithEventRepository(repo repository.EventRepository) driverAppOption {
 	}
 }
 
+func WithAnalyticsRepository(repo repository.AnalyticsRepository) driverAppOption {
+	return func(da *driverApp) {
+		da.repository.analytics = repo
+	}
+}
+
 func WithSessionService(svc sessionServiceInterface) driverAppOption {
 	return func(da *driverApp) {
 		da.service.session = svc
@@ -113,6 +119,10 @@ func (d driverApp) validateApp() error {
 
 	if d.repository.event == nil {
 		return errors.New("driver app need event repository")
+	}
+
+	if d.repository.analytics == nil {
+		return errors.New("driver app need analytics repository")
 	}
 
 	if d.service.session == nil {

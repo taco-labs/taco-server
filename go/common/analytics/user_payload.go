@@ -6,8 +6,13 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 )
 
+// TODO (taekyeom) referral
 type UserSignupPayload struct {
 	UserId string
+}
+
+func (u UserSignupPayload) EventType() EventType {
+	return EventType_UserSignup
 }
 
 type UserTaxiCallRequestPayload struct {
@@ -25,6 +30,10 @@ type UserTaxiCallRequestPayload struct {
 	RequestMaxAdditionalPrice int
 }
 
+func (u UserTaxiCallRequestPayload) EventType() EventType {
+	return EventType_UserTaxiCallRequest
+}
+
 type UserTaxiCallRequestFailedPayload struct {
 	UserId                    string
 	Id                        string
@@ -32,17 +41,19 @@ type UserTaxiCallRequestFailedPayload struct {
 	TaxiCallRequestCreateTime time.Time
 }
 
-type UserCancelTaxiCallRequestPayload struct {
-	UserId        string
-	Id            string
-	CancelPenalty int
-	CreateTime    time.Time
+func (u UserTaxiCallRequestFailedPayload) EventType() EventType {
+	return EventType_UserTaxiCallRequestFailed
 }
 
-type UserPaymentDonePayload struct {
-	UserId         string
-	OrderId        string
-	OrderName      string
-	Amount         int
-	PaymentSummary value.PaymentSummary
+// TODO (taekyeom) cancel penalty && request create time
+type UserCancelTaxiCallRequestPayload struct {
+	UserId                    string
+	Id                        string
+	CancelPenalty             int
+	CreateTime                time.Time
+	TaxiCallRequestCreateTime time.Time
+}
+
+func (u UserCancelTaxiCallRequestPayload) EventType() EventType {
+	return EventType_UserCancelTaxiCallRequest
 }

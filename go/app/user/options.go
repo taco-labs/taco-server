@@ -29,6 +29,12 @@ func WithSmsVerificationRepository(repo repository.SmsVerificationRepository) us
 	}
 }
 
+func WithAnalyticsRepository(repo repository.AnalyticsRepository) userAppOption {
+	return func(ua *userApp) {
+		ua.repository.analytics = repo
+	}
+}
+
 func WithSessionService(app sessionServiceInterface) userAppOption {
 	return func(ua *userApp) {
 		ua.service.session = app
@@ -88,6 +94,10 @@ func (u userApp) validateApp() error {
 
 	if u.repository.smsVerification == nil {
 		return errors.New("user app need sms verification repository")
+	}
+
+	if u.repository.analytics == nil {
+		return errors.New("user app need analytics repository")
 	}
 
 	if u.service.session == nil {

@@ -67,7 +67,7 @@ func (t taxicallApp) LatestUserTaxiCallRequest(ctx context.Context, userId strin
 	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		taxiCallRequest, err := t.repository.taxiCallRequest.GetLatestByUserId(ctx, i, userId)
 		if err != nil {
-			return fmt.Errorf("app.taxCall.LatestUserTaxiCallRequest: error while get latest taxi call:\n%w", err)
+			return fmt.Errorf("app.taxiCall.LatestUserTaxiCallRequest: error while get latest taxi call:\n%w", err)
 		}
 
 		tags, err := slices.MapErr(taxiCallRequest.TagIds, value.GetTagById)
@@ -122,7 +122,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 		isActive := latestTaxiCallRequest.CurrentState.Active()
 
 		if !isNotFound && isActive {
-			err = fmt.Errorf("app.taxCall.CreateTaxiCallRequest: already active taxi call request exists:\n%w", value.ErrAlreadyExists)
+			err = fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: already active taxi call request exists:\n%w", value.ErrAlreadyExists)
 			return err
 		}
 
@@ -165,7 +165,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 
 	route, err := t.service.route.GetRoute(ctx, req.Departure, req.Arrival)
 	if err != nil {
-		return entity.TaxiCallRequest{}, fmt.Errorf("app.taxCall.CreateTaxiCallRequest: error while get route:\n%w", err)
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while get route:\n%w", err)
 	}
 
 	if req.Dryrun {
@@ -208,7 +208,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 		// create taxi call request
 		userPayment, err := t.service.payment.GetUserPayment(ctx, userId, req.PaymentId)
 		if err != nil {
-			return fmt.Errorf("app.taxCall.CreateTaxiCallRequest: error while get user payment: %w", err)
+			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while get user payment: %w", err)
 		}
 		userPayment.LastUseTime = requestTime
 		if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
@@ -241,7 +241,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 		}
 
 		if err = t.repository.taxiCallRequest.Create(ctx, i, taxiCallRequest); err != nil {
-			return fmt.Errorf("app.taxCall.CreateTaxiCallRequest: error while create taxi call request:%w", err)
+			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call request:%w", err)
 		}
 
 		processMessage := command.NewTaxiCallProgressCommand(
@@ -255,27 +255,30 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
 
+		requestAnalytics := entity.NewAnalytics(requestTime, analytics.UserTaxiCallRequestPayload{
+			UserId:                    taxiCallRequest.UserId,
+			Id:                        taxiCallRequest.Id,
+			Departure:                 taxiCallRequest.Departure,
+			Arrival:                   taxiCallRequest.Arrival,
+			ToArrivalETA:              taxiCallRequest.ToArrivalRoute.ETA,
+			ToArrivalDistance:         taxiCallRequest.ToArrivalRoute.Distance,
+			Tags:                      taxiCallRequest.Tags,
+			UserTag:                   taxiCallRequest.UserTag,
+			PaymentSummary:            taxiCallRequest.PaymentSummary,
+			RequestBasePrice:          taxiCallRequest.RequestBasePrice,
+			RequestMinAdditionalPrice: taxiCallRequest.RequestMinAdditionalPrice,
+			RequestMaxAdditionalPrice: taxiCallRequest.RequestMaxAdditionalPrice,
+		})
+		if err := t.repository.analytics.Create(ctx, i, requestAnalytics); err != nil {
+			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create analytics event: %w", err)
+		}
+
 		return nil
 	})
 
 	if err != nil {
 		return entity.TaxiCallRequest{}, err
 	}
-
-	analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_UserTaxiCallRequest, analytics.UserTaxiCallRequestPayload{
-		UserId:                    taxiCallRequest.UserId,
-		Id:                        taxiCallRequest.Id,
-		Departure:                 taxiCallRequest.Departure,
-		Arrival:                   taxiCallRequest.Arrival,
-		ToArrivalETA:              taxiCallRequest.ToArrivalRoute.ETA,
-		ToArrivalDistance:         taxiCallRequest.ToArrivalRoute.Distance,
-		Tags:                      taxiCallRequest.Tags,
-		UserTag:                   taxiCallRequest.UserTag,
-		PaymentSummary:            taxiCallRequest.PaymentSummary,
-		RequestBasePrice:          taxiCallRequest.RequestBasePrice,
-		RequestMinAdditionalPrice: taxiCallRequest.RequestMinAdditionalPrice,
-		RequestMaxAdditionalPrice: taxiCallRequest.RequestMaxAdditionalPrice,
-	})
 
 	return taxiCallRequest, nil
 }
@@ -287,11 +290,11 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 		var events []entity.Event
 		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, req.TaxiCallRequestId)
 		if err != nil {
-			return fmt.Errorf("app.taxCall.CancelTaxiCall: error while get taxi call:%w", err)
+			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while get taxi call:%w", err)
 		}
 
 		if taxiCallRequest.UserId != userId {
-			return fmt.Errorf("app.taxCall.CancelTaxiCall: Invalid request:%w", value.ErrUnAuthorized)
+			return fmt.Errorf("app.taxiCall.CancelTaxiCall: Invalid request:%w", value.ErrUnAuthorized)
 		}
 
 		err = taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_USER_CANCELLED)
@@ -307,7 +310,7 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 		}
 
 		if err = t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
-			return fmt.Errorf("app.taxCall.CancelTaxiCall: error while update taxi call:%w", err)
+			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while update taxi call:%w", err)
 		}
 
 		if err := t.service.payment.AddUserPaymentPoint(ctx, userId, taxiCallRequest.UserUsedPoint); err != nil {
@@ -331,13 +334,15 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
 
-		// TODO (taekyeom) 패널티 감수하고 취소했는지 체크 필요
-		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_UserCancelTaxiCallRequest, analytics.UserCancelTaxiCallRequestPayload{
+		cancelAnalytics := entity.NewAnalytics(requestTime, analytics.UserCancelTaxiCallRequestPayload{
 			UserId:        taxiCallRequest.UserId,
 			Id:            taxiCallRequest.Id,
 			CancelPenalty: taxiCallRequest.UserCancelPenaltyPrice(requestTime),
 			CreateTime:    taxiCallRequest.CreateTime,
 		})
+		if err := t.repository.analytics.Create(ctx, i, cancelAnalytics); err != nil {
+			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while create analytics event: %w", err)
+		}
 
 		return nil
 	})

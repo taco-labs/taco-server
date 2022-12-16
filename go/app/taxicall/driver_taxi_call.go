@@ -342,7 +342,7 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			UserPhone:       user.Phone,
 		}
 
-		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiCallTicketAccept, analytics.DriverTaxiCallTicketAcceptPayload{
+		driverAcceptAnalytics := entity.NewAnalytics(requestTime, analytics.DriverTaxiCallTicketAcceptPayload{
 			DriverId:                        driverTaxiCallContext.DriverId,
 			RequestUserId:                   taxiCallRequest.UserId,
 			TaxiCallRequestId:               taxiCallRequest.Id,
@@ -356,6 +356,9 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			ReceiveTime:                     driverTaxiCallContext.LastReceiveTime,
 			TaxiCallRequestCreateTime:       taxiCallRequest.CreateTime,
 		})
+		if err := t.repository.analytics.Create(ctx, i, driverAcceptAnalytics); err != nil {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while create analytics event: %w", err)
+		}
 
 		return nil
 	})
@@ -395,7 +398,7 @@ func (t taxicallApp) RejectTaxiCallRequest(ctx context.Context, driverId string,
 			return fmt.Errorf("app.taxiCall.RejectTaxiCallRequest: error while get taxi call request by id: %w", err)
 		}
 
-		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiCallTicketReject, analytics.DriverTaxiCallTicketRejectPayload{
+		driverRejectAnalytics := entity.NewAnalytics(requestTime, analytics.DriverTaxiCallTicketRejectPayload{
 			DriverId:                  driverTaxiCallContext.DriverId,
 			RequestUserId:             taxiCallRequest.UserId,
 			TaxiCallRequestId:         taxiCallRequest.Id,
@@ -407,6 +410,9 @@ func (t taxicallApp) RejectTaxiCallRequest(ctx context.Context, driverId string,
 			ReceiveTime:               driverTaxiCallContext.LastReceiveTime,
 			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
 		})
+		if err := t.repository.analytics.Create(ctx, i, driverRejectAnalytics); err != nil {
+			return fmt.Errorf("app.taxiCall.RejectTaxiCallRequest: error while create analytics event: %w", err)
+		}
 
 		return nil
 	})
@@ -470,10 +476,10 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 		)
 
 		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
-			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call process event: %w", err)
+			return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while create taxi call process event: %w", err)
 		}
 
-		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiCallCancel, analytics.DriverTaxiCancelPayload{
+		driverTaxiCallCancelPayload := entity.NewAnalytics(requestTime, analytics.DriverTaxiCancelPayload{
 			DriverId:                  taxiCallRequest.DriverId.String,
 			RequestUserId:             taxiCallRequest.UserId,
 			TaxiCallRequestId:         taxiCallRequest.Id,
@@ -481,21 +487,24 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
 			AcceptTime:                taxiCallRequestAcceptTime,
 		})
+		if err := t.repository.analytics.Create(ctx, i, driverTaxiCallCancelPayload); err != nil {
+			return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while create analytics event: %w", err)
+		}
 
 		return nil
 	})
 }
 
-func (d taxicallApp) DriverToArrival(ctx context.Context, driverId string, callRequestId string) error {
+func (t taxicallApp) DriverToArrival(ctx context.Context, driverId string, callRequestId string) error {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
-	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		taxiCallRequest, err := d.repository.taxiCallRequest.GetById(ctx, i, callRequestId)
+	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, callRequestId)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.DriverToArrival: error while get taxi call request: %w", err)
 		}
 
-		driverLocation, err := d.repository.driverLocation.GetByDriverId(ctx, i, driverId)
+		driverLocation, err := t.repository.driverLocation.GetByDriverId(ctx, i, driverId)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.DriverToArrival: error while get driver location: %w", err)
 		}
@@ -510,7 +519,7 @@ func (d taxicallApp) DriverToArrival(ctx context.Context, driverId string, callR
 			return fmt.Errorf("app.taxiCall.DriverToArrival: invalid state change: %w", err)
 		}
 
-		if err := d.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
+		if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxiCall.DriverToArrival: error while update taxi call request: %w", err)
 		}
 
@@ -521,11 +530,11 @@ func (d taxicallApp) DriverToArrival(ctx context.Context, driverId string, callR
 			taxiCallRequest.UpdateTime,
 		)
 
-		if err := d.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
+		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
 			return fmt.Errorf("app.taxiCall.DriverToArrival: error while create event: %w", err)
 		}
 
-		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiToArrival, analytics.DriverTaxiToArrivalPayload{
+		toArrivalAnalytics := entity.NewAnalytics(requestTime, analytics.DriverTaxiToArrivalPayload{
 			DriverId:                  taxiCallRequest.DriverId.String,
 			RequestUserId:             taxiCallRequest.UserId,
 			TaxiCallRequestId:         taxiCallRequest.Id,
@@ -533,6 +542,9 @@ func (d taxicallApp) DriverToArrival(ctx context.Context, driverId string, callR
 			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
 			AcceptTime:                taxiCallRequestAcceptTime,
 		})
+		if err := t.repository.analytics.Create(ctx, i, toArrivalAnalytics); err != nil {
+			return fmt.Errorf("app.taxiCall.DriverToArrival: error while create analytics event: %w", err)
+		}
 
 		return nil
 	})
@@ -593,7 +605,7 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while create taxi call process event: %w", err)
 		}
 
-		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverTaxiDone, analytics.DriverTaxiDonePaylod{
+		doneAnalytics := entity.NewAnalytics(requestTime, analytics.DriverTaxiDonePaylod{
 			DriverId:                  taxiCallRequest.DriverId.String,
 			RequestUserId:             taxiCallRequest.UserId,
 			TaxiCallRequestId:         taxiCallRequest.Id,
@@ -604,6 +616,9 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
 			ToArrivalTime:             taxiCallRequestToArrivalTime,
 		})
+		if err := t.repository.analytics.Create(ctx, i, doneAnalytics); err != nil {
+			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while create analytics event: %w", err)
+		}
 
 		return nil
 	})

@@ -62,6 +62,7 @@ type userApp struct {
 	repository struct {
 		user            repository.UserRepository
 		smsVerification repository.SmsVerificationRepository // TODO(taekyeom) SMS 관련 로직은 별도 app으로 나중에 빼야 할듯?
+		analytics       repository.AnalyticsRepository
 	}
 
 	service struct {
@@ -268,16 +269,19 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			return fmt.Errorf("app.User.Signup: error while delete sms verification:\n %w", err)
 		}
 
+		userSignupAnalytics := entity.NewAnalytics(requestTime, analytics.UserSignupPayload{
+			UserId: newUser.Id,
+		})
+		if err := u.repository.analytics.Create(ctx, i, userSignupAnalytics); err != nil {
+			return fmt.Errorf("app.User.Signup: error while create analytics event: %w", err)
+		}
+
 		return nil
 	})
 
 	if err != nil {
 		return entity.User{}, "", err
 	}
-
-	analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_UserSignup, analytics.UserSignupPayload{
-		UserId: newUser.Id,
-	})
 
 	return newUser, userSession.Id, nil
 }

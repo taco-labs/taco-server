@@ -73,6 +73,7 @@ type driverApp struct {
 		settlementAccount repository.DriverSettlementAccountRepository
 		smsVerification   repository.SmsVerificationRepository
 		event             repository.EventRepository
+		analytics         repository.AnalyticsRepository
 	}
 
 	service struct {
@@ -281,6 +282,14 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: error while delete sms verification:%w", err)
 		}
 
+		driverSignupAnalyticsEvent := entity.NewAnalytics(requestTime, analytics.DriverSignupPayload{
+			DriverId: newDriverDto.Id,
+		})
+
+		if err := d.repository.analytics.Create(ctx, i, driverSignupAnalyticsEvent); err != nil {
+			return fmt.Errorf("app.Driver.Signup: error while create analytics event: %w", err)
+		}
+
 		return nil
 	})
 
@@ -298,10 +307,6 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 		DownloadUrls: downloadUrls,
 		UploadUrls:   uploadUrls,
 	}
-
-	analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverSignup, analytics.DriverSignupPayload{
-		DriverId: newDriver.Id,
-	})
 
 	return newDriver, driverSession.Id, nil
 }
@@ -445,10 +450,13 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 			return err
 		}
 
-		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverOnDuty, analytics.DriverOnDutyPayload{
+		driverOnDutyAnalyticsEvent := entity.NewAnalytics(requestTime, analytics.DriverOnDutyPayload{
 			DriverId: driver.Id,
 			OnDuty:   driver.OnDuty,
 		})
+		if err := d.repository.analytics.Create(ctx, i, driverOnDutyAnalyticsEvent); err != nil {
+			return fmt.Errorf("app.Driver.UpdateOnDuty: error while create analytics event: %w", err)
+		}
 
 		return nil
 	})
@@ -472,13 +480,16 @@ func (d driverApp) UpdateDriverLocation(ctx context.Context, req request.DriverL
 			return err
 		}
 
-		analytics.WriteAnalyticsLog(ctx, requestTime, analytics.LogType_DriverLocation, analytics.DriverLocationPayload{
+		driverLocationAnalytics := entity.NewAnalytics(requestTime, analytics.DriverLocationPayload{
 			DriverId: req.DriverId,
 			Point: value.Point{
 				Latitude:  req.Latitude,
 				Longitude: req.Longitude,
 			},
 		})
+		if err := d.repository.analytics.Create(ctx, i, driverLocationAnalytics); err != nil {
+			return fmt.Errorf("app.Driver.UpdateDriverLocation: error while add analytics event: %w", err)
+		}
 
 		return nil
 	})

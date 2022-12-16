@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/outbox"
-	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/config"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
@@ -25,9 +24,6 @@ import (
 
 func RunOutbox(ctx context.Context, outboxConfig config.OutboxConfig, logger *zap.Logger, quit <-chan (os.Signal)) error {
 	ctx = utils.SetLogger(ctx, logger)
-
-	// Initialize analytics logger
-	analytics.InitLogger(outboxConfig.Env)
 
 	// Initialize aws sdk v2 session
 	awsconf, err := awsconfig.LoadDefaultConfig(ctx)

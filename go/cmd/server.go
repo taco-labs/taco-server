@@ -26,7 +26,6 @@ import (
 	"github.com/taco-labs/taco/go/app/taxicall"
 	"github.com/taco-labs/taco/go/app/user"
 	"github.com/taco-labs/taco/go/app/usersession"
-	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/config"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/server"
@@ -48,9 +47,6 @@ import (
 
 func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *zap.Logger, quit <-chan (os.Signal)) error {
 	ctx = utils.SetLogger(ctx, logger)
-
-	// Initialize analytics logger
-	analytics.InitLogger(serverConfig.Env)
 
 	// Initialize aws sdk v2 session
 	awsconf, err := awsconfig.LoadDefaultConfig(ctx)
@@ -97,6 +93,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	driverSessionRepository := repository.NewDriverSessionRepository()
 
 	eventRepository := repository.NewEventRepository()
+	analyticsRepository := repository.NewAnalyticsRepository()
 
 	pushTokenRepository := repository.NewPushTokenRepository()
 
@@ -257,6 +254,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		taxicall.WithUserGetterService(userAppDelegator),
 		taxicall.WithDriverGetterService(driverAppDelegator),
 		taxicall.WithPaymentAppService(paymentApp),
+		taxicall.WithAnalyticsRepository(analyticsRepository),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup taxi call app: %w", err)
@@ -300,6 +298,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		user.WithTaxiCallService(taxicallApp),
 		user.WithUserPaymentService(paymentApp),
 		user.WithDriverAppService(driverAppDelegator),
+		user.WithAnalyticsRepository(analyticsRepository),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup user app: %w", err)
@@ -320,6 +319,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		driver.WithDriverSettlementService(driverSettlementApp),
 		driver.WithUserPaymentAppService(paymentApp),
 		driver.WithEncryptionService(kmsEncryptionService),
+		driver.WithAnalyticsRepository(analyticsRepository),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup driver app: %w", err)

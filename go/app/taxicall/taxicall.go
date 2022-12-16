@@ -32,6 +32,7 @@ type taxicallApp struct {
 		driverLocation  repository.DriverLocationRepository
 		taxiCallRequest repository.TaxiCallRepository
 		event           repository.EventRepository
+		analytics       repository.AnalyticsRepository
 	}
 	service struct {
 		route        service.MapRouteService
