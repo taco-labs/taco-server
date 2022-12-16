@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/analytics"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"
@@ -352,6 +352,9 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			ActualTicketAttempt:             actualTicket.Attempt,
 			RequestBasePrice:                taxiCallRequest.RequestBasePrice,
 			AdditionalPrice:                 taxiCallRequest.AdditionalPrice,
+			DriverSettlementAmount:          taxiCallRequest.DriverSettlementAdditonalPrice(),
+			DriverAdditionalReward:          taxiCallRequest.DriverAdditionalRewardPrice,
+			UserUsedPoint:                   taxiCallRequest.UserUsedPoint,
 			DriverLocation:                  driverTaxiCallContext.Location,
 			ReceiveTime:                     driverTaxiCallContext.LastReceiveTime,
 			TaxiCallRequestCreateTime:       taxiCallRequest.CreateTime,
@@ -484,8 +487,8 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 			RequestUserId:             taxiCallRequest.UserId,
 			TaxiCallRequestId:         taxiCallRequest.Id,
 			DriverLocation:            driverTaxiCallContext.Location,
-			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
 			AcceptTime:                taxiCallRequestAcceptTime,
+			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
 		})
 		if err := t.repository.analytics.Create(ctx, i, driverTaxiCallCancelPayload); err != nil {
 			return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while create analytics event: %w", err)
@@ -612,6 +615,9 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 			BasePrice:                 req.BasePrice,
 			RequestBasePrice:          taxiCallRequest.RequestBasePrice,
 			AdditionalPrice:           taxiCallRequest.AdditionalPrice,
+			DriverSettlementAmount:    taxiCallRequest.DriverSettlementAdditonalPrice(),
+			DriverAdditionalReward:    taxiCallRequest.DriverAdditionalRewardPrice,
+			UserUsedPoint:             taxiCallRequest.UserUsedPoint,
 			DriverLocation:            driverTaxiCallContext.Location,
 			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
 			ToArrivalTime:             taxiCallRequestToArrivalTime,

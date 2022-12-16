@@ -8,10 +8,10 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/analytics"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"

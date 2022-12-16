@@ -11,6 +11,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/analytics"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
@@ -23,9 +24,10 @@ type paymentApp struct {
 	app.Transactor
 
 	repository struct {
-		payment  repository.PaymentRepository
-		referral repository.ReferralRepository
-		event    repository.EventRepository
+		payment   repository.PaymentRepository
+		referral  repository.ReferralRepository
+		event     repository.EventRepository
+		analytics repository.AnalyticsRepository
 	}
 
 	service struct {
@@ -411,7 +413,8 @@ func (p paymentApp) CreateUserReferral(ctx context.Context, fromUserId string, t
 	})
 }
 
-func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId string, price int) error {
+func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId, orderId string, price int) error {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
 	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		userReferralReward, err := p.repository.referral.GetUserReferral(ctx, i, userId)
 		if errors.Is(err, value.ErrNotFound) {
@@ -437,6 +440,16 @@ func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId string, 
 		referralRewardNotification := NewReferralRewardNotification(userReferralReward.ToUserId, reward)
 		if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{referralRewardNotification}); err != nil {
 			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while add notification event: %w", err)
+		}
+
+		referralRewardAnalytics := entity.NewAnalytics(requestTime, analytics.UserReferralPointReceivedPayload{
+			UserId:        userReferralReward.ToUserId,
+			FromUserId:    userReferralReward.ToUserId,
+			OrderId:       orderId,
+			ReceiveAmount: reward,
+		})
+		if err := p.repository.analytics.Create(ctx, i, referralRewardAnalytics); err != nil {
+			return fmt.Errorf("app.paymanetApp.ApplyUserReferralReward: error while create referral reward analytics event: %w", err)
 		}
 
 		return nil

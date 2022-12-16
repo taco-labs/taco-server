@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/analytics"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"
@@ -335,10 +335,10 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 		}
 
 		cancelAnalytics := entity.NewAnalytics(requestTime, analytics.UserCancelTaxiCallRequestPayload{
-			UserId:        taxiCallRequest.UserId,
-			Id:            taxiCallRequest.Id,
-			CancelPenalty: taxiCallRequest.UserCancelPenaltyPrice(requestTime),
-			CreateTime:    taxiCallRequest.CreateTime,
+			UserId:                    taxiCallRequest.UserId,
+			Id:                        taxiCallRequest.Id,
+			CancelPenalty:             taxiCallRequest.UserCancelPenaltyPrice(requestTime),
+			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
 		})
 		if err := t.repository.analytics.Create(ctx, i, cancelAnalytics); err != nil {
 			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while create analytics event: %w", err)

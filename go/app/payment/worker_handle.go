@@ -20,7 +20,7 @@ func (p paymentApp) handleTransactionRequest(ctx context.Context, event entity.E
 	}
 
 	if cmd.Amount-cmd.UsedPoint == 0 {
-		return p.ApplyUserReferralReward(ctx, cmd.UserId, cmd.Amount)
+		return p.ApplyUserReferralReward(ctx, cmd.UserId, cmd.OrderId, cmd.Amount)
 	}
 
 	var userPayment entity.UserPayment
@@ -134,7 +134,7 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 			))
 		}
 
-		if err := p.ApplyUserReferralReward(ctx, transactionRequest.UserId, transactionRequest.Amount); err != nil {
+		if err := p.ApplyUserReferralReward(ctx, transactionRequest.UserId, transactionRequest.OrderId, transactionRequest.Amount); err != nil {
 			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to apply user referral: %w", err)
 		}
 

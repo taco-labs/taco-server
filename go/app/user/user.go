@@ -8,10 +8,10 @@ import (
 	"context"
 
 	"github.com/taco-labs/taco/go/app"
-	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/analytics"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
@@ -165,6 +165,8 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 	var err error
 	var newUser entity.User
 	var userSession entity.UserSession
+	referralType := enum.ReferralType_Unknown
+	referralId := ""
 
 	err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		user, err := u.repository.user.FindByUserUniqueKey(ctx, i, req.Phone)
@@ -224,8 +226,10 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 				if err := u.service.userPayment.CreateUserReferral(ctx, newUser.Id, referralUser.Id); err != nil {
 					return fmt.Errorf("app.User.Signup: error while create user referral: %w", err)
 				}
+				referralType = enum.ReferralType_User
+				referralId = referralUser.Id
 			case enum.ReferralType_Driver:
-				driver, err := u.service.driver.GetDriverByUserUniqueKey(ctx, referralCode.PhoneNumber)
+				referralDriver, err := u.service.driver.GetDriverByUserUniqueKey(ctx, referralCode.PhoneNumber)
 				if errors.Is(err, value.ErrNotFound) {
 					return fmt.Errorf("app.User.Signup: driver not found: %w",
 						value.NewTacoError(value.ERR_NOTFOUND_REFERRAL_CODE, "driver referral not found"))
@@ -233,9 +237,11 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 				if err != nil {
 					return fmt.Errorf("app.User.Signup: error while get driver by unique key: %w", err)
 				}
-				if err := u.service.userPayment.AddDriverReferralReward(ctx, driver.Id); err != nil {
+				if err := u.service.userPayment.AddDriverReferralReward(ctx, referralDriver.Id); err != nil {
 					return fmt.Errorf("app.User.Signup: error while update driver referral: %w", err)
 				}
+				referralType = enum.ReferralType_Driver
+				referralId = referralDriver.Id
 			}
 		}
 
@@ -270,7 +276,9 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 		}
 
 		userSignupAnalytics := entity.NewAnalytics(requestTime, analytics.UserSignupPayload{
-			UserId: newUser.Id,
+			UserId:       newUser.Id,
+			ReferralType: referralType,
+			ReferralId:   referralId,
 		})
 		if err := u.repository.analytics.Create(ctx, i, userSignupAnalytics); err != nil {
 			return fmt.Errorf("app.User.Signup: error while create analytics event: %w", err)

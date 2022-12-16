@@ -11,7 +11,7 @@ const (
 
 	EventType_UserTaxiCallRequestFailed EventType = "User_taxiCallRequestFailed"
 
-	EventType_UserPaymentDone EventType = "User_PaymentDone"
+	EventType_UserReferralPointReceived EventType = "User_ReferralPointReceived"
 
 	EventType_DriverSignup EventType = "Driver_Signup"
 

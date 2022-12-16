@@ -9,10 +9,10 @@ import (
 	// "time"
 
 	"github.com/taco-labs/taco/go/app"
-	"github.com/taco-labs/taco/go/common/analytics"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/analytics"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"

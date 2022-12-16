@@ -32,7 +32,6 @@ func (d DriverOnDutyPayload) EventType() EventType {
 	return EventType_DriverOnDuty
 }
 
-// TODO (taekyeom) ETA to departure
 type DriverTaxicallTicketDistributionPayload struct {
 	DriverId                  string
 	RequestUserId             string
@@ -52,7 +51,6 @@ func (d DriverTaxicallTicketDistributionPayload) EventType() EventType {
 	return EventType_DriverTaxiCallTicketDistribution
 }
 
-// TODO (taekyeom) user used point && additional reward
 type DriverTaxiCallTicketAcceptPayload struct {
 	DriverId                        string
 	RequestUserId                   string
@@ -63,6 +61,9 @@ type DriverTaxiCallTicketAcceptPayload struct {
 	ActualTicketAttempt             int
 	RequestBasePrice                int
 	AdditionalPrice                 int
+	DriverSettlementAmount          int
+	DriverAdditionalReward          int
+	UserUsedPoint                   int
 	DriverLocation                  value.Point
 	ReceiveTime                     time.Time
 	TaxiCallRequestCreateTime       time.Time
@@ -82,6 +83,7 @@ type DriverTaxiCallTicketRejectPayload struct {
 	AdditionalPrice           int
 	DriverLocation            value.Point
 	ReceiveTime               time.Time
+	DistributedTime           time.Time
 	TaxiCallRequestCreateTime time.Time
 }
 
@@ -89,14 +91,13 @@ func (d DriverTaxiCallTicketRejectPayload) EventType() EventType {
 	return EventType_DriverTaxiCallTicketReject
 }
 
-// TODO (taekyeom) Cancel penalty
 type DriverTaxiCancelPayload struct {
 	DriverId                  string
 	RequestUserId             string
 	TaxiCallRequestId         string
 	DriverLocation            value.Point
-	TaxiCallRequestCreateTime time.Time
 	AcceptTime                time.Time
+	TaxiCallRequestCreateTime time.Time
 }
 
 func (d DriverTaxiCancelPayload) EventType() EventType {
@@ -116,14 +117,17 @@ func (d DriverTaxiToArrivalPayload) EventType() EventType {
 	return EventType_DriverTaxiToArrival
 }
 
-// TODO (taekyeom) toll fee & additional reward & referral point
 type DriverTaxiDonePaylod struct {
 	DriverId                  string
 	RequestUserId             string
 	TaxiCallRequestId         string
 	BasePrice                 int
+	TollFee                   int
 	RequestBasePrice          int
 	AdditionalPrice           int
+	DriverSettlementAmount    int
+	DriverAdditionalReward    int
+	UserUsedPoint             int
 	DriverLocation            value.Point
 	TaxiCallRequestCreateTime time.Time
 	ToArrivalTime             time.Time

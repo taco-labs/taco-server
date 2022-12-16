@@ -4,11 +4,13 @@ import (
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/enum"
 )
 
-// TODO (taekyeom) referral
 type UserSignupPayload struct {
-	UserId string
+	UserId       string
+	ReferralType enum.ReferralType
+	ReferralId   string
 }
 
 func (u UserSignupPayload) EventType() EventType {
@@ -45,15 +47,24 @@ func (u UserTaxiCallRequestFailedPayload) EventType() EventType {
 	return EventType_UserTaxiCallRequestFailed
 }
 
-// TODO (taekyeom) cancel penalty && request create time
 type UserCancelTaxiCallRequestPayload struct {
 	UserId                    string
 	Id                        string
 	CancelPenalty             int
-	CreateTime                time.Time
 	TaxiCallRequestCreateTime time.Time
 }
 
 func (u UserCancelTaxiCallRequestPayload) EventType() EventType {
 	return EventType_UserCancelTaxiCallRequest
+}
+
+type UserReferralPointReceivedPayload struct {
+	UserId        string
+	FromUserId    string
+	OrderId       string
+	ReceiveAmount int
+}
+
+func (u UserReferralPointReceivedPayload) EventType() EventType {
+	return EventType_UserReferralPointReceived
 }
