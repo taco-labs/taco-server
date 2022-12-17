@@ -137,7 +137,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 	group, _ := errgroup.WithContext(ctx)
 	var departure, arrival value.Address
 	group.Go(func() error {
-		addr, err := t.service.location.GetAddress(ctx, req.Departure)
+		addr, err := t.service.mapService.GetAddress(ctx, req.Departure)
 		if err != nil {
 			return fmt.Errorf("%w: error from get road address of departure", err)
 		}
@@ -146,7 +146,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 	})
 
 	group.Go(func() error {
-		addr, err := t.service.location.GetAddress(ctx, req.Arrival)
+		addr, err := t.service.mapService.GetAddress(ctx, req.Arrival)
 		if err != nil {
 			return fmt.Errorf("%w: error from get road address of arrival", err)
 		}
@@ -163,7 +163,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 		return entity.TaxiCallRequest{}, fmt.Errorf("%w: not supported region", value.ErrUnsupportedServiceRegion)
 	}
 
-	route, err := t.service.route.GetRoute(ctx, req.Departure, req.Arrival)
+	route, err := t.service.mapService.GetRoute(ctx, req.Departure, req.Arrival)
 	if err != nil {
 		return entity.TaxiCallRequest{}, fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while get route:\n%w", err)
 	}

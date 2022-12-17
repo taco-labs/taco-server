@@ -22,12 +22,6 @@ func WithPushTokenRepository(repo repository.PushTokenRepository) pushAppOption 
 	}
 }
 
-func WithRouteService(svc service.MapRouteService) pushAppOption {
-	return func(tcpa *taxiCallPushApp) {
-		tcpa.service.route = svc
-	}
-}
-
 func WithNotificationService(svc service.NotificationService) pushAppOption {
 	return func(tcpa *taxiCallPushApp) {
 		tcpa.service.notification = svc
@@ -53,10 +47,6 @@ func (t taxiCallPushApp) validate() error {
 
 	if t.repository.pushToken == nil {
 		return errors.New("taxi call push app need push token repository")
-	}
-
-	if t.service.route == nil {
-		return errors.New("taxi call push app need route service")
 	}
 
 	if t.service.notification == nil {

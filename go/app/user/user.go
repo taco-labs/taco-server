@@ -69,8 +69,7 @@ type userApp struct {
 		driver      driverAppInterface
 		smsSender   service.SmsSenderService
 		session     sessionServiceInterface
-		route       service.MapRouteService
-		location    service.LocationService
+		mapService  service.MapService
 		push        pushServiceInterface
 		taxiCall    taxiCallInterface
 		userPayment userPaymentInterface

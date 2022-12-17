@@ -13,8 +13,7 @@ type ServerConfig struct {
 	SmsSender                SmsSenderConfig
 	PaymentService           PaymentServiceConfig
 	SettlementAccountService SettlementAccountServiceConfig
-	RouteService             RouteServiceConfig
-	LocationService          LocationServiceConfig
+	MapService               MapServiceConfig
 	EncryptionService        EncryptionServiceConfig
 	Backoffice               BackofficeConfig
 	Firebase                 FirebaseConfig

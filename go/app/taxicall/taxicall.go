@@ -35,8 +35,7 @@ type taxicallApp struct {
 		analytics       repository.AnalyticsRepository
 	}
 	service struct {
-		route        service.MapRouteService
-		location     service.LocationService
+		mapService   service.MapService
 		userGetter   userGetterInterface
 		driverGetter driverGetterInterface
 		payment      paymentAppInterface

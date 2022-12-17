@@ -47,15 +47,9 @@ func WithSmsSenderService(svc service.SmsSenderService) userAppOption {
 	}
 }
 
-func WithMapRouteService(svc service.MapRouteService) userAppOption {
+func WithMapService(svc service.MapService) userAppOption {
 	return func(ua *userApp) {
-		ua.service.route = svc
-	}
-}
-
-func WithLocationService(svc service.LocationService) userAppOption {
-	return func(ua *userApp) {
-		ua.service.location = svc
+		ua.service.mapService = svc
 	}
 }
 
@@ -108,12 +102,8 @@ func (u userApp) validateApp() error {
 		return errors.New("user app need sms sender service")
 	}
 
-	if u.service.route == nil {
-		return errors.New("user app need map route service")
-	}
-
-	if u.service.location == nil {
-		return errors.New("user app need location service")
+	if u.service.mapService == nil {
+		return errors.New("user app need map service")
 	}
 
 	if u.service.push == nil {

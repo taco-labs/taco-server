@@ -51,15 +51,6 @@ var SupportedServiceRegions = map[string]struct{}{
 	"경기 화성":  {},
 }
 
-func GetServiceRegion(address string) string {
-	for supportedRegion := range SupportedServiceRegions {
-		if strings.HasPrefix(address, supportedRegion) {
-			return supportedRegion
-		}
-	}
-	return ""
-}
-
 type Address struct {
 	AddressName   string `json:"addressName"`
 	RegionDepth1  string `json:"regionDepth1"`
@@ -76,6 +67,32 @@ type Address struct {
 func (r Address) AvailableRegion() bool {
 	_, ok := SupportedServiceRegions[r.ServiceRegion]
 	return ok
+}
+
+func NewAddress(addressName, regionDepth1, regionDepth2, regionDepth3, mainAddressNo, subAddressNo, buildingName string) Address {
+	addr := Address{
+		AddressName:   addressName,
+		RegionDepth1:  regionDepth1,
+		RegionDepth2:  regionDepth2,
+		RegionDepth3:  regionDepth3,
+		MainAddressNo: mainAddressNo,
+		SubAddressNo:  subAddressNo,
+		BuildingName:  buildingName,
+	}
+	addr.setServiceRegion()
+
+	return addr
+}
+
+func (r *Address) setServiceRegion() {
+	for supportedRegion := range SupportedServiceRegions {
+		regionParts := strings.Split(supportedRegion, " ")
+		if len(regionParts) == 1 && strings.HasPrefix(r.RegionDepth1, regionParts[0]) {
+			r.ServiceRegion = supportedRegion
+		} else if len(regionParts) == 2 && strings.HasPrefix(r.RegionDepth1, regionParts[0]) && strings.HasPrefix(r.RegionDepth2, regionParts[1]) {
+			r.ServiceRegion = supportedRegion
+		}
+	}
 }
 
 type AddressSummary struct {

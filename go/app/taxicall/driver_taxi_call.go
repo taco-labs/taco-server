@@ -188,7 +188,7 @@ func (t taxicallApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId st
 			return fmt.Errorf("app.taxiCall.LatestTaxiCallTicket: error while get user: %w", err)
 		}
 
-		routeBetweenDeparture, err := t.service.route.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
+		routeBetweenDeparture, err := t.service.mapService.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
 		if err != nil {
 			return fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get route between driver location and departure: %w", err)
 		}
@@ -293,7 +293,7 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 		}
 
 		// TODO (taekyeom) call outside of transaction
-		routeToDeparture, err := t.service.route.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
+		routeToDeparture, err := t.service.mapService.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get route between departure:%w", err)
 		}

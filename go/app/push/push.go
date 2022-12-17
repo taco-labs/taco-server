@@ -29,7 +29,6 @@ type taxiCallPushApp struct {
 		pushToken repository.PushTokenRepository
 	}
 	service struct {
-		route        service.MapRouteService
 		notification service.NotificationService
 		userGetter   userGetterInterface
 		driverGetter driverGetterInterface

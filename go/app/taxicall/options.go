@@ -40,15 +40,9 @@ func WithAnalyticsRepository(repo repository.AnalyticsRepository) taxicallAppOpt
 	}
 }
 
-func WithRouteServie(svc service.MapRouteService) taxicallAppOption {
+func WithMapService(svc service.MapService) taxicallAppOption {
 	return func(ta *taxicallApp) {
-		ta.service.route = svc
-	}
-}
-
-func WithLocationService(svc service.LocationService) taxicallAppOption {
-	return func(ta *taxicallApp) {
-		ta.service.location = svc
+		ta.service.mapService = svc
 	}
 }
 
@@ -91,12 +85,8 @@ func (t taxicallApp) validateApp() error {
 		return errors.New("taxi call app needs analytics repository")
 	}
 
-	if t.service.route == nil {
-		return errors.New("taxi call app needs route service")
-	}
-
-	if t.service.location == nil {
-		return errors.New("taxi call app needs location service")
+	if t.service.mapService == nil {
+		return errors.New("taxi call app needs maps service")
 	}
 
 	if t.service.userGetter == nil {

@@ -39,15 +39,9 @@ type SettlementAccountServiceConfig struct {
 	WebhookUrl string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_WEBHOOK_URL"`
 }
 
-type RouteServiceConfig struct {
-	Endpoint  string `env:"TACO_ROUTE_SERVICE_ENDPOINT,required"`
-	ApiKey    string `env:"TACO_ROUTE_SERVICE_API_KEY,required"`
-	ApiSecret string `env:"TACO_ROUTE_SERVICE_API_SECRET,required"`
-}
-
-type LocationServiceConfig struct {
-	Endpoint  string `env:"TACO_LOCATION_SERVICE_ENDPOINT,required"`
-	ApiSecret string `env:"TACO_LOCATION_SERVICE_API_SECRET,required"`
+type MapServiceConfig struct {
+	Endpoint string `env:"TACO_MAP_SERVICE_ENDPOINT,required"`
+	ApiKey   string `env:"TACO_MAP_SERVICE_API_KEY,required"`
 }
 
 type EncryptionServiceConfig struct {

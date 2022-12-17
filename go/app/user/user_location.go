@@ -15,7 +15,7 @@ func (u userApp) GetAddress(ctx context.Context, req request.GetAddressRequest) 
 		Longitude: req.Longitude,
 	}
 
-	resp, err := u.service.location.GetAddress(ctx, point)
+	resp, err := u.service.mapService.GetAddress(ctx, point)
 	if err != nil {
 		return value.Address{}, fmt.Errorf("app.user.GetAddress: error from get address: %w", err)
 	}
@@ -32,7 +32,7 @@ func (u userApp) SearchLocation(ctx context.Context, req request.SearchLocationR
 		Latitude:  req.Latitude,
 		Longitude: req.Longitude,
 	}
-	resp, pageToken, err := u.service.location.SearchLocation(ctx, point, req.Keyword, req.PageToken)
+	resp, pageToken, err := u.service.mapService.SearchLocation(ctx, point, req.Keyword, req.PageToken, req.PageCount)
 
 	if err != nil {
 		return []value.LocationSummary{}, pageToken, fmt.Errorf("app.user.SearchLocation: error from search location: %w", err)

@@ -105,15 +105,9 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		serverConfig.SmsSender.ApiSecret,
 	)
 
-	mapRouteService := service.NewNaverMapsRouteService(
-		serverConfig.RouteService.Endpoint,
-		serverConfig.RouteService.ApiKey,
-		serverConfig.RouteService.ApiSecret,
-	)
-
-	locationService := service.NewKakaoLocationService(
-		serverConfig.LocationService.Endpoint,
-		serverConfig.LocationService.ApiSecret,
+	mapService := service.NewNhnMapsService(
+		serverConfig.MapService.Endpoint,
+		serverConfig.MapService.ApiKey,
 	)
 
 	// TODO(taekyeom) Replace mock to real one
@@ -223,7 +217,6 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 
 	pushApp, err := push.NewPushApp(
 		push.WithTransactor(transactor),
-		push.WithRouteService(mapRouteService),
 		push.WithNotificationService(notificationService),
 		push.WithPushTokenRepository(pushTokenRepository),
 		push.WithUserGetterService(userAppDelegator),
@@ -249,8 +242,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		taxicall.WithDriverLocationRepository(driverLocationRepository),
 		taxicall.WithTaxiCallRequestRepository(taxiCallRequestRepository),
 		taxicall.WithEventRepository(eventRepository),
-		taxicall.WithRouteServie(mapRouteService),
-		taxicall.WithLocationService(locationService),
+		taxicall.WithMapService(mapService),
 		taxicall.WithUserGetterService(userAppDelegator),
 		taxicall.WithDriverGetterService(driverAppDelegator),
 		taxicall.WithPaymentAppService(paymentApp),
@@ -292,8 +284,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		user.WithSessionService(userSessionApp),
 		user.WithSmsVerificationRepository(smsVerificationRepository),
 		user.WithSmsSenderService(smsSenderService),
-		user.WithMapRouteService(mapRouteService),
-		user.WithLocationService(locationService),
+		user.WithMapService(mapService),
 		user.WithPushService(pushApp),
 		user.WithTaxiCallService(taxicallApp),
 		user.WithUserPaymentService(paymentApp),
