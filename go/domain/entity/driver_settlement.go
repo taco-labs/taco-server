@@ -39,7 +39,7 @@ type DriverSettlementHistory struct {
 
 	DriverId         string    `bun:"driver_id,pk"`
 	Amount           int       `bun:"amount"`
-	AmountWithoutTax int       `bun:"amoun_without_tax"`
+	AmountWithoutTax int       `bun:"amount_without_tax"`
 	Bank             string    `bun:"bank"`
 	AccountNumber    string    `bun:"account_number"`
 	RequestTime      time.Time `bun:"request_time"`
@@ -59,7 +59,7 @@ type DriverInflightSettlementTransfer struct {
 	ExecutionKey      string                              `bun:"execution_key"`
 	BankTransactionId string                              `bun:"bank_transaction_id"`
 	Amount            int                                 `bun:"amount"`
-	AmountWithoutTax  int                                 `bun:"amoun_without_tax"`
+	AmountWithoutTax  int                                 `bun:"amount_without_tax"`
 	Message           string                              `bun:"message"`
 	State             enum.SettlementTransferProcessState `bun:"state"`
 	CreateTime        time.Time                           `bun:"create_time"`
@@ -74,7 +74,7 @@ type DriverFailedSettlementTransfer struct {
 	ExecutionKey      string    `bun:"execution_key"`
 	BankTransactionId string    `bun:"bank_transaction_id"`
 	Amount            int       `bun:"amount"`
-	AmountWithoutTax  int       `bun:"amoun_without_tax"`
+	AmountWithoutTax  int       `bun:"amount_without_tax"`
 	Message           string    `bun:"message"`
 	FailureMessage    string    `bun:"failure_message"`
 	CreateTime        time.Time `bun:"create_time"`
