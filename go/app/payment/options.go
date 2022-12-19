@@ -34,6 +34,12 @@ func WithReferralRepository(repo repository.ReferralRepository) paymentAppOption
 	}
 }
 
+func WithAnalyticsRepository(repo repository.AnalyticsRepository) paymentAppOption {
+	return func(pa *paymentApp) {
+		pa.repository.analytics = repo
+	}
+}
+
 func WithPaymentService(svc service.PaymentService) paymentAppOption {
 	return func(pa *paymentApp) {
 		pa.service.payment = svc
@@ -59,6 +65,10 @@ func (p paymentApp) validateApp() error {
 
 	if p.repository.referral == nil {
 		return errors.New("user payment app need referral repository")
+	}
+
+	if p.repository.analytics == nil {
+		return errors.New("user payment app need analytics repository")
 	}
 
 	return nil

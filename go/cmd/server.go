@@ -232,6 +232,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		payment.WithEventRepository(eventRepository),
 		payment.WithPaymentService(payplePaymentService),
 		payment.WithReferralRepository(referralRepository),
+		payment.WithAnalyticsRepository(analyticsRepository),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup user payment app: %w", err)
