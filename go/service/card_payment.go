@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
 )
@@ -16,226 +18,257 @@ type PaymentService interface {
 	GetTransactionResult(context.Context, string) (value.PaymentResult, error)
 }
 
-// const (
-// 	tossPaymentCardReigstrationPath  = "v1/billing/authorizations/card"
-// 	tossPaymentTransactionPath       = "v1/billing/%s"
-// 	tossPaymentCancelTransactionPath = "v1/payments/%s/cancel"
-// 	tossPaymentGetTransaction        = "v1/payments/orders/%s"
-// )
+type payplePaymentService struct {
+	client      *resty.Client
+	customerId  string
+	customerKey string
+}
 
-// type tossPaymentService struct {
-// 	client *resty.Client
-// }
+type paypleCardRegistrationRequestParamResponse struct {
+	ServerName  string `json:"server_name"`
+	Result      string `json:"result"`
+	ResultMsg   string `json:"result_msg"`
+	CustomerId  string `json:"cst_id"`
+	CustomerKey string `json:"custKey"`
+	AuthKey     string `json:"AuthKey"`
+	ReturnUrl   string `json:"return_url"`
+}
 
-// type tossPaymentServiceError struct {
-// 	Code    string `json:"code"`
-// 	Message string `json:"message"`
-// }
+type payplePartnerAuthenticationRequest struct {
+	CustomerId  string `json:"cst_id"`
+	CustomerKey string `json:"custKey"`
+	PayType     string `json:"PCD_PAY_TYPE"`
+	RestFlag    string `json:"PCD_SIMPLE_FLAG"`
+}
 
-// type tossPaymentCardRegisterRequest struct {
-// 	CustomerKey            string `json:"customerKey"`
-// 	CardNumber             string `json:"cardNumber"`
-// 	CardExpirationYear     string `json:"cardExpirationYear"`
-// 	CardExpirationMonth    string `json:"cardExpirationMonth"`
-// 	CardPassword           string `json:"cardPassword"`
-// 	CustomerIdentityNumber string `json:"customerIdentityNumber"`
-// 	// TODO (taekyeom) Do we need email or customer name?
-// }
+type payplePartnerAuthenticationResponse struct {
+	ServerName  string `json:"server_name"`
+	Result      string `json:"result"`
+	ResultMsg   string `json:"result_msg"`
+	CustomerId  string `json:"cst_id"`
+	CustomerKey string `json:"custKey"`
+	AuthKey     string `json:"AuthKey"`
+	PayUrl      string `json:"PCD_PAY_URL"`
+	ReturnUrl   string `json:"return_url"`
+}
 
-// type tossPaymentCardRegisterResponse struct {
-// 	Mid             string `json:"mid"`
-// 	CustomerKey     string `json:"customerKey"`
-// 	AuthenticatedAt string `json:"authenticatedAt"`
-// 	Method          string `json:"method"`
-// 	BillingKey      string `json:"billingKey"`
-// 	Card            struct {
-// 		Comany    string `json:"company"`
-// 		Number    string `json:"number"`
-// 		CardType  string `json:"cardType"`
-// 		OnwerType string `json:"ownerType"`
-// 	} `json:"card"`
-// }
+func (p payplePartnerAuthenticationResponse) Success() bool {
+	return p.Result == "success"
+}
 
-// type tossPaymentTransactionRequest struct {
-// 	Amount      int    `json:"amount"`
-// 	CustomerKey string `json:"customerKey"`
-// 	OrderId     string `json:"orderId"`
-// 	OrderName   string `json:"orderName"`
-// }
+type paypleTransactionRequest struct {
+	CustomerId  string `json:"PCD_CST_ID"`
+	CustomerKey string `json:"PCD_CUST_KEY"`
+	AuthKey     string `json:"PCD_AUTH_KEY"`
+	PayType     string `json:"PCD_PAY_TYPE"`
+	BillingKey  string `json:"PCD_PAYER_ID"`
+	OrderName   string `json:"PCD_PAY_GOODS"`
+	RestFlag    string `json:"PCD_SIMPLE_FLAG"`
+	Amount      int    `json:"PCD_PAY_TOTAL"`
+	OrderId     string `json:"PCD_PAY_OID"`
+}
 
-// type tossPaymentObjectResponse struct {
-// 	Version     string `json:"version"`
-// 	PaymentKey  string `json:"paymentKey"`
-// 	Type        string `json:"type"`
-// 	OrderId     string `json:"orderId"`
-// 	OrderName   string `json:"orderName"`
-// 	TotalAmount int    `json:"totalAmount"`
-// 	Status      string `json:"status"`
-// 	Receipt     struct {
-// 		Url string `json:"url"`
-// 	} `json:"receipt"`
-// }
+type paypleTransactionResponse struct {
+	Result     string `json:"PCD_PAY_RST"`
+	ResultCode string `json:"PCD_PAY_CODE"`
+	ResultMsg  string `json:"PCD_PAY_MSG"`
+	OrderId    string `json:"PCD_PAY_OID"`
+	PaymentKey string `json:"PCD_PAY_CARDTRADENUM"`
+	ReceiptUrl string `json:"PCD_PAY_CARDRECEIPT"`
+}
 
-// type tossPaymentTransactionCancelRequest struct {
-// 	CancelReason string `json:"CancelReason"`
-// 	CancelAmount int    `json:"cancelAmount"`
-// }
+func (p paypleTransactionResponse) Success() bool {
+	return p.Result == "success"
+}
 
-// func (t tossPaymentService) GetCardRegistrationRequestParam(context.Context) (value.PaymentRegistrationRequestParmam, error) {
-// 	return value.PaymentRegistrationRequestParmam{}, value.ErrUnsupported
-// }
+type paypleGetTransactionRequest struct {
+}
 
-// func (t tossPaymentService) RegisterCard(ctx context.Context, customerKey string, req request.UserPaymentRegisterRequest) (value.CardPaymentInfo, error) {
-// 	tossPaymentRequest := tossPaymentCardRegisterRequest{
-// 		CustomerKey:            customerKey,
-// 		CardNumber:             req.CardNumber,
-// 		CardExpirationYear:     req.ExpirationYear,
-// 		CardExpirationMonth:    req.ExpirationMonth,
-// 		CustomerIdentityNumber: req.CustomerIdentityNumber,
-// 	}
-// 	resp, err := t.client.R().
-// 		SetBody(tossPaymentRequest).
-// 		SetResult(&tossPaymentCardRegisterResponse{}).
-// 		Post(tossPaymentCardReigstrationPath)
+type paypleDeletePaymentRequest struct {
+	CustomerId  string `json:"PCD_CST_ID"`
+	CustomerKey string `json:"PCD_CUST_KEY"`
+	AuthKey     string `json:"PCD_AUTH_KEY"`
+	BillingKey  string `json:"PCD_PAYER_ID"`
+}
 
-// 	if err != nil {
-// 		// TODO(taekyeom) Error handling
-// 		return value.CardPaymentInfo{}, fmt.Errorf("%w: error from card registration: %v", value.ErrExternalPayment, err)
-// 	}
+type paypleDeletePaymentResponse struct {
+	Result  string `json:"PCD_PAY_RST"`
+	Code    string `json:"PCD_PAY_CODE"`
+	Message string `json:"PCD_PAY_MSG"`
+}
 
-// 	if resp.Error() != nil {
-// 		serviceErr := resp.Error().(*tossPaymentServiceError)
-// 		return value.CardPaymentInfo{}, handleTossPaymentServiceError(serviceErr)
-// 	}
+func (p paypleDeletePaymentResponse) Success() bool {
+	return p.Result == "success" && p.Code == "PUER0000"
+}
 
-// 	tossPaymentResp := resp.Result().(*tossPaymentCardRegisterResponse)
+func (p payplePaymentService) GetCardRegistrationRequestParam(ctx context.Context, requestId int, user entity.User) (value.PaymentRegistrationRequestParam, error) {
+	request := struct {
+		CustomerId  string `json:"cst_id"`
+		CustomerKey string `json:"custKey"`
+	}{
+		p.customerId,
+		p.customerKey,
+	}
 
-// 	return value.CardPaymentInfo{
-// 		CustomerKey:         tossPaymentResp.CustomerKey,
-// 		CardCompany:         tossPaymentResp.Card.Comany,
-// 		CardNumber:          tossPaymentResp.Card.Number,
-// 		CardExpirationYear:  req.ExpirationYear,
-// 		CardExpirationMonth: req.ExpirationMonth,
-// 		BillingKey:          tossPaymentResp.BillingKey,
-// 	}, nil
-// }
+	resp, err := p.client.R().
+		SetBody(request).
+		SetResult(&paypleCardRegistrationRequestParamResponse{}).
+		Post("php/auth.php")
 
-// func (t tossPaymentService) Transaction(ctx context.Context, userPayment entity.UserPayment, payment value.Payment) (value.PaymentResult, error) {
-// 	tossPaymentRequest := tossPaymentTransactionRequest{
-// 		Amount:      payment.Amount,
-// 		CustomerKey: userPayment.Id,
-// 		OrderId:     payment.OrderId,
-// 		OrderName:   payment.OrderName,
-// 	}
-// 	resp, err := t.client.R().
-// 		SetBody(tossPaymentRequest).
-// 		SetResult(&tossPaymentObjectResponse{}).
-// 		Post(fmt.Sprintf(tossPaymentTransactionPath, userPayment.BillingKey))
+	if err != nil {
+		return value.PaymentRegistrationRequestParam{},
+			fmt.Errorf("%w: error from payple card registration auth request: %v", value.ErrExternalPayment, err)
+	}
 
-// 	if err != nil {
-// 		// TODO(taekyeom) Error handling
-// 		return value.PaymentResult{}, fmt.Errorf("%w: error while invoking card transaction: %v", value.ErrExternalPayment, err)
-// 	}
+	// TODO (taekyeom) handle success check?
+	authResp := resp.Result().(*paypleCardRegistrationRequestParamResponse)
 
-// 	if resp.Error() != nil {
-// 		serviceErr := resp.Error().(*tossPaymentServiceError)
-// 		return value.PaymentResult{}, handleTossPaymentServiceError(serviceErr)
-// 	}
+	return value.PaymentRegistrationRequestParam{
+		RequestId:       requestId,
+		AuthKey:         authResp.AuthKey,
+		RegistrationUrl: authResp.ReturnUrl,
+		UserPhone:       user.Phone,
+	}, nil
+}
 
-// 	transactionResp := resp.Result().(*tossPaymentObjectResponse)
+func (p payplePaymentService) Transaction(ctx context.Context, userPayment entity.UserPayment, payment value.Payment) (value.PaymentResult, error) {
+	authResp, err := p.partnerAuthentication(ctx)
+	if err != nil {
+		return value.PaymentResult{}, err
+	}
 
-// 	result := value.PaymentResult{
-// 		OrderId:    transactionResp.OrderId,
-// 		PaymentKey: transactionResp.PaymentKey,
-// 		Amount:     transactionResp.TotalAmount,
-// 		OrderName:  transactionResp.OrderName,
-// 		ReceiptUrl: transactionResp.Receipt.Url,
-// 	}
+	request := paypleTransactionRequest{
+		CustomerId:  authResp.CustomerId,
+		CustomerKey: authResp.CustomerKey,
+		AuthKey:     authResp.AuthKey,
+		PayType:     "card",
+		BillingKey:  userPayment.BillingKey,
+		OrderName:   payment.OrderName,
+		RestFlag:    "Y",
+		Amount:      payment.Amount,
+		OrderId:     payment.OrderId,
+	}
 
-// 	return result, nil
-// }
+	resp, err := p.client.R().
+		SetBody(request).
+		SetResult(&paypleTransactionResponse{}).
+		Post(authResp.PayUrl)
 
-// func (t tossPaymentService) CancelTransaction(ctx context.Context, cancel value.PaymentCancel) error {
-// 	tossPaymentRequest := tossPaymentTransactionCancelRequest{
-// 		CancelReason: cancel.Reason,
-// 		CancelAmount: cancel.CancelAmount,
-// 	}
+	if err != nil {
+		return value.PaymentResult{}, fmt.Errorf("%w: error from payple transaction request: %v", value.ErrExternalPayment, err)
+	}
 
-// 	resp, err := t.client.R().
-// 		SetBody(tossPaymentRequest).
-// 		Post(fmt.Sprintf(tossPaymentCancelTransactionPath, cancel.PaymentKey))
-// 	if err != nil {
-// 		return fmt.Errorf("%w: error from transaction cancellation: %v", value.ErrExternalPayment, err)
-// 	}
+	transactionResp := resp.Result().(*paypleTransactionResponse)
+	if !transactionResp.Success() {
+		return value.PaymentResult{}, fmt.Errorf("%w: error from payple transaction: messge: [%s]%s", value.ErrExternalPayment, transactionResp.ResultCode, transactionResp.ResultMsg)
+	}
 
-// 	if resp.Error() != nil {
-// 		serviceErr := resp.Error().(*tossPaymentServiceError)
-// 		return handleTossPaymentServiceError(serviceErr)
-// 	}
+	return value.PaymentResult{
+		OrderId:    transactionResp.OrderId,
+		PaymentKey: transactionResp.PaymentKey,
+		Amount:     payment.Amount,
+		OrderName:  payment.OrderName,
+		ReceiptUrl: transactionResp.ReceiptUrl,
+	}, nil
+}
 
-// 	return nil
-// }
+func (p payplePaymentService) DeleteCard(ctx context.Context, billingKey string) error {
+	request := struct {
+		CustomerId  string `json:"cst_id"`
+		CustomerKey string `json:"custKey"`
+		PayWork     string `json:"PCD_PAY_WORK"`
+	}{
+		p.customerId,
+		p.customerKey,
+		"PUSERDEL",
+	}
 
-// func (t tossPaymentService) GetTransactionResult(ctx context.Context, orderId string) (value.PaymentResult, error) {
-// 	resp, err := t.client.R().
-// 		SetResult(&tossPaymentObjectResponse{}).
-// 		Get(fmt.Sprintf(tossPaymentGetTransaction, orderId))
+	resp, err := p.client.R().
+		SetBody(request).
+		SetResult(&payplePartnerAuthenticationResponse{}).
+		Post("php/auth.php")
 
-// 	if err != nil {
-// 		return value.PaymentResult{}, fmt.Errorf("%w: error from transaction cancellation: %v", value.ErrExternalPayment, err)
-// 	}
+	if err != nil {
+		return fmt.Errorf("%w: error while auth request: %v", value.ErrExternalPayment, err)
+	}
 
-// 	if resp.Error() != nil {
-// 		serviceErr := resp.Error().(*tossPaymentServiceError)
-// 		return value.PaymentResult{}, handleTossPaymentServiceError(serviceErr)
-// 	}
+	authResp := resp.Result().(*payplePartnerAuthenticationResponse)
+	if !authResp.Success() {
+		return fmt.Errorf("%w: error response while authentication: %v", value.ErrExternalPayment, authResp.ResultMsg)
+	}
 
-// 	transactionResp := resp.Result().(*tossPaymentObjectResponse)
+	deleteRequest := paypleDeletePaymentRequest{
+		authResp.CustomerId,
+		authResp.CustomerKey,
+		authResp.AuthKey,
+		billingKey,
+	}
 
-// 	result := value.PaymentResult{
-// 		OrderId:    transactionResp.OrderId,
-// 		PaymentKey: transactionResp.PaymentKey,
-// 		Amount:     transactionResp.TotalAmount,
-// 		OrderName:  transactionResp.OrderName,
-// 		ReceiptUrl: transactionResp.Receipt.Url,
-// 	}
+	resp, err = p.client.R().
+		SetBody(deleteRequest).
+		SetResult(&paypleDeletePaymentResponse{}).
+		Post(authResp.PayUrl)
 
-// 	return result, nil
-// }
+	if err != nil {
+		return fmt.Errorf("%w: error while delete request: %v", value.ErrExternalPayment, err)
+	}
 
-// func NewTossPaymentService(endpoint string, apiKey string) *tossPaymentService {
-// 	client := resty.New().
-// 		SetBaseURL(endpoint).
-// 		SetAuthScheme("Basic").
-// 		SetHeader("Content-Type", "application/json").
-// 		SetError(&tossPaymentServiceError{}).
-// 		SetAuthToken(apiKey)
+	deleteResp := resp.Result().(*paypleDeletePaymentResponse)
+	if !deleteResp.Success() {
+		return fmt.Errorf("%w: error response while delete payment: %v", value.ErrExternalPayment, deleteResp.Message)
+	}
 
-// 	return &tossPaymentService{
-// 		client: client,
-// 	}
-// }
+	return nil
+}
 
-// func handleTossPaymentServiceError(serviceError *tossPaymentServiceError) value.TacoError {
-// 	var errCode value.ErrCode
-// 	errMessage := serviceError.Message
-// 	switch serviceError.Code {
-// 	case "DUPLICATED_ORDER_ID":
-// 		errCode = value.ERR_PAYMENT_DUPLICATED_ORDER
-// 	case "INVALID_CARD_EXPIRATION":
-// 		errCode = value.ERR_PAYMENT_INVALID_CARD_EXPIRATION
-// 	case "INVALID_CARD_NUMBER":
-// 		errCode = value.ERR_PAYMENT_INVALID_CARD_NUMBER
-// 	case "INVALID_STOPPED_CARD":
-// 		errCode = value.ERR_PAYMENT_INVALID_STOPPED_CARD
-// 	case "REJECT_ACCOUNT_PAYMENT":
-// 		errCode = value.ERR_PAYMENT_REJECT_ACCOUNT_PAYMENT
-// 	default:
-// 		errCode = value.ERR_EXTERNAL
-// 	}
+func (p payplePaymentService) CancelTransaction(context.Context, value.PaymentCancel) error {
+	return value.ErrUnsupported
+}
 
-// 	return value.NewTacoError(errCode, errMessage)
-// }
+func (p payplePaymentService) GetTransactionResult(context.Context, string) (value.PaymentResult, error) {
+	return value.PaymentResult{}, value.ErrUnsupported
+}
+
+func (p payplePaymentService) partnerAuthentication(context.Context) (*payplePartnerAuthenticationResponse, error) {
+	request := payplePartnerAuthenticationRequest{
+		CustomerId:  p.customerId,
+		CustomerKey: p.customerKey,
+		PayType:     "card",
+		RestFlag:    "Y",
+	}
+
+	resp, err := p.client.R().
+		SetBody(request).
+		SetResult(&payplePartnerAuthenticationResponse{}).
+		Post("php/auth.php")
+
+	if err != nil {
+		return nil, fmt.Errorf("%w: error while auth request: %v", value.ErrExternalPayment, err)
+	}
+
+	authResp := resp.Result().(*payplePartnerAuthenticationResponse)
+	if !authResp.Success() {
+		return nil, fmt.Errorf("%w: error response while authentication: %v", value.ErrExternalPayment, authResp.ResultMsg)
+	}
+
+	return authResp, nil
+}
+
+func NewPayplePaymentService(serviceEndpoint, refererHost, customerId, customerKey string) *payplePaymentService {
+	client := resty.New().
+		SetBaseURL(serviceEndpoint).
+		SetHeaders(map[string]string{
+			"Content-Type":  "application/json",
+			"Cache-Control": "no-cache",
+			"Referer":       refererHost,
+		})
+
+	return &payplePaymentService{
+		client:      client,
+		customerId:  customerId,
+		customerKey: customerKey,
+	}
+}
 
 func AsPaymentError(err error, target *value.TacoError) bool {
 	if !errors.As(err, target) {

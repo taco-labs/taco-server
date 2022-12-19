@@ -170,12 +170,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 
 	if req.Dryrun {
 		// TODO (taekyeom) additional price 계산을 위한 별도 모듈로 빼야 함
-		var maxAdditionalPrice int
-		if route.Price < 10000 {
-			maxAdditionalPrice = route.Price
-		} else {
-			maxAdditionalPrice = 10000
-		}
+		maxAdditionalPrice := 10000
 		taxiCallRequest := entity.TaxiCallRequest{
 			Dryrun:         req.Dryrun,
 			UserId:         userId,
