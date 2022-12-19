@@ -25,6 +25,7 @@ const (
 	ERR_INVALID_USER_PAYMENT   ErrCode = "ERR_INVALID_USER_PAYMENT"
 	ERR_INVALID_REFERRAL_CODE  ErrCode = "ERR_INVALID_REFERRAL_CODE"
 	ERR_NOTFOUND_REFERRAL_CODE ErrCode = "ERR_NOTFOUND_REFERRAL_CODE"
+	ERR_USER_TAG_TOO_LONG      ErrCode = "ERR_USER_TAG_TOO_LONG"
 
 	ERR_PAYMENT_DUPLICATED_ORDER        ErrCode = "ERR_PAYMENT_DUPLICATED_ORDER"
 	ERR_PAYMENT_INVALID_CARD_EXPIRATION ErrCode = "ERR_PAYMENT_INVALID_CARD_EXPIRATION"
@@ -105,6 +106,8 @@ var (
 	ErrPaymentInvalidStoppedCard = TacoError{ERR_PAYMENT_INVALID_STOPPED_CARD, "stopped card"}
 
 	ErrPaymentRejectAccountPayment = TacoError{ERR_PAYMENT_REJECT_ACCOUNT_PAYMENT, "reject account payment"}
+
+	ErrUserTagTooLong = TacoError{ERR_USER_TAG_TOO_LONG, "user tag too long"}
 )
 
 func NewTacoError(errCode ErrCode, message string) TacoError {

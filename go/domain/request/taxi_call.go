@@ -19,8 +19,8 @@ type CreateTaxiCallRequest struct {
 
 // TODO (taekyeom) validation
 func (c CreateTaxiCallRequest) Validate() error {
-	if utf8.RuneCountInString(c.UserTag) > 10 {
-		return value.NewTacoError(value.ERR_INVALID, "요청사항은 10자 이내이어야 합니다.")
+	if utf8.RuneCountInString(c.UserTag) > 20 {
+		return value.ErrUserTagTooLong
 	}
 	return nil
 }
