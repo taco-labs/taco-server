@@ -61,14 +61,9 @@ func (d driverApp) RegisterDriverSettlementAccount(ctx context.Context,
 		return entity.DriverSettlementAccount{}, err
 	}
 
-	settlementAccount, err := d.service.settlementAccount.GetSettlementAccount(ctx, driver, req.Bank, req.AccountNumber)
+	settlementAccount, err := d.checkDriverSettlementAccount(ctx, driver, req.Bank, req.AccountNumber)
 	if err != nil {
 		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: error while get settlement account: %w", err)
-	}
-
-	if settlementAccount.AccountHolderName != driver.FullName() {
-		// TODO (taekyeom) 별도 error code 부여 필요
-		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: bank account name is different: %w", value.ErrInvalidOperation)
 	}
 
 	driverSettlementAccount := entity.DriverSettlementAccount{
@@ -93,6 +88,29 @@ func (d driverApp) RegisterDriverSettlementAccount(ctx context.Context,
 	}
 
 	return driverSettlementAccount, nil
+}
+
+func (d driverApp) checkDriverSettlementAccount(ctx context.Context, driver entity.Driver, bank string, accountNumber string) (value.SettlementAccount, error) {
+	if driver.MockAccount() {
+		return value.SettlementAccount{
+			BankCode:          bank,
+			AccountNumber:     accountNumber,
+			AccountHolderName: driver.FullName(),
+			BankTransactionId: "mock-transaction-id",
+		}, nil
+	}
+
+	settlementAccount, err := d.service.settlementAccount.GetSettlementAccount(ctx, driver, bank, accountNumber)
+	if err != nil {
+		return value.SettlementAccount{}, fmt.Errorf("app.Driver.checkDriverSettlementAccount: error while get settlement account: %w", err)
+	}
+
+	if settlementAccount.AccountHolderName != driver.FullName() {
+		// TODO (taekyeom) 별도 error code 부여 필요
+		return value.SettlementAccount{}, fmt.Errorf("app.Driver.checkDriverSettlementAccount: bank account name is different: %w", value.ErrInvalidOperation)
+	}
+
+	return settlementAccount, nil
 }
 
 func (d driverApp) UpdateDriverSettlementAccount(ctx context.Context,

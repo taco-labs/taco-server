@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/uptrace/bun"
@@ -40,6 +41,10 @@ type DriverDto struct {
 	CreateTime                 time.Time       `bun:"create_time"`
 	UpdateTime                 time.Time       `bun:"update_time"`
 	DeleteTime                 time.Time       `bun:"delete_time"`
+}
+
+func (d DriverDto) MockAccount() bool {
+	return d.Id == uuid.Nil.String()
 }
 
 func (d DriverDto) FullName() string {

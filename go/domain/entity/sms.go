@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	codes = []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}
+	MockAccountPhone = "01000000000"
+	codes            = []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}
 )
 
 type SmsVerification struct {
@@ -21,6 +22,10 @@ type SmsVerification struct {
 	Verified         bool      `bun:"verified"`
 	Phone            string    `bun:"phone"`
 	ExpireTime       time.Time `bun:"expire_time"`
+}
+
+func (s SmsVerification) MockAccountPhone() bool {
+	return s.Phone == MockAccountPhone
 }
 
 func (s SmsVerification) VerficationMessage() string {
@@ -43,4 +48,14 @@ func generateRandomCode(length int) string {
 		b[i] = codes[rand.Intn(len(codes))]
 	}
 	return strings.Join(b, "")
+}
+
+func NewMockSmsVerification(id string, currentTime time.Time) SmsVerification {
+	return SmsVerification{
+		Id:               id,
+		VerificationCode: "000000",
+		Verified:         false,
+		ExpireTime:       currentTime.Add(time.Minute * 3),
+		Phone:            MockAccountPhone,
+	}
 }

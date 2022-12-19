@@ -8,6 +8,7 @@ import (
 
 	// "time"
 
+	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
@@ -89,18 +90,26 @@ type driverApp struct {
 	}
 }
 
+// TODO (taekyeom) mock account logic seperation
 func (d driverApp) SmsVerificationRequest(ctx context.Context, req request.SmsVerificationRequest) (entity.SmsVerification, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
-	smsVerification := entity.NewSmsVerification(req.StateKey, requestTime, req.Phone)
+	var smsVerification entity.SmsVerification
+	if req.Phone == entity.MockAccountPhone {
+		smsVerification = entity.NewMockSmsVerification(req.StateKey, requestTime)
+	} else {
+		smsVerification = entity.NewSmsVerification(req.StateKey, requestTime, req.Phone)
+	}
 
 	err := d.Run(ctx, func(ctx context.Context, db bun.IDB) error {
 		if err := d.repository.smsVerification.Create(ctx, db, smsVerification); err != nil {
 			return fmt.Errorf("app.Driver.SmsVerificationRequest: error while create sms verification:\n%w", err)
 		}
 
-		if err := d.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerficationMessage()); err != nil {
-			return fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
+		if req.Phone != entity.MockAccountPhone {
+			if err := d.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerficationMessage()); err != nil {
+				return fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
+			}
 		}
 		return nil
 	})
@@ -198,7 +207,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 
 	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driver, err := d.repository.driver.FindByUserUniqueKey(ctx, i, req.Phone)
-		if !errors.Is(err, value.ErrDriverNotFound) {
+		if err != nil && !errors.Is(err, value.ErrDriverNotFound) {
 			return fmt.Errorf("app.Driver.Signup: error while find driver by unique key:%w", err)
 		}
 
@@ -220,8 +229,16 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: unsupported service region: %w", value.ErrUnsupportedServiceRegion)
 		}
 
+		// TODO (taekyeom) mock account seperation
+		var driverId string
+		if smsVerification.MockAccountPhone() {
+			driverId = uuid.Nil.String()
+		} else {
+			driverId = utils.MustNewUUID()
+		}
+
 		newDriverDto = entity.DriverDto{
-			Id:                         utils.MustNewUUID(),
+			Id:                         driverId,
 			DriverType:                 enum.DriverTypeFromString(req.DriverType),
 			FirstName:                  req.FirstName,
 			LastName:                   req.LastName,
