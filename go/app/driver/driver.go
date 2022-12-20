@@ -221,7 +221,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrInvalidOperation)
 		}
 
-		_, supportedRegion := value.SupportedServiceRegions[req.ServiceRegion]
+		_, supportedRegion := value.SupportedServiceRegionMap[req.ServiceRegion]
 		if !supportedRegion {
 			return fmt.Errorf("app.Driver.Signup: unsupported service region: %w", value.ErrUnsupportedServiceRegion)
 		}
@@ -558,6 +558,10 @@ func (d driverApp) ActivateDriver(ctx context.Context, driverId string) error {
 
 		return nil
 	})
+}
+
+func (d driverApp) AvailableServiceRegions(ctx context.Context) ([]string, error) {
+	return value.SupportedServiceRegionList, nil
 }
 
 func NewDriverApp(opts ...driverAppOption) (*driverApp, error) {

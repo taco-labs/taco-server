@@ -86,3 +86,14 @@ func ToMap[I any, K comparable](ins []I, f func(I) K) map[K]I {
 
 	return out
 }
+
+func ToMapWithValue[I any, K comparable, V any](ins []I, f func(I) (K, V)) map[K]V {
+	out := make(map[K]V)
+
+	for _, in := range ins {
+		k, v := f(in)
+		out[k] = v
+	}
+
+	return out
+}

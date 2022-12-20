@@ -62,6 +62,8 @@ func (d *driverServer) initController() error {
 	taxiCallGroup.PUT("/:taxiCallRequestId/to_arrival", d.DriverToArrival)
 	taxiCallGroup.PUT("/:taxiCallRequestId/done", d.DoneTaxiCallRequest)
 
+	d.echo.GET("/service_region", d.AvailableServiceRegions)
+
 	return nil
 }
 

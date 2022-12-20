@@ -19,6 +19,7 @@ var skipSet = map[string]struct{}{
 	"/driver/signin/sms/verify":  {},
 	"/driver/signup":             {},
 	"/healthz":                   {},
+	"/service_region":            {},
 
 	// TODO (taekyeom) move to extension
 	"/payment/payple/settlement_callback": {},
