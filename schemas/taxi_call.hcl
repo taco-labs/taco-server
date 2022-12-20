@@ -46,7 +46,7 @@ table "taxi_call_request" {
   }
 
   column "user_tag" {
-    type = varchar(10)
+    type = varchar(20)
     null = false
   }
 

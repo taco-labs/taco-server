@@ -337,6 +337,12 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get user: %w", err)
 		}
+
+		tags, err := slices.MapErr(taxiCallRequest.TagIds, value.GetTagById)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get tags by id: %w", err)
+		}
+		taxiCallRequest.Tags = tags
 		driverLatestTaxiCallRequest = entity.DriverLatestTaxiCallRequest{
 			TaxiCallRequest: taxiCallRequest,
 			UserPhone:       user.Phone,
