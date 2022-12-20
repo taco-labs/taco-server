@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	// "time"
-
-	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
@@ -232,7 +229,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 		// TODO (taekyeom) mock account seperation
 		var driverId string
 		if smsVerification.MockAccountPhone() {
-			driverId = uuid.Nil.String()
+			driverId = value.MockDriverId
 		} else {
 			driverId = utils.MustNewUUID()
 		}

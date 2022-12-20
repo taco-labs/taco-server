@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/uptrace/bun"
@@ -44,7 +43,7 @@ type DriverDto struct {
 }
 
 func (d DriverDto) MockAccount() bool {
-	return d.Id == uuid.Nil.String()
+	return d.Id == value.MockDriverId
 }
 
 func (d DriverDto) FullName() string {

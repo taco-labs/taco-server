@@ -4,12 +4,15 @@ import (
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
 )
 
 const (
 	MinimumPointToUse = 1000
 	MinimumPriceToPay = 100
+
+	mockBillingKey = "mock-billing-key"
 )
 
 type UserPaymentRegistrationRequest struct {
@@ -42,6 +45,24 @@ func (u UserPayment) ToSummary() value.PaymentSummary {
 		PaymentId:  u.Id,
 		Company:    u.CardCompany,
 		CardNumber: u.RedactedCardNumber,
+	}
+}
+
+func (u UserPayment) MockPayment() bool {
+	return u.BillingKey == mockBillingKey
+}
+
+func NewMockPayment(userId string, requestTime time.Time) UserPayment {
+	return UserPayment{
+		Id:                 utils.MustNewUUID(),
+		UserId:             userId,
+		Name:               "Mock Payment",
+		CardCompany:        "Taco",
+		RedactedCardNumber: "1234xxxxxxxx1234",
+		BillingKey:         mockBillingKey,
+		Invalid:            false,
+		CreateTime:         requestTime,
+		LastUseTime:        requestTime,
 	}
 }
 

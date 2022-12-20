@@ -72,6 +72,22 @@ func (p paymentApp) handleTransactionRequest(ctx context.Context, event entity.E
 		return err
 	}
 
+	if userPayment.MockPayment() {
+		// orderId, paymentKey, receiptUrl string, createTime time.Time
+		successCmd := command.NewUserPaymentTransactionSuccessCommand(
+			transactionRequest.OrderId,
+			"mock-payment-key",
+			"",
+			event.CreateTime,
+		)
+		return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+			if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{successCmd}); err != nil {
+				return fmt.Errorf("app.payment.handleTransactionRequest: error while create mock payment success event: %w", err)
+			}
+			return nil
+		})
+	}
+
 	paymentTransaction := value.Payment{
 		OrderId:   transactionRequest.OrderId,
 		Amount:    transactionRequest.GetPaymentAmount(),
@@ -123,6 +139,24 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 
 		if err := p.repository.payment.CreatePaymentOrder(ctx, i, userPaymentOrder); err != nil {
 			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to create user payment order: %w", err)
+		}
+
+		userPayment, err := p.repository.payment.GetUserPayment(ctx, i, userPaymentOrder.PaymentSummary.PaymentId)
+		if err != nil {
+			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to get user payment: %w", err)
+		}
+		if userPayment.MockPayment() {
+			if err := p.CancelDriverReferralReward(
+				ctx,
+				transactionRequest.SettlementTargetId,
+				transactionRequest.AdditionalSettlementAmount); err != nil {
+				return fmt.Errorf("app.payment.handleTransactionSuccess: failed to cancel driver reward for mock payment: %w", err)
+			}
+			if err := p.AddUserPaymentPoint(ctx, transactionRequest.UserId, transactionRequest.UsedPoint); err != nil {
+				return fmt.Errorf("app.payment.handleTransactionSuccess: failed to cancel user used point for mock payment: %w", err)
+			}
+
+			return nil
 		}
 
 		if transactionRequest.SettlementTargetId != uuid.Nil.String() && transactionRequest.SettlementAmount > 0 {

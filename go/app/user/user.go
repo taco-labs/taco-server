@@ -43,6 +43,7 @@ type taxiCallInterface interface {
 }
 
 type userPaymentInterface interface {
+	CreateUserPayment(ctx context.Context, userPayment entity.UserPayment) error
 	GetCardRegistrationRequestParam(context.Context, entity.User) (value.PaymentRegistrationRequestParam, error)
 	RegistrationCallback(context.Context, request.PaymentRegistrationCallbackRequest) (entity.UserPayment, error)
 	ListUserPayment(context.Context, string) ([]entity.UserPayment, error)
@@ -79,7 +80,12 @@ type userApp struct {
 func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVerificationRequest) (entity.SmsVerification, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
-	smsVerification := entity.NewSmsVerification(req.StateKey, requestTime, req.Phone)
+	var smsVerification entity.SmsVerification
+	if req.Phone == entity.MockAccountPhone {
+		smsVerification = entity.NewMockSmsVerification(req.StateKey, requestTime)
+	} else {
+		smsVerification = entity.NewSmsVerification(req.StateKey, requestTime, req.Phone)
+	}
 
 	err := u.Run(ctx, func(ctx context.Context, db bun.IDB) error {
 		if err := u.repository.smsVerification.Create(ctx, db, smsVerification); err != nil {
@@ -187,9 +193,17 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			return fmt.Errorf("app.User.Signup: not verified phone:\n%w", value.ErrInvalidOperation)
 		}
 
+		// TODO (taekyeom) mock account seperation
+		var userId string
+		if smsVerification.MockAccountPhone() {
+			userId = value.MockUserId
+		} else {
+			userId = utils.MustNewUUID()
+		}
+
 		// create user
 		newUser = entity.User{
-			Id:            utils.MustNewUUID(),
+			Id:            userId,
 			FirstName:     req.FirstName,
 			LastName:      req.LastName,
 			BirthDay:      req.Birthday,
@@ -206,7 +220,7 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			return fmt.Errorf("app.User.Signup: error while create user:\n %w", err)
 		}
 
-		if req.ReferralCode != "" {
+		if req.ReferralCode != "" && !newUser.MockAccount() {
 			referralCode, err := value.DecodeReferralCode(req.ReferralCode)
 			if err != nil {
 				return fmt.Errorf("app.User.Signup: invalid refferral code: %w (%v)", value.ErrInvalidReferralCode, err)
@@ -222,11 +236,14 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 				if err != nil {
 					return fmt.Errorf("app.User.Signup: error while get referral user: %w", err)
 				}
-				if err := u.service.userPayment.CreateUserReferral(ctx, newUser.Id, referralUser.Id); err != nil {
-					return fmt.Errorf("app.User.Signup: error while create user referral: %w", err)
+
+				if !referralUser.MockAccount() {
+					if err := u.service.userPayment.CreateUserReferral(ctx, newUser.Id, referralUser.Id); err != nil {
+						return fmt.Errorf("app.User.Signup: error while create user referral: %w", err)
+					}
+					referralType = enum.ReferralType_User
+					referralId = referralUser.Id
 				}
-				referralType = enum.ReferralType_User
-				referralId = referralUser.Id
 			case enum.ReferralType_Driver:
 				referralDriver, err := u.service.driver.GetDriverByUserUniqueKey(ctx, referralCode.PhoneNumber)
 				if errors.Is(err, value.ErrNotFound) {
@@ -236,11 +253,22 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 				if err != nil {
 					return fmt.Errorf("app.User.Signup: error while get driver by unique key: %w", err)
 				}
-				if err := u.service.userPayment.AddDriverReferralReward(ctx, referralDriver.Id); err != nil {
-					return fmt.Errorf("app.User.Signup: error while update driver referral: %w", err)
+
+				if !referralDriver.MockAccount() {
+					if err := u.service.userPayment.AddDriverReferralReward(ctx, referralDriver.Id); err != nil {
+						return fmt.Errorf("app.User.Signup: error while update driver referral: %w", err)
+					}
+					referralType = enum.ReferralType_Driver
+					referralId = referralDriver.Id
 				}
-				referralType = enum.ReferralType_Driver
-				referralId = referralDriver.Id
+			}
+		}
+
+		// If user account is mock, create mock payment
+		if newUser.MockAccount() {
+			mockPayment := entity.NewMockPayment(newUser.Id, requestTime)
+			if err := u.service.userPayment.CreateUserPayment(ctx, mockPayment); err != nil {
+				return fmt.Errorf("app.User.Signup: error while create mock payment: %w", err)
 			}
 		}
 

@@ -66,6 +66,15 @@ func (u paymentApp) GetCardRegistrationRequestParam(ctx context.Context, user en
 	return requestParam, nil
 }
 
+func (u paymentApp) CreateUserPayment(ctx context.Context, userPayment entity.UserPayment) error {
+	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		if err := u.repository.payment.CreateUserPayment(ctx, i, userPayment); err != nil {
+			return fmt.Errorf("app.paymentApp.CreateUserPayment: error while create user payment: %w", err)
+		}
+		return nil
+	})
+}
+
 func (u paymentApp) RegistrationCallback(ctx context.Context, req request.PaymentRegistrationCallbackRequest) (entity.UserPayment, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 	logger := utils.GetLogger(ctx)
