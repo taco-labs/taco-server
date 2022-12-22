@@ -30,6 +30,7 @@ type TaxiCallRepository interface {
 	CreateTicket(context.Context, bun.IDB, entity.TaxiCallTicket) error
 	TicketExists(context.Context, bun.IDB, entity.TaxiCallTicket) (bool, error)
 	DeleteTicketByRequestId(context.Context, bun.IDB, string) error
+	GetDistributedCountByTicketId(context.Context, bun.IDB, string) (int, error)
 
 	GetDriverTaxiCallContext(context.Context, bun.IDB, string) (entity.DriverTaxiCallContext, error)
 	UpsertDriverTaxiCallContext(context.Context, bun.IDB, entity.DriverTaxiCallContext) error
@@ -148,6 +149,22 @@ func (t taxiCallRepository) DeleteTicketByRequestId(ctx context.Context, db bun.
 	}
 
 	return nil
+}
+
+func (t taxiCallRepository) GetDistributedCountByTicketId(ctx context.Context, db bun.IDB, ticketId string) (int, error) {
+	var distributedCount int
+
+	err := db.NewSelect().
+		Model((*entity.TaxiCallTicket)(nil)).
+		Where("ticket_id = ?", ticketId).
+		ColumnExpr("SUM(distributed_count)").
+		Scan(ctx, &distributedCount)
+
+	if err != nil {
+		return 0, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return distributedCount, nil
 }
 
 func (t taxiCallRepository) GetById(ctx context.Context, db bun.IDB, taxiCallRequestId string) (entity.TaxiCallRequest, error) {

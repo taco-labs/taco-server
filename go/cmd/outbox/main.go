@@ -21,13 +21,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	var logger *zap.Logger
-
-	if outboxConfig.Env == "prod" {
-		logger, err = zap.NewProduction()
-	} else {
-		logger, err = zap.NewDevelopment()
-	}
+	logger, err := zap.NewProduction()
 
 	if err != nil {
 		fmt.Printf("Failed to initializae logger: %v\n", err)

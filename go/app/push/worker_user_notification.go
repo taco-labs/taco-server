@@ -128,3 +128,17 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestCanceled(ctx context.Context
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil
 }
+
+func (t taxiCallPushApp) handleDriverNotAvailable(ctx context.Context, fcmToken string,
+	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
+
+	messageTitle := "주변에 호출 가능한 택시가 없습니다"
+	messageBody := "주변에 호출 가능한 택시가 없습니다"
+
+	data := map[string]string{
+		"taxiCallRequestId": cmd.TaxiCallRequestId,
+		"taxiCallState":     cmd.TaxiCallState,
+	}
+
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil
+}

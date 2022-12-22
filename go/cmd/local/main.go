@@ -28,13 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	var logger *zap.Logger
-
-	if serverConfig.Env == "prod" {
-		logger, err = zap.NewProduction()
-	} else {
-		logger, err = zap.NewDevelopment()
-	}
+	logger, err := zap.NewDevelopment()
 
 	if err != nil {
 		fmt.Printf("Failed to initializae logger: %v\n", err)

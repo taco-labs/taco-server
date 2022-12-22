@@ -9,6 +9,7 @@ enum "taxi_call_state" {
     "USER_CANCELLED",
     "DRIVER_CANCELLED",
     "TAXI_CALL_FAILED",
+    "DRIVER_NOT_AVAILABLE",
   ]
 }
 
@@ -181,6 +182,11 @@ table "taxi_call_ticket" {
 
   column "ticket_id" {
     type = uuid
+    null = false
+  }
+
+  column "distributed_count" {
+    type = int
     null = false
   }
 

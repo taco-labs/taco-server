@@ -146,7 +146,12 @@ type TaxiCallTicket struct {
 	AdditionalPrice   int       `bun:"additional_price,pk"`
 	Attempt           int       `bun:"attempt,pk"`
 	TicketId          string    `bun:"ticket_id"`
+	DistributedCount  int       `bun:"distributed_count"`
 	CreateTime        time.Time `bun:"create_time"`
+}
+
+func (t TaxiCallTicket) AttemptLimit() bool {
+	return t.Attempt == AttemptLimit
 }
 
 func (t TaxiCallTicket) UserAdditionalPrice() int {
