@@ -226,6 +226,17 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		return fmt.Errorf("failed to setup push app: %w", err)
 	}
 
+	driverSettlementApp, err := driversettlement.NewDriverSettlementApp(
+		driversettlement.WithTransactor(transactor),
+		driversettlement.WithSettlementRepository(driverSettlementRepository),
+		driversettlement.WithEventRepository(eventRepository),
+		driversettlement.WithSettlementAccountService(settlementAccountService),
+		driversettlement.WithAnalyticsRepository(analyticsRepository),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to setup driver settlement app: %w", err)
+	}
+
 	paymentApp, err := payment.NewPaymentApp(
 		payment.WithTransactor(transactor),
 		payment.WithPaymentRepository(userPaymentRepository),
@@ -233,6 +244,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		payment.WithPaymentService(payplePaymentService),
 		payment.WithReferralRepository(referralRepository),
 		payment.WithAnalyticsRepository(analyticsRepository),
+		payment.WithDriverSettlementService(driverSettlementApp),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup user payment app: %w", err)
@@ -267,16 +279,6 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup driver session app: %w", err)
-	}
-
-	driverSettlementApp, err := driversettlement.NewDriverSettlementApp(
-		driversettlement.WithTransactor(transactor),
-		driversettlement.WithSettlementRepository(driverSettlementRepository),
-		driversettlement.WithEventRepository(eventRepository),
-		driversettlement.WithSettlementAccountService(settlementAccountService),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to setup driver settlement app: %w", err)
 	}
 
 	userApp, err := user.NewUserApp(

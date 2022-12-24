@@ -30,6 +30,8 @@ const (
 	EventType_DriverTaxiToArrival EventType = "Driver_TaxiToArrival"
 
 	EventType_DriverTaxiDone EventType = "Driver_TaxiDone"
+
+	EventType_DriverPromotionReward EventType = "Driver_PromotionReward"
 )
 
 type AnalyticsEvent interface {

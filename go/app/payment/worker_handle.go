@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
+	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/uptrace/bun"
 )
@@ -20,7 +21,8 @@ func (p paymentApp) handleTransactionRequest(ctx context.Context, event entity.E
 	}
 
 	if cmd.Amount-cmd.UsedPoint == 0 {
-		return p.ApplyUserReferralReward(ctx, cmd.UserId, cmd.OrderId, cmd.Amount)
+		_, err := p.ApplyUserReferralReward(ctx, cmd.UserId, cmd.OrderId, cmd.Amount)
+		return err
 	}
 
 	var userPayment entity.UserPayment
@@ -159,17 +161,41 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 			return nil
 		}
 
+		userReferralReward, err := p.ApplyUserReferralReward(ctx, transactionRequest.UserId, transactionRequest.OrderId, transactionRequest.Amount)
+		if err != nil {
+			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to apply user referral: %w", err)
+		}
+
 		if transactionRequest.SettlementTargetId != uuid.Nil.String() && transactionRequest.SettlementAmount > 0 {
+			// TODO (taekyeom) promotion reward 로 인한 payment app과 settlement app 의 커플링을 어떻게 풀까..?
+			var driverPromotionRewardRate int
+			if userReferralReward == 0 && transactionRequest.AdditionalSettlementAmount == 0 {
+				driverPromotionRewardRate = entity.DriverSettlementPromotionRateWithNoReferral
+			} else if userReferralReward > 0 && transactionRequest.AdditionalSettlementAmount > 0 {
+				driverPromotionRewardRate = entity.DriverSettlementPromotionRateWithAllReferral
+			} else {
+				driverPromotionRewardRate = entity.DriverSettlementPromotionRateWithOneReferral
+			}
+
+			promotionReward, err := p.service.settlement.ApplyDriverSettlementPromotionReward(
+				ctx,
+				request.ApplyDriverSettlementPromotionRewardRequest{
+					DriverId:   transactionRequest.SettlementTargetId,
+					OrderId:    transactionRequest.OrderId,
+					Amount:     transactionRequest.Amount,
+					RewardRate: driverPromotionRewardRate,
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("app.payment.handleTransactionSuccess: failed to apply driver settlement promotion: %w", err)
+			}
+
 			events = append(events, command.NewDriverSettlementRequestCommand(
 				transactionRequest.SettlementTargetId,
 				transactionRequest.OrderId,
-				transactionRequest.GetSettlementAmount(),
+				transactionRequest.GetSettlementAmount(promotionReward),
 				cmd.CreateTime,
 			))
-		}
-
-		if err := p.ApplyUserReferralReward(ctx, transactionRequest.UserId, transactionRequest.OrderId, transactionRequest.Amount); err != nil {
-			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to apply user referral: %w", err)
 		}
 
 		if transactionRequest.Recovery {

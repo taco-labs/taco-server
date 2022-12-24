@@ -34,6 +34,10 @@ type DriverSettlementRepository interface {
 	GetFailedSettlementTransferById(context.Context, bun.IDB, string) (entity.DriverFailedSettlementTransfer, error)
 	CreateFailedSettlementTransfer(context.Context, bun.IDB, entity.DriverFailedSettlementTransfer) error
 	DeleteFailedSettlementTransfer(context.Context, bun.IDB, entity.DriverFailedSettlementTransfer) error
+
+	GetDriverPromotionSettlementReward(context.Context, bun.IDB, string) (entity.DriverPromotionSettlementReward, error)
+	CreateDriverPromotionSettlementReward(context.Context, bun.IDB, entity.DriverPromotionSettlementReward) error
+	UpdateDriverPromotionSettlementReward(context.Context, bun.IDB, entity.DriverPromotionSettlementReward) error
 }
 
 type driverSettlementRepository struct{}
@@ -308,6 +312,58 @@ func (d driverSettlementRepository) CreateFailedSettlementTransfer(ctx context.C
 
 func (d driverSettlementRepository) DeleteFailedSettlementTransfer(ctx context.Context, db bun.IDB, failedSettlementTransfer entity.DriverFailedSettlementTransfer) error {
 	res, err := db.NewDelete().Model(&failedSettlementTransfer).WherePK().Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (d driverSettlementRepository) GetDriverPromotionSettlementReward(ctx context.Context, db bun.IDB, driverId string) (entity.DriverPromotionSettlementReward, error) {
+	resp := entity.DriverPromotionSettlementReward{
+		DriverId: driverId,
+	}
+
+	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.DriverPromotionSettlementReward{}, value.ErrNotFound
+	}
+	if err != nil {
+		return entity.DriverPromotionSettlementReward{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (d driverSettlementRepository) CreateDriverPromotionSettlementReward(ctx context.Context, db bun.IDB, promotionReward entity.DriverPromotionSettlementReward) error {
+	res, err := db.NewInsert().Model(&promotionReward).Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (d driverSettlementRepository) UpdateDriverPromotionSettlementReward(ctx context.Context, db bun.IDB, promotionReward entity.DriverPromotionSettlementReward) error {
+	res, err := db.NewUpdate().Model(&promotionReward).WherePK().Exec(ctx)
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)

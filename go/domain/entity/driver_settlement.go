@@ -11,6 +11,10 @@ import (
 const (
 	DriverSettlementTaxRateNumerator   = 33
 	DriverSettlementTaxRateDenominator = 1000
+
+	DriverSettlementPromotionRateWithNoReferral  = 15
+	DriverSettlementPromotionRateWithOneReferral = 10
+	DriverSettlementPromotionRateWithAllReferral = 5
 )
 
 func ExpectedSettlementAmountWithoutTax(amount int) int {
@@ -78,4 +82,23 @@ type DriverFailedSettlementTransfer struct {
 	Message           string    `bun:"message"`
 	FailureMessage    string    `bun:"failure_message"`
 	CreateTime        time.Time `bun:"create_time"`
+}
+
+type DriverPromotionSettlementReward struct {
+	bun.BaseModel `bun:"table:driver_promotion_settlement_reward"`
+
+	DriverId    string `bun:"driver_id,pk"`
+	TotalAmount int    `bun:"total_amount"`
+}
+
+func (d *DriverPromotionSettlementReward) Apply(amount int, rate int) int {
+	rewardAmount := amount * rate / 100
+
+	if d.TotalAmount < rewardAmount {
+		rewardAmount = d.TotalAmount
+	}
+
+	d.TotalAmount -= rewardAmount
+
+	return rewardAmount
 }

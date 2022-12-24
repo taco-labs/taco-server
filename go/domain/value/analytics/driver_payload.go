@@ -7,7 +7,8 @@ import (
 )
 
 type DriverSignupPayload struct {
-	DriverId string
+	DriverId      string
+	ServiceRegion string
 }
 
 func (d DriverSignupPayload) EventType() EventType {
@@ -135,4 +136,16 @@ type DriverTaxiDonePaylod struct {
 
 func (d DriverTaxiDonePaylod) EventType() EventType {
 	return EventType_DriverTaxiDone
+}
+
+type DriverPromotionReward struct {
+	DriverId             string
+	TaxiCallRequestId    string
+	RewardRate           int
+	AfterPromotionAmount int
+	RewardAmount         int
+}
+
+func (d DriverPromotionReward) EventType() EventType {
+	return EventType_DriverPromotionReward
 }

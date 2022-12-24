@@ -86,8 +86,8 @@ func (u UserPaymentTransactionRequest) GetPaymentAmount() int {
 	return u.Amount - u.UsedPoint
 }
 
-func (u UserPaymentTransactionRequest) GetSettlementAmount() int {
-	return u.SettlementAmount + u.AdditionalSettlementAmount
+func (u UserPaymentTransactionRequest) GetSettlementAmount(promotionReward int) int {
+	return u.SettlementAmount + u.AdditionalSettlementAmount + promotionReward
 }
 
 type UserPaymentOrder struct {

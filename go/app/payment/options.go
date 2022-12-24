@@ -46,6 +46,12 @@ func WithPaymentService(svc service.PaymentService) paymentAppOption {
 	}
 }
 
+func WithDriverSettlementService(svc driverSettlementAppInterface) paymentAppOption {
+	return func(pa *paymentApp) {
+		pa.service.settlement = svc
+	}
+}
+
 func (p paymentApp) validateApp() error {
 	if p.Transactor == nil {
 		return errors.New("user payment app need transactor")
@@ -61,6 +67,10 @@ func (p paymentApp) validateApp() error {
 
 	if p.service.payment == nil {
 		return errors.New("user payment app need payment service")
+	}
+
+	if p.service.settlement == nil {
+		return errors.New("user settlement app need settlement service")
 	}
 
 	if p.repository.referral == nil {

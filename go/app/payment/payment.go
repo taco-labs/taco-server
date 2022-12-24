@@ -20,6 +20,10 @@ import (
 	"go.uber.org/zap"
 )
 
+type driverSettlementAppInterface interface {
+	ApplyDriverSettlementPromotionReward(ctx context.Context, req request.ApplyDriverSettlementPromotionRewardRequest) (int, error)
+}
+
 type paymentApp struct {
 	app.Transactor
 
@@ -31,7 +35,8 @@ type paymentApp struct {
 	}
 
 	service struct {
-		payment service.PaymentService
+		payment    service.PaymentService
+		settlement driverSettlementAppInterface
 	}
 }
 
@@ -422,9 +427,10 @@ func (p paymentApp) CreateUserReferral(ctx context.Context, fromUserId string, t
 	})
 }
 
-func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId, orderId string, price int) error {
+func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId, orderId string, price int) (int, error) {
+	var referralReward int
 	requestTime := utils.GetRequestTimeOrNow(ctx)
-	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		userReferralReward, err := p.repository.referral.GetUserReferral(ctx, i, userId)
 		if errors.Is(err, value.ErrNotFound) {
 			return nil
@@ -432,7 +438,7 @@ func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId, orderId
 		if err != nil {
 			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while get user referral reward: %w", err)
 		}
-		reward := userReferralReward.UseReward(price)
+		referralReward = userReferralReward.UseReward(price)
 		if err := p.repository.referral.UpdateUserReferral(ctx, i, userReferralReward); err != nil {
 			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while update user referral reward: %w", err)
 		}
@@ -441,12 +447,12 @@ func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId, orderId
 		if err != nil {
 			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while get user payment point: %w", err)
 		}
-		userPaymentPoint.Point += reward
+		userPaymentPoint.Point += referralReward
 		if err := p.repository.payment.UpdateUserPaymentPoint(ctx, i, userPaymentPoint); err != nil {
 			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while update user payment point: %w", err)
 		}
 
-		referralRewardNotification := NewReferralRewardNotification(userReferralReward.ToUserId, reward)
+		referralRewardNotification := NewReferralRewardNotification(userReferralReward.ToUserId, referralReward)
 		if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{referralRewardNotification}); err != nil {
 			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while add notification event: %w", err)
 		}
@@ -455,7 +461,7 @@ func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId, orderId
 			UserId:        userReferralReward.ToUserId,
 			FromUserId:    userReferralReward.ToUserId,
 			OrderId:       orderId,
-			ReceiveAmount: reward,
+			ReceiveAmount: referralReward,
 		})
 		if err := p.repository.analytics.Create(ctx, i, referralRewardAnalytics); err != nil {
 			return fmt.Errorf("app.paymanetApp.ApplyUserReferralReward: error while create referral reward analytics event: %w", err)
@@ -463,6 +469,12 @@ func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId, orderId
 
 		return nil
 	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return referralReward, nil
 }
 
 func (p paymentApp) CreateDriverReferral(ctx context.Context, driverId string) error {

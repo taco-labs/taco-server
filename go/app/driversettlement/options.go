@@ -28,6 +28,12 @@ func WithEventRepository(repo repository.EventRepository) driversettlementAppOpt
 	}
 }
 
+func WithAnalyticsRepository(repo repository.AnalyticsRepository) driversettlementAppOption {
+	return func(da *driversettlementApp) {
+		da.repository.analytics = repo
+	}
+}
+
 func WithSettlementAccountService(svc service.SettlementAccountService) driversettlementAppOption {
 	return func(da *driversettlementApp) {
 		da.service.settlementAccount = svc
@@ -45,6 +51,10 @@ func (d driversettlementApp) validateApp() error {
 
 	if d.repository.event == nil {
 		return errors.New("driver settlement app need event repository")
+	}
+
+	if d.repository.analytics == nil {
+		return errors.New("driver settlement app need analytics repository")
 	}
 
 	if d.service.settlementAccount == nil {

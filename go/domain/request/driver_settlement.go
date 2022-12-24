@@ -47,3 +47,10 @@ type DriverSettlementTransferFailureCallbackRequest struct {
 	DriverId       string
 	FailureMessage string
 }
+
+type ApplyDriverSettlementPromotionRewardRequest struct {
+	DriverId   string
+	OrderId    string
+	Amount     int
+	RewardRate int
+}

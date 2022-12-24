@@ -240,3 +240,37 @@ table "driver_settlement_history" {
     ]
   }
 }
+
+table "driver_promotion_settlement_reward" {
+  schema = schema.taco
+
+  column "driver_id" {
+    type = uuid
+    null = false
+  }
+
+  column "total_amount" {
+    type = int
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.driver_id,
+    ]
+  }
+
+  foreign_key "settlement_promotion_reward_driver_id_fk" {
+    columns = [
+      column.driver_id,
+    ]
+
+    ref_columns = [
+      table.driver.column.id,
+    ]
+
+    on_delete = CASCADE
+
+    on_update = NO_ACTION
+  }
+}

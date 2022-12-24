@@ -297,7 +297,8 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 		}
 
 		driverSignupAnalyticsEvent := entity.NewAnalytics(requestTime, analytics.DriverSignupPayload{
-			DriverId: newDriverDto.Id,
+			DriverId:      newDriverDto.Id,
+			ServiceRegion: newDriverDto.ServiceRegion,
 		})
 
 		if err := d.repository.analytics.Create(ctx, i, driverSignupAnalyticsEvent); err != nil {

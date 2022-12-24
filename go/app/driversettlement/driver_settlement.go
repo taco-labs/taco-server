@@ -11,6 +11,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/analytics"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
@@ -24,6 +25,7 @@ type driversettlementApp struct {
 	repository struct {
 		settlement repository.DriverSettlementRepository
 		event      repository.EventRepository
+		analytics  repository.AnalyticsRepository
 	}
 
 	service struct {
@@ -50,17 +52,28 @@ func (d driversettlementApp) GetExpectedDriverSettlement(ctx context.Context, dr
 
 	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		es, err := d.repository.settlement.GetDriverTotalSettlement(ctx, i, driverId)
-		if err != nil && !errors.Is(err, value.ErrNotFound) {
-			return fmt.Errorf("app.driversettlementApp.GetExpectedDriverSetttlement: error while select expected settlement: %w", err)
-		}
 		if errors.Is(err, value.ErrNotFound) {
 			expectedSettlement = entity.DriverTotalSettlement{
 				DriverId:    driverId,
 				TotalAmount: 0,
 			}
-			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("app.driversettlementApp.GetExpectedDriverSetttlement: error while select expected settlement: %w", err)
 		}
 		expectedSettlement = es
+
+		promotionAmount, err := d.repository.settlement.GetDriverPromotionSettlementReward(ctx, i, driverId)
+		if errors.Is(err, value.ErrNotFound) {
+			promotionAmount = entity.DriverPromotionSettlementReward{
+				DriverId:    driverId,
+				TotalAmount: 0,
+			}
+		}
+		if err != nil {
+			return fmt.Errorf("app.driversettlementApp.GetExpectedDriverSetttlement: error while get promotion settlement: %w", err)
+		}
+		expectedSettlement.TotalAmount += promotionAmount.TotalAmount
 
 		requestableAmount, err := d.repository.settlement.AggregateDriverRequestableSettlement(ctx, i, driverId, settlementRequestableTime)
 		if err != nil {
@@ -175,4 +188,44 @@ func (d driversettlementApp) DriverSettlementTransferFailureCallback(ctx context
 		}
 		return nil
 	})
+}
+
+func (d driversettlementApp) ApplyDriverSettlementPromotionReward(ctx context.Context, req request.ApplyDriverSettlementPromotionRewardRequest) (int, error) {
+	var rewardAmount int
+	// TODO (taekyeom) user request가 아닌 형태의 요청은 시간을 undeterministic 하게 받음.. evetn loop에서도 적당히 작업이 필요할 듯 싶음.
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		promotionReward, err := d.repository.settlement.GetDriverPromotionSettlementReward(ctx, i, req.DriverId)
+		if errors.Is(err, value.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementPromotionReward: error while get driver promotion reward: %w", err)
+		}
+
+		rewardAmount = promotionReward.Apply(req.Amount, req.RewardRate)
+
+		if err := d.repository.settlement.UpdateDriverPromotionSettlementReward(ctx, i, promotionReward); err != nil {
+			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementPromotionReward: error while update driver promotion reward: %w", err)
+		}
+
+		rewardApplyAnalytics := entity.NewAnalytics(requestTime, analytics.DriverPromotionReward{
+			DriverId:             req.DriverId,
+			TaxiCallRequestId:    req.OrderId,
+			RewardRate:           req.RewardRate,
+			AfterPromotionAmount: promotionReward.TotalAmount,
+			RewardAmount:         rewardAmount,
+		})
+		if err := d.repository.analytics.Create(ctx, i, rewardApplyAnalytics); err != nil {
+			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementPromotionReward: error while create analytics: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return rewardAmount, nil
 }
