@@ -19,6 +19,8 @@ type DriverRepository interface {
 	Update(context.Context, bun.IDB, entity.DriverDto) error
 	Delete(context.Context, bun.IDB, entity.DriverDto) error
 
+	ListNotActivatedDriver(context.Context, bun.IDB, string, int) ([]entity.DriverDto, string, error)
+
 	CreateDriverRegistrationNumber(context.Context, bun.IDB, entity.DriverResidentRegistrationNumber) error
 }
 
@@ -111,6 +113,29 @@ func (u driverRepository) Delete(ctx context.Context, db bun.IDB, driver entity.
 	}
 
 	return nil
+}
+
+func (u driverRepository) ListNotActivatedDriver(ctx context.Context, db bun.IDB, pageToken string, count int) ([]entity.DriverDto, string, error) {
+	var resp []entity.DriverDto
+
+	selectExpr := db.NewSelect().Model(&resp).Where("not active").Order("create_time DESC").Limit(count)
+
+	if pageToken != "" {
+		subQ := db.NewSelect().Model((*entity.DriverDto)(nil)).Column("create_time").Where("id = ?", pageToken)
+		selectExpr = selectExpr.Where("create_time < (?)", subQ)
+	}
+
+	err := selectExpr.Scan(ctx)
+
+	if err != nil {
+		return []entity.DriverDto{}, "", fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	resultCount := len(resp)
+	if resultCount == 0 {
+		return resp, pageToken, nil
+	}
+	return resp, resp[resultCount-1].Id, nil
 }
 
 func (u driverRepository) CreateDriverRegistrationNumber(ctx context.Context, db bun.IDB, registrationNumber entity.DriverResidentRegistrationNumber) error {

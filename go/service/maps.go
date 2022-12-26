@@ -17,8 +17,7 @@ const (
 	getAddressPath     = "/maps/v3.0/appkeys/{appKey}/addresses"
 	getRoutePath       = "/maps/v3.0/appkeys/{appKey}/route-normal"
 
-	SentinelPageToken = -1
-	PageCountDefault  = 20
+	PageCountDefault = 20
 )
 
 type MapService interface {
@@ -32,10 +31,6 @@ type nhnMapsService struct {
 }
 
 func (n nhnMapsService) SearchLocation(ctx context.Context, point value.Point, keyword string, pageToken int, pageCount int) ([]value.LocationSummary, int, error) {
-	if pageToken == SentinelPageToken {
-		return []value.LocationSummary{}, SentinelPageToken, nil
-	}
-
 	if pageCount == 0 {
 		pageCount = PageCountDefault
 	}
@@ -56,18 +51,18 @@ func (n nhnMapsService) SearchLocation(ctx context.Context, point value.Point, k
 		Get(searchLocationPath)
 
 	if err != nil {
-		return []value.LocationSummary{}, SentinelPageToken, fmt.Errorf("%w: error from nhn maps api: %v", value.ErrExternal, err)
+		return []value.LocationSummary{}, 0, fmt.Errorf("%w: error from nhn maps api: %v", value.ErrExternal, err)
 	}
 
 	nhnMapsSearchResp := resp.Result().(*nhnMapsSearchLocationResponse)
 
 	if err := nhnMapsSearchResp.Err(); err != nil {
-		return []value.LocationSummary{}, SentinelPageToken, nil
+		return []value.LocationSummary{}, 0, err
 	}
 
 	var nextPageToken int
 	if nhnMapsSearchResp.End() {
-		nextPageToken = SentinelPageToken
+		nextPageToken = pageToken
 	} else {
 		nextPageToken = pageToken + nhnMapsSearchResp.Search.Count
 	}

@@ -20,6 +20,8 @@ type driverApp interface {
 	DriverToArrival(context.Context, string) error
 	ForceAcceptTaxiCallRequest(context.Context, string, string) (entity.DriverLatestTaxiCallRequest, error)
 	DoneTaxiCallRequest(context.Context, request.DoneTaxiCallRequest) error
+
+	ListNonActivatedDriver(context.Context, request.ListNonActivatedDriverRequest) ([]entity.DriverDto, string, error)
 }
 
 type userApp interface {
@@ -52,6 +54,7 @@ func (b *backofficeServer) initController() error {
 	})
 
 	driverGroup := b.echo.Group("/driver")
+	driverGroup.GET("/non_active", b.ListNonActivatedDriver)
 	driverGroup.GET("/:driverId", b.GetDriver)
 	driverGroup.DELETE("/:driverId", b.DeleteDriver)
 	driverGroup.PUT("/:driverId/activate", b.ActivateDriver)

@@ -225,7 +225,7 @@ func (t taxiCallRepository) ListByUserId(ctx context.Context, db bun.IDB, userId
 
 	if pageToken != "" {
 		subQ := db.NewSelect().Model((*entity.TaxiCallRequest)(nil)).Column("create_time").Where("id = ?", pageToken)
-		selectExpr.Where("create_time < (?)", subQ)
+		selectExpr = selectExpr.Where("create_time < (?)", subQ)
 	}
 
 	err := selectExpr.Scan(ctx)
@@ -235,7 +235,7 @@ func (t taxiCallRepository) ListByUserId(ctx context.Context, db bun.IDB, userId
 
 	resultCount := len(resp)
 	if resultCount == 0 {
-		return resp, "", nil
+		return resp, pageToken, nil
 	}
 	return resp, resp[resultCount-1].Id, nil
 }
@@ -268,7 +268,7 @@ func (t taxiCallRepository) ListByDriverId(ctx context.Context, db bun.IDB, driv
 
 	if pageToken != "" {
 		subQ := db.NewSelect().Model((*entity.TaxiCallRequest)(nil)).Column("create_time").Where("id = ?", pageToken)
-		selectExpr.Where("create_time < (?)", subQ)
+		selectExpr = selectExpr.Where("create_time < (?)", subQ)
 	}
 
 	err := selectExpr.Scan(ctx)
@@ -278,7 +278,7 @@ func (t taxiCallRepository) ListByDriverId(ctx context.Context, db bun.IDB, driv
 
 	resultCount := len(resp)
 	if resultCount == 0 {
-		return resp, "", nil
+		return resp, pageToken, nil
 	}
 	return resp, resp[resultCount-1].Id, nil
 }

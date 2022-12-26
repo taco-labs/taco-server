@@ -100,6 +100,16 @@ func WithEncryptionService(svc service.EncryptionService) driverAppOption {
 	}
 }
 
+func NewDriverApp(opts ...driverAppOption) (*driverApp, error) {
+	da := &driverApp{}
+
+	for _, opt := range opts {
+		opt(da)
+	}
+
+	return da, da.validateApp()
+}
+
 func (d driverApp) validateApp() error {
 	if d.Transactor == nil {
 		return errors.New("driver app need transactor")

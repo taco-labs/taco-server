@@ -9,28 +9,56 @@ import (
 	"github.com/taco-labs/taco/go/utils/slices"
 )
 
+type DriverDtoResponse struct {
+	Id                         string `json:"id"`
+	DriverType                 string `json:"driverType"`
+	FirstName                  string `json:"firstName"`
+	LastName                   string `json:"lastName"`
+	BirthDay                   string `json:"birthday"`
+	Phone                      string `json:"phone"`
+	Gender                     string `json:"gender"`
+	AppOs                      string `json:"appOs"`
+	AppVersion                 string `json:"osVersion"`
+	Active                     bool   `json:"active"`
+	OnDuty                     bool   `json:"onDuty"`
+	DriverLicenseId            string `json:"driverLicenseId"`
+	CompanyRegistrationNumber  string `json:"companyRegistrationNumber"`
+	CompanyName                string `json:"companyName"`
+	CarNumber                  string `json:"carNumber"`
+	ServiceRegion              string `json:"serviceRegion"`
+	DriverLicenseImageUploaded bool   `json:"driverLicenseImageUploaded"`
+	DriverProfileImageUploaded bool   `json:"driverProfileImageUploaded"`
+	ReferralCode               string `json:"referralCode"`
+}
+
+func DriverDtoToResponse(driverDto entity.DriverDto) DriverDtoResponse {
+	return DriverDtoResponse{
+		Id:                         driverDto.Id,
+		DriverType:                 string(driverDto.DriverType),
+		FirstName:                  driverDto.FirstName,
+		LastName:                   driverDto.LastName,
+		BirthDay:                   driverDto.BirthDay,
+		Phone:                      driverDto.Phone,
+		Gender:                     driverDto.Gender,
+		DriverLicenseId:            driverDto.DriverLicenseId,
+		CarNumber:                  driverDto.CarNumber,
+		ServiceRegion:              driverDto.ServiceRegion,
+		CompanyRegistrationNumber:  driverDto.CompanyRegistrationNumber,
+		CompanyName:                driverDto.CompanyName,
+		AppOs:                      string(driverDto.AppOs),
+		AppVersion:                 driverDto.AppVersion,
+		Active:                     driverDto.Active,
+		OnDuty:                     driverDto.OnDuty,
+		DriverLicenseImageUploaded: driverDto.DriverLicenseImageUploaded,
+		DriverProfileImageUploaded: driverDto.DriverProfileImageUploaded,
+		ReferralCode:               driverDto.ReferralCode(),
+	}
+}
+
 type DriverResponse struct {
-	Id                         string                `json:"id"`
-	DriverType                 string                `json:"driverType"`
-	FirstName                  string                `json:"firstName"`
-	LastName                   string                `json:"lastName"`
-	BirthDay                   string                `json:"birthday"`
-	Phone                      string                `json:"phone"`
-	Gender                     string                `json:"gender"`
-	AppOs                      string                `json:"appOs"`
-	AppVersion                 string                `json:"osVersion"`
-	Active                     bool                  `json:"active"`
-	OnDuty                     bool                  `json:"onDuty"`
-	DriverLicenseId            string                `json:"driverLicenseId"`
-	CompanyRegistrationNumber  string                `json:"companyRegistrationNumber"`
-	CompanyName                string                `json:"companyName"`
-	CarNumber                  string                `json:"carNumber"`
-	ServiceRegion              string                `json:"serviceRegion"`
-	DriverLicenseImageUploaded bool                  `json:"driverLicenseImageUploaded"`
-	DriverProfileImageUploaded bool                  `json:"driverProfileImageUploaded"`
-	UploadUrls                 value.DriverImageUrls `json:"uploadUrls"`
-	DownloadUrls               value.DriverImageUrls `json:"downloadUrls"`
-	ReferralCode               string                `json:"referralCode"`
+	DriverDtoResponse
+	UploadUrls   value.DriverImageUrls `json:"uploadUrls"`
+	DownloadUrls value.DriverImageUrls `json:"downloadUrls"`
 }
 
 type DriverSignupResponse struct {
@@ -40,27 +68,9 @@ type DriverSignupResponse struct {
 
 func DriverToResponse(driver entity.Driver) DriverResponse {
 	return DriverResponse{
-		Id:                         driver.Id,
-		DriverType:                 string(driver.DriverType),
-		FirstName:                  driver.FirstName,
-		LastName:                   driver.LastName,
-		BirthDay:                   driver.BirthDay,
-		Phone:                      driver.Phone,
-		Gender:                     driver.Gender,
-		DriverLicenseId:            driver.DriverLicenseId,
-		CarNumber:                  driver.CarNumber,
-		ServiceRegion:              driver.ServiceRegion,
-		CompanyRegistrationNumber:  driver.CompanyRegistrationNumber,
-		CompanyName:                driver.CompanyName,
-		AppOs:                      string(driver.AppOs),
-		AppVersion:                 driver.AppVersion,
-		Active:                     driver.Active,
-		OnDuty:                     driver.OnDuty,
-		DriverLicenseImageUploaded: driver.DriverLicenseImageUploaded,
-		DriverProfileImageUploaded: driver.DriverProfileImageUploaded,
-		UploadUrls:                 driver.UploadUrls,
-		DownloadUrls:               driver.DownloadUrls,
-		ReferralCode:               driver.ReferralCode(),
+		DriverDtoResponse: DriverDtoToResponse(driver.DriverDto),
+		UploadUrls:        driver.UploadUrls,
+		DownloadUrls:      driver.DownloadUrls,
 	}
 }
 
@@ -141,4 +151,9 @@ func ListDriverSettlementHistoryToResponse(settlementHistories []entity.DriverSe
 
 type DriverSettlementTransferResponse struct {
 	ExpectedTransferAmount int `json:"expectedTransferAmount"`
+}
+
+type ListNonActivatedDriverResponse struct {
+	PageToken string              `json:"pageToken"`
+	Drivers   []DriverDtoResponse `json:"drivers"`
 }

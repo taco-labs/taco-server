@@ -561,16 +561,27 @@ func (d driverApp) ActivateDriver(ctx context.Context, driverId string) error {
 	})
 }
 
-func (d driverApp) AvailableServiceRegions(ctx context.Context) ([]string, error) {
-	return value.SupportedServiceRegionList, nil
-}
+func (d driverApp) ListNonActivatedDriver(ctx context.Context, req request.ListNonActivatedDriverRequest) ([]entity.DriverDto, string, error) {
+	var driverDtos []entity.DriverDto
+	var pageToken string
+	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		dtos, newPageToken, err := d.repository.driver.ListNotActivatedDriver(ctx, i, req.PageToken, req.Count)
+		if err != nil {
+			return fmt.Errorf("app.Driver.ListNonActivatedDriver: error while list non activated driver: %w", err)
+		}
 
-func NewDriverApp(opts ...driverAppOption) (*driverApp, error) {
-	da := &driverApp{}
+		driverDtos = dtos
+		pageToken = newPageToken
+		return nil
+	})
 
-	for _, opt := range opts {
-		opt(da)
+	if err != nil {
+		return []entity.DriverDto{}, "", err
 	}
 
-	return da, da.validateApp()
+	return driverDtos, pageToken, nil
+}
+
+func (d driverApp) AvailableServiceRegions(ctx context.Context) ([]string, error) {
+	return value.SupportedServiceRegionList, nil
 }

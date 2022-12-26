@@ -51,7 +51,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	// Initialize aws sdk v2 session
 	awsconf, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("Failed to load default aws config: %w", err)
+		return fmt.Errorf("failed to load default aws config: %w", err)
 	}
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&search_path=%s",

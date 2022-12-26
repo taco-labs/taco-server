@@ -132,7 +132,7 @@ func (d driverSettlementRepository) ListDriverSettlementHistory(ctx context.Cont
 	}
 
 	if len(resp) == 0 {
-		return []entity.DriverSettlementHistory{}, time.Time{}, nil
+		return []entity.DriverSettlementHistory{}, pageToken, nil
 	}
 
 	return resp, resp[len(resp)-1].CreateTime, nil

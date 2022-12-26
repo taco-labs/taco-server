@@ -8,6 +8,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/response"
 	"github.com/taco-labs/taco/go/server"
 	"github.com/taco-labs/taco/go/utils"
+	"github.com/taco-labs/taco/go/utils/slices"
 )
 
 func (b backofficeServer) GetDriver(e echo.Context) error {
@@ -127,4 +128,25 @@ func (b backofficeServer) DoneTaxiCallRequest(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusOK, struct{}{})
+}
+
+func (b backofficeServer) ListNonActivatedDriver(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.ListNonActivatedDriverRequest{}
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	driverDtos, pageToken, err := b.app.driver.ListNonActivatedDriver(ctx, req)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	resp := response.ListNonActivatedDriverResponse{
+		PageToken: pageToken,
+		Drivers:   slices.Map(driverDtos, response.DriverDtoToResponse),
+	}
+
+	return e.JSON(http.StatusOK, resp)
 }

@@ -52,3 +52,8 @@ type DriverSettlementAccountUpdateRequest struct {
 	Bank          string `json:"bank"`
 	AccountNumber string `json:"accountNumber"`
 }
+
+type ListNonActivatedDriverRequest struct {
+	PageToken string `param:"pageToken"`
+	Count     int    `param:"count"`
+}

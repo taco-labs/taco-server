@@ -138,6 +138,14 @@ table "driver" {
       column.user_unique_key,
     ]
   }
+
+  index "driver_not_activated_idx" {
+    unique = false
+    columns = [
+      column.create_time,
+    ]
+    where = "not active"
+  }
 }
 
 table "driver_resident_registration_number" {
