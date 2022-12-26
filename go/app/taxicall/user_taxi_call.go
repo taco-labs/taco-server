@@ -257,6 +257,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 			Arrival:                   taxiCallRequest.Arrival,
 			ToArrivalETA:              taxiCallRequest.ToArrivalRoute.ETA,
 			ToArrivalDistance:         taxiCallRequest.ToArrivalRoute.Distance,
+			TagIds:                    taxiCallRequest.TagIds,
 			Tags:                      taxiCallRequest.Tags,
 			UserTag:                   taxiCallRequest.UserTag,
 			PaymentSummary:            taxiCallRequest.PaymentSummary,

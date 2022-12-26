@@ -24,6 +24,7 @@ type UserTaxiCallRequestPayload struct {
 	Arrival                   value.Location
 	ToArrivalETA              time.Duration
 	ToArrivalDistance         int
+	TagIds                    []int
 	Tags                      []string
 	UserTag                   string
 	PaymentSummary            value.PaymentSummary
