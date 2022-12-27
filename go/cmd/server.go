@@ -171,42 +171,31 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	presignedClient := s3.NewPresignClient(s3Client)
 	s3ImagePresignedUrlService := service.NewS3ImagePresignedUrlService(
 		presignedClient,
-		serverConfig.ImageUrlService.Timeout,
-		serverConfig.ImageUrlService.Bucket,
-		serverConfig.ImageUrlService.BasePath,
+		serverConfig.ImageUploadUrlService.Timeout,
+		serverConfig.ImageUploadUrlService.Bucket,
+		serverConfig.ImageUploadUrlService.BasePath,
 	)
-
-	// TODO(taekyeom) unify cache interface regardless of its method
-	downloadImageUrlRistrettoCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: int64(10 * serverConfig.ImageUrlService.MaxCacheSizeEntires),
-		MaxCost:     int64(serverConfig.ImageUrlService.MaxCacheSizeBytes),
-		BufferItems: 64,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to setup download url ristretto cache: %w", err)
-	}
-	downloadImageUrlCache := store.NewRistretto(downloadImageUrlRistrettoCache,
-		store.WithExpiration(serverConfig.ImageUrlService.Timeout),
-	)
-	downloadImageUrlCacheManager := cache.New[string](downloadImageUrlCache)
 
 	uploadImageUrlRistrettoCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: int64(10 * serverConfig.ImageUrlService.MaxCacheSizeEntires),
-		MaxCost:     int64(serverConfig.ImageUrlService.MaxCacheSizeBytes),
+		NumCounters: int64(10 * serverConfig.ImageUploadUrlService.MaxCacheSizeEntires),
+		MaxCost:     int64(serverConfig.ImageUploadUrlService.MaxCacheSizeBytes),
 		BufferItems: 64,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to setup upload url ristretto cache: %w", err)
 	}
 	uploadImageUrlCache := store.NewRistretto(uploadImageUrlRistrettoCache,
-		store.WithExpiration(serverConfig.ImageUrlService.Timeout),
+		store.WithExpiration(serverConfig.ImageUploadUrlService.Timeout),
 	)
 	uploadImageUrlCacheManager := cache.New[string](uploadImageUrlCache)
 
-	cachedS3ImagePresignedUrlService := service.NewCachedUrlService(
-		downloadImageUrlCacheManager,
+	cachedS3ImagePresignedUploadUrlService := service.NewCachedUrlService(
 		uploadImageUrlCacheManager,
 		s3ImagePresignedUrlService)
+
+	publicS3ImageDownloadUrlService := service.NewS3PublicAccessUrlService(
+		serverConfig.ImageDownloadUrlService.RegionalDomain,
+		serverConfig.ImageDownloadUrlService.BasePath)
 
 	kmsClient := kms.NewFromConfig(awsconf)
 	kmsEncryptionService := service.NewAwsKMSEncryptionService(kmsClient, serverConfig.EncryptionService.KeyId)
@@ -308,7 +297,8 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		driver.WithEventRepository(eventRepository),
 		driver.WithPushService(pushApp),
 		driver.WithTaxiCallService(taxicallApp),
-		driver.WithImageUrlService(cachedS3ImagePresignedUrlService),
+		driver.WithImageUploadUrlService(cachedS3ImagePresignedUploadUrlService),
+		driver.WithImageDownloadUrlService(publicS3ImageDownloadUrlService),
 		driver.WithSettlementAccountService(settlementAccountService),
 		driver.WithDriverSettlementService(driverSettlementApp),
 		driver.WithUserPaymentAppService(paymentApp),

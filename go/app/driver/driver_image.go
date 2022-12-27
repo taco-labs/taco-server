@@ -13,7 +13,7 @@ func (d driverApp) driverImageUrls(ctx context.Context, driverId string) (value.
 	var driverProfileDownloadUrl, driverProfileUploadUrl, driverLicenseDownloadUrl, driverLicenseUploadUrl string
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		url, err := d.service.imageUrl.GetDownloadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverProfile))
+		url, err := d.service.imageDownloadUrl.GetDownloadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverProfile))
 		if err != nil {
 			return fmt.Errorf("app.driver.GetDriverImageUrls: error while get driver profile download url:%w", err)
 		}
@@ -21,7 +21,7 @@ func (d driverApp) driverImageUrls(ctx context.Context, driverId string) (value.
 		return nil
 	})
 	group.Go(func() error {
-		url, err := d.service.imageUrl.GetUploadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverProfile))
+		url, err := d.service.imageUploadUrl.GetUploadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverProfile))
 		if err != nil {
 			return fmt.Errorf("app.driver.GetDriverImageUrls: error while get driver profile upload url:%w", err)
 		}
@@ -29,7 +29,7 @@ func (d driverApp) driverImageUrls(ctx context.Context, driverId string) (value.
 		return nil
 	})
 	group.Go(func() error {
-		url, err := d.service.imageUrl.GetDownloadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverLicense))
+		url, err := d.service.imageDownloadUrl.GetDownloadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverLicense))
 		if err != nil {
 			return fmt.Errorf("app.driver.GetDriverImageUrls: error while get licnese image download url:%w", err)
 		}
@@ -37,7 +37,7 @@ func (d driverApp) driverImageUrls(ctx context.Context, driverId string) (value.
 		return nil
 	})
 	group.Go(func() error {
-		url, err := d.service.imageUrl.GetUploadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverLicense))
+		url, err := d.service.imageUploadUrl.GetUploadUrl(ctx, getImageFileName(driverId, enum.ImageType_DriverLicense))
 		if err != nil {
 			return fmt.Errorf("app.driver.GetDriverImageUrls: error while get license image upload url:%w", err)
 		}

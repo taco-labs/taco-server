@@ -79,7 +79,8 @@ type driverApp struct {
 		session           sessionServiceInterface
 		push              pushServiceInterface
 		taxiCall          driverTaxiCallInterface
-		imageUrl          service.ImageUrlService
+		imageUploadUrl    service.ImageUploadUrlService
+		imageDownloadUrl  service.ImageDownloadUrlService
 		settlementAccount service.SettlementAccountService // TODO (taekyeom) settlement app으로 이동
 		driverSettlement  driverSettlementInterface
 		payment           userPaymentApp

@@ -70,9 +70,15 @@ func WithTaxiCallService(svc driverTaxiCallInterface) driverAppOption {
 	}
 }
 
-func WithImageUrlService(svc service.ImageUrlService) driverAppOption {
+func WithImageUploadUrlService(svc service.ImageUploadUrlService) driverAppOption {
 	return func(da *driverApp) {
-		da.service.imageUrl = svc
+		da.service.imageUploadUrl = svc
+	}
+}
+
+func WithImageDownloadUrlService(svc service.ImageDownloadUrlService) driverAppOption {
+	return func(da *driverApp) {
+		da.service.imageDownloadUrl = svc
 	}
 }
 
@@ -151,8 +157,12 @@ func (d driverApp) validateApp() error {
 		return errors.New("driver app need taxi call service")
 	}
 
-	if d.service.imageUrl == nil {
-		return errors.New("driver app need image url service")
+	if d.service.imageUploadUrl == nil {
+		return errors.New("driver app need image upload url service")
+	}
+
+	if d.service.imageDownloadUrl == nil {
+		return errors.New("driver app need image download url service")
 	}
 
 	if d.service.settlementAccount == nil {

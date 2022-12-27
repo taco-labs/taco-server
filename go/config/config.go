@@ -78,3 +78,8 @@ type S3PresignedUrlConfig struct {
 	MaxCacheSizeBytes   int           `env:"MAX_CACHE_SIZE_BYTES,required"`
 	MaxCacheSizeEntires int           `env:"MAX_CACHE_SIZE_ENTRIES,required"`
 }
+
+type S3PublicAccessConfig struct {
+	RegionalDomain string `env:"REGIONAL_DOMAIN,required"`
+	BasePath       string `env:"BASE_PATH,required"`
+}

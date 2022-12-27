@@ -18,7 +18,8 @@ type ServerConfig struct {
 	Backoffice               BackofficeConfig
 	Firebase                 FirebaseConfig
 	EventStream              EventStreamConfig
-	ImageUrlService          S3PresignedUrlConfig `env:",prefix=TACO_IMAGE_URL_SERVICE_"`
+	ImageUploadUrlService    S3PresignedUrlConfig `env:",prefix=TACO_IMAGE_UPLOAD_URL_SERVICE_"`
+	ImageDownloadUrlService  S3PublicAccessConfig `env:",prefix=TACO_IMAGE_DOWNLOAD_URL_SERVICE_"`
 }
 
 type EventStreamConfig struct {
