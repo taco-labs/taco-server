@@ -222,37 +222,42 @@ type nhnMapsServiceGetAddressResponse struct {
 		Adm           struct {
 			BuildingName string `json:"bldname"`
 		} `json:"adm"`
-		LegalAddress struct {
-			Address      string `json:"cut_address"`
-			RegionDepth1 string `json:"address_category1"`
-			RegionDepth2 string `json:"address_category2"`
-			RegionDepth3 string `json:"address_category3"`
-			RegionDepth4 string `json:"address_category4"`
-			AddressNo    string `json:"jibun"`
-		} `json:"legal_address"`
+		AdministrativeAddress nhnAddress `json:"adm_address"`
+		LegalAddress          nhnAddress `json:"legal_address"`
 	} `json:"location"`
 }
 
+type nhnAddress struct {
+	Address      string `json:"cut_address"`
+	RegionDepth1 string `json:"address_category1"`
+	RegionDepth2 string `json:"address_category2"`
+	RegionDepth3 string `json:"address_category3"`
+	RegionDepth4 string `json:"address_category4"`
+	AddressNo    string `json:"jibun"`
+}
+
 func nhnMapsServiceGetAddressResponseToAddress(n *nhnMapsServiceGetAddressResponse) value.Address {
-	addressName := fmt.Sprintf("%s %s", n.Location.LegalAddress.Address, n.Location.LegalAddress.AddressNo)
-	regionDepth1 := n.Location.LegalAddress.RegionDepth1
-	regionDepth2 := n.Location.LegalAddress.RegionDepth2
+	var addressToTransform nhnAddress
+	if n.Location.HasAdmAddress {
+		addressToTransform = n.Location.AdministrativeAddress
+	} else {
+		addressToTransform = n.Location.LegalAddress
+	}
+
+	addressName := fmt.Sprintf("%s %s", addressToTransform.Address, addressToTransform.AddressNo)
+	regionDepth1 := addressToTransform.RegionDepth1
+	regionDepth2 := addressToTransform.RegionDepth2
 	var regionDepth3 string
-	var buildingName string
 	var mainAddressNo string
 	var subAddressNo string
 
-	if n.Location.LegalAddress.RegionDepth4 != "" {
-		regionDepth3 = fmt.Sprintf("%s %s", n.Location.LegalAddress.RegionDepth3, n.Location.LegalAddress.RegionDepth4)
+	if addressToTransform.RegionDepth4 != "" {
+		regionDepth3 = fmt.Sprintf("%s %s", addressToTransform.RegionDepth3, addressToTransform.RegionDepth4)
 	} else {
-		regionDepth3 = n.Location.LegalAddress.RegionDepth3
+		regionDepth3 = addressToTransform.RegionDepth3
 	}
 
-	if n.Location.HasAdmAddress {
-		buildingName = n.Location.Adm.BuildingName
-	}
-
-	addressNumberParts := strings.Split(n.Location.LegalAddress.AddressNo, "-")
+	addressNumberParts := strings.Split(addressToTransform.AddressNo, "-")
 	if len(addressNumberParts) == 2 {
 		mainAddressNo = addressNumberParts[0]
 		subAddressNo = addressNumberParts[1]
@@ -267,6 +272,6 @@ func nhnMapsServiceGetAddressResponseToAddress(n *nhnMapsServiceGetAddressRespon
 		regionDepth3,
 		mainAddressNo,
 		subAddressNo,
-		buildingName,
+		n.Location.Adm.BuildingName,
 	)
 }
