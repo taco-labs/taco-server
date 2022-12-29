@@ -105,10 +105,10 @@ func (d driverApp) checkDriverSettlementAccount(ctx context.Context, driver enti
 		return value.SettlementAccount{}, fmt.Errorf("app.Driver.checkDriverSettlementAccount: error while get settlement account: %w", err)
 	}
 
-	if settlementAccount.AccountHolderName != driver.FullName() {
-		// TODO (taekyeom) 별도 error code 부여 필요
-		return value.SettlementAccount{}, fmt.Errorf("app.Driver.checkDriverSettlementAccount: bank account name is different: %w", value.ErrInvalidOperation)
-	}
+	// if settlementAccount.AccountHolderName != driver.FullName() {
+	// 	// TODO (taekyeom) 별도 error code 부여 필요
+	// 	return value.SettlementAccount{}, fmt.Errorf("app.Driver.checkDriverSettlementAccount: bank account name is different: %w", value.ErrInvalidOperation)
+	// }
 
 	return settlementAccount, nil
 }
@@ -146,10 +146,10 @@ func (d driverApp) UpdateDriverSettlementAccount(ctx context.Context,
 		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: error while get settlement account: %w", err)
 	}
 
-	if settlementAccount.AccountHolderName != driver.FullName() {
-		// TODO (taekyeom) 별도 error code 부여 필요
-		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: bank account name is different: %w", value.ErrInvalidOperation)
-	}
+	// if settlementAccount.AccountHolderName != driver.FullName() {
+	// 	// TODO (taekyeom) 별도 error code 부여 필요
+	// 	return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: bank account name is different: %w", value.ErrInvalidOperation)
+	// }
 
 	driverSettlementAccount.Bank = settlementAccount.BankCode
 	driverSettlementAccount.AccountNumber = settlementAccount.AccountNumber
