@@ -241,6 +241,80 @@ table "driver_settlement_history" {
   }
 }
 
+table "driver_promotion_reward_limit" {
+  schema = schema.taco
+
+  column "driver_id" {
+    type = uuid
+    null = false
+  }
+
+  column "receive_count" {
+    type = int
+    null = false
+  }
+
+  column "receive_count_limit" {
+    type = int
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.driver_id,
+    ]
+  }
+
+  foreign_key "promotion_reward_limit_driver_id_fk" {
+    columns = [
+      column.driver_id,
+    ]
+
+    ref_columns = [
+      table.driver.column.id,
+    ]
+
+    on_delete = CASCADE
+
+    on_update = NO_ACTION
+  }
+}
+
+table "driver_promotion_reward_history" {
+  schema = schema.taco
+
+  column "driver_id" {
+    type = uuid
+    null = false
+  }
+
+  column "receive_date" {
+    type = timestamp 
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.driver_id,
+      column.receive_date,
+    ]
+  }
+
+  foreign_key "promotion_reward_history_driver_id_fk" {
+    columns = [
+      column.driver_id,
+    ]
+
+    ref_columns = [
+      table.driver.column.id,
+    ]
+
+    on_delete = CASCADE
+
+    on_update = NO_ACTION
+  }
+}
+
 table "driver_promotion_settlement_reward" {
   schema = schema.taco
 

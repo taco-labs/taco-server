@@ -15,6 +15,15 @@ const (
 	DriverSettlementPromotionRateWithNoReferral  = 15
 	DriverSettlementPromotionRateWithOneReferral = 10
 	DriverSettlementPromotionRateWithAllReferral = 5
+
+	DriverRewardReceiveAmount     = 1000
+	DriverRewardReceiveCountLimit = 30
+)
+
+var (
+	Kst, _                         = time.LoadLocation("Asia/Seoul")
+	DriverRewardPromotionTimeStart = time.Date(2023, 1, 1, 0, 0, 0, 0, Kst)
+	DriverRewardPromotionTimeEnd   = time.Date(2023, 2, 1, 0, 0, 0, 0, Kst)
 )
 
 func ExpectedSettlementAmountWithoutTax(amount int) int {
@@ -101,4 +110,53 @@ func (d *DriverPromotionSettlementReward) Apply(amount int, rate int) int {
 	d.TotalAmount -= rewardAmount
 
 	return rewardAmount
+}
+
+type DriverPromotionRewardHistory struct {
+	bun.BaseModel `bun:"table:driver_promotion_reward_history"`
+
+	DriverId    string    `bun:"driver_id,pk"`
+	ReceiveDate time.Time `bun:"receive_date,pk"`
+}
+
+func (d DriverPromotionRewardHistory) PromotionValid() bool {
+	return (d.ReceiveDate.After(DriverRewardPromotionTimeStart) || d.ReceiveDate.Equal(DriverRewardPromotionTimeStart)) &&
+		d.ReceiveDate.Before(DriverRewardPromotionTimeEnd)
+}
+
+func NewDriverPromotionRewardHistory(driverId string, receiveTime time.Time) DriverPromotionRewardHistory {
+	receiveTimeInKst := receiveTime.In(Kst)
+	receiveDateInKst := time.Date(
+		receiveTimeInKst.Year(),
+		receiveTimeInKst.Month(),
+		receiveTimeInKst.Day(),
+		0, 0, 0, 0,
+		receiveTimeInKst.Location()).UTC()
+	return DriverPromotionRewardHistory{DriverId: driverId, ReceiveDate: receiveDateInKst}
+}
+
+type DriverPromotionRewardLimit struct {
+	bun.BaseModel `bun:"table:driver_promotion_reward_limit"`
+
+	DriverId          string `bun:"driver_id,pk"`
+	ReceiveCount      int    `bun:"receive_count"`
+	ReceiveCountLimit int    `bun:"receive_count_limit"`
+}
+
+func (d *DriverPromotionRewardLimit) Receive() bool {
+	if d.ReceiveCount == d.ReceiveCountLimit {
+		return false
+	}
+
+	d.ReceiveCount += 1
+
+	return true
+}
+
+func NewDriverPromotionRewardLimit(driverId string) DriverPromotionRewardLimit {
+	return DriverPromotionRewardLimit{
+		DriverId:          driverId,
+		ReceiveCount:      0,
+		ReceiveCountLimit: DriverRewardReceiveCountLimit,
+	}
 }

@@ -38,6 +38,13 @@ type DriverSettlementRepository interface {
 	GetDriverPromotionSettlementReward(context.Context, bun.IDB, string) (entity.DriverPromotionSettlementReward, error)
 	CreateDriverPromotionSettlementReward(context.Context, bun.IDB, entity.DriverPromotionSettlementReward) error
 	UpdateDriverPromotionSettlementReward(context.Context, bun.IDB, entity.DriverPromotionSettlementReward) error
+
+	DriverPromotionRewardHistoryExists(context.Context, bun.IDB, entity.DriverPromotionRewardHistory) (bool, error)
+	CreateDriverPromotionRewardHistory(context.Context, bun.IDB, entity.DriverPromotionRewardHistory) error
+
+	GetDriverPromotionRewardLimit(context.Context, bun.IDB, string) (entity.DriverPromotionRewardLimit, error)
+	CreateDriverPromotionRewardLimit(context.Context, bun.IDB, entity.DriverPromotionRewardLimit) error
+	UpdateDriverPromotionRewardLimit(context.Context, bun.IDB, entity.DriverPromotionRewardLimit) error
 }
 
 type driverSettlementRepository struct{}
@@ -364,6 +371,85 @@ func (d driverSettlementRepository) CreateDriverPromotionSettlementReward(ctx co
 
 func (d driverSettlementRepository) UpdateDriverPromotionSettlementReward(ctx context.Context, db bun.IDB, promotionReward entity.DriverPromotionSettlementReward) error {
 	res, err := db.NewUpdate().Model(&promotionReward).WherePK().Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (d driverSettlementRepository) DriverPromotionRewardHistoryExists(ctx context.Context, db bun.IDB, rewardHistory entity.DriverPromotionRewardHistory) (bool, error) {
+	exists, err := db.NewSelect().Model(&rewardHistory).WherePK().Exists(ctx)
+	if err != nil {
+		return false, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return exists, nil
+}
+
+func (d driverSettlementRepository) CreateDriverPromotionRewardHistory(ctx context.Context, db bun.IDB, rewardHistory entity.DriverPromotionRewardHistory) error {
+	res, err := db.NewInsert().Model(&rewardHistory).Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (d driverSettlementRepository) GetDriverPromotionRewardLimit(ctx context.Context, db bun.IDB, driverId string) (entity.DriverPromotionRewardLimit, error) {
+	resp := entity.DriverPromotionRewardLimit{
+		DriverId: driverId,
+	}
+
+	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.DriverPromotionRewardLimit{}, value.ErrNotFound
+	}
+	if err != nil {
+		return entity.DriverPromotionRewardLimit{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (d driverSettlementRepository) CreateDriverPromotionRewardLimit(ctx context.Context, db bun.IDB, rewardLimit entity.DriverPromotionRewardLimit) error {
+	res, err := db.NewInsert().Model(&rewardLimit).Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (d driverSettlementRepository) UpdateDriverPromotionRewardLimit(ctx context.Context, db bun.IDB, rewardLimit entity.DriverPromotionRewardLimit) error {
+	res, err := db.NewUpdate().Model(&rewardLimit).WherePK().Exec(ctx)
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)

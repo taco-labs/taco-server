@@ -76,6 +76,11 @@ table "driver" {
     comment = "Is taxi driver is on duty (출근 중인지 여부)"
   }
 
+  column "on_duty_update_time" {
+    type = timestamp
+    null = false
+  }
+
   column "driver_license_id" {
     type = text
     null = false

@@ -37,6 +37,7 @@ type DriverDto struct {
 	DriverProfileImageUploaded bool            `bun:"driver_profile_image_uploaded"`
 	Active                     bool            `bun:"active"`
 	OnDuty                     bool            `bun:"on_duty"`
+	OnDutyUpdateTime           time.Time       `bun:"on_duty_update_time"`
 	CreateTime                 time.Time       `bun:"create_time"`
 	UpdateTime                 time.Time       `bun:"update_time"`
 	DeleteTime                 time.Time       `bun:"delete_time"`

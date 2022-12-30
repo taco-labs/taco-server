@@ -58,6 +58,7 @@ type driverSettlementInterface interface {
 	GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverTotalSettlement, error)
 	ListDriverSettlementHistory(ctx context.Context, req request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error)
 	RequestSettlementTransfer(ctx context.Context, settlementAccount entity.DriverSettlementAccount) (int, error)
+	ReceiveDriverPromotionReward(ctx context.Context, driverId string, receiveTime time.Time) error
 }
 
 type userPaymentApp interface {
@@ -450,6 +451,8 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 		}
 
 		driver.OnDuty = req.OnDuty
+		driverOnDutyPrevUpdateTime := driver.OnDutyUpdateTime
+		driver.OnDutyUpdateTime = requestTime
 		driver.UpdateTime = requestTime
 
 		if err := d.repository.driver.Update(ctx, i, driver); err != nil {
@@ -457,13 +460,18 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 		}
 
 		if req.OnDuty {
-			err = d.service.taxiCall.ActivateDriverContext(ctx, req.DriverId)
+			if err := d.service.taxiCall.ActivateDriverContext(ctx, req.DriverId); err != nil {
+				return err
+			}
 		} else {
-			err = d.service.taxiCall.DeactivateDriverContext(ctx, req.DriverId)
-		}
-
-		if err != nil {
-			return err
+			if err := d.service.taxiCall.DeactivateDriverContext(ctx, req.DriverId); err != nil {
+				return err
+			}
+			if requestTime.Sub(driverOnDutyPrevUpdateTime) > time.Hour*4 {
+				if err := d.service.driverSettlement.ReceiveDriverPromotionReward(ctx, driver.Id, driverOnDutyPrevUpdateTime); err != nil {
+					return err
+				}
+			}
 		}
 
 		driverOnDutyAnalyticsEvent := entity.NewAnalytics(requestTime, analytics.DriverOnDutyPayload{

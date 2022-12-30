@@ -229,3 +229,64 @@ func (d driversettlementApp) ApplyDriverSettlementPromotionReward(ctx context.Co
 
 	return rewardAmount, nil
 }
+
+func (d driversettlementApp) ReceiveDriverPromotionReward(ctx context.Context, driverId string, receiveTime time.Time) error {
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverPromotionReward, err := d.repository.settlement.GetDriverPromotionSettlementReward(ctx, i, driverId)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.driversettlementApp.GiveDriverPromotionReward: error while get driver promotion settlement reward: %w", err)
+		}
+		if errors.Is(err, value.ErrNotFound) {
+			driverPromotionReward = entity.DriverPromotionSettlementReward{
+				DriverId:    driverId,
+				TotalAmount: 0,
+			}
+			if err := d.repository.settlement.CreateDriverPromotionSettlementReward(ctx, i, driverPromotionReward); err != nil {
+				return fmt.Errorf("app.driversettlementApp.GiveDriverPromotionReward: error while create driver promotion settlement reward: %w", err)
+			}
+		}
+
+		promotionRewardLimit, err := d.repository.settlement.GetDriverPromotionRewardLimit(ctx, i, driverId)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.driversettlementApp.GiveDriverPromotionReward: error while get driver promotion reward limit: %w", err)
+		}
+		if errors.Is(err, value.ErrNotFound) {
+			promotionRewardLimit = entity.NewDriverPromotionRewardLimit(driverId)
+			if err := d.repository.settlement.CreateDriverPromotionRewardLimit(ctx, i, promotionRewardLimit); err != nil {
+				return fmt.Errorf("app.driversettlementApp.GiveDriverPromotionReward: error while create driver promotion reward limit: %w", err)
+			}
+		}
+
+		driverPromotionRewardHistory := entity.NewDriverPromotionRewardHistory(driverId, receiveTime)
+		if !driverPromotionRewardHistory.PromotionValid() {
+			return nil
+		}
+
+		historyExists, err := d.repository.settlement.DriverPromotionRewardHistoryExists(ctx, i, driverPromotionRewardHistory)
+		if err != nil {
+			return fmt.Errorf("app.driversettlementApp.GiveDriverPromotionReward: error while check driver reward history existance check: %w", err)
+		}
+		if historyExists {
+			return nil
+		}
+
+		if !promotionRewardLimit.Receive() {
+			return nil
+		}
+
+		driverPromotionReward.TotalAmount += entity.DriverRewardReceiveAmount
+		if err := d.repository.settlement.UpdateDriverPromotionSettlementReward(ctx, i, driverPromotionReward); err != nil {
+			return fmt.Errorf("app.driversettlementApp.GiveDriverPromotionReward: error while update driver promotion settlement reward: %w", err)
+		}
+
+		if err := d.repository.settlement.UpdateDriverPromotionRewardLimit(ctx, i, promotionRewardLimit); err != nil {
+			return fmt.Errorf("app.driversettlementApp.GiveDriverPromotionReward: error while update driver promotion reward limit: %w", err)
+		}
+
+		if err := d.repository.settlement.CreateDriverPromotionRewardHistory(ctx, i, driverPromotionRewardHistory); err != nil {
+			return fmt.Errorf("app.driversettlementApp.GiveDriverPromotionReward: error while create driver promotion reward history: %w", err)
+		}
+
+		return nil
+	})
+}
