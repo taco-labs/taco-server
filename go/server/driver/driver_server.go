@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -43,6 +44,10 @@ type driverApp interface {
 	RequestSettlementTransfer(ctx context.Context, driverId string) (int, error)
 
 	AvailableServiceRegions(ctx context.Context) ([]string, error)
+
+	AddDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error
+	DeleteDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error
+	ListDriverDenyTaxiCallTag(ctx context.Context, driverId string) ([]value.Tag, error)
 }
 
 func (d driverServer) SmsVerificationRequest(e echo.Context) error {
@@ -443,6 +448,53 @@ func (d driverServer) AvailableServiceRegions(e echo.Context) error {
 	ctx := e.Request().Context()
 
 	resp, err := d.app.driver.AvailableServiceRegions(ctx)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) AddDriverDenyTaxiCallTag(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+	tagId, err := strconv.Atoi(e.Param("tagId"))
+	if err != nil {
+		tagId = -1
+	}
+
+	err = d.app.driver.AddDriverDenyTaxiCallTag(ctx, driverId, tagId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
+}
+
+func (d driverServer) DeleteDriverDenyTaxiCallTag(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+	tagId, err := strconv.Atoi(e.Param("tagId"))
+	if err != nil {
+		tagId = -1
+	}
+
+	err = d.app.driver.DeleteDriverDenyTaxiCallTag(ctx, driverId, tagId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
+}
+
+func (d driverServer) ListDriverDenyTaxiCallTag(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+
+	resp, err := d.app.driver.ListDriverDenyTaxiCallTag(ctx, driverId)
 	if err != nil {
 		return server.ToResponse(e, err)
 	}

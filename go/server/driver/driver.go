@@ -52,6 +52,9 @@ func (d *driverServer) initController() error {
 	driverGroup.GET("/:driverId/taxicall_latest", d.GetLatestTaxiCallRequest)
 	driverGroup.GET("/:driverId/taxicall", d.ListTaxiCallRequest)
 	driverGroup.GET("/:driverId/ticket_latest", d.LatestTaxiCallTicket)
+	driverGroup.PUT("/:driverId/deny_taxi_call_tag/:tagId", d.AddDriverDenyTaxiCallTag)
+	driverGroup.DELETE("/:driverId/deny_taxi_call_tag/:tagId", d.DeleteDriverDenyTaxiCallTag)
+	driverGroup.GET("/:driverId/deny_taxi_call_tag", d.ListDriverDenyTaxiCallTag)
 
 	taxiCallGroup := d.echo.Group("/taxicall")
 	taxiCallGroup.PUT("/ticket/:ticketId", d.AcceptTaxiCallRequest)

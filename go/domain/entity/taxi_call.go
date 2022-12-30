@@ -240,3 +240,11 @@ func NewEmptyDriverTaxiCallContext(driverId string, canReceive bool, t time.Time
 		LastReceiveTime:           t,
 	}
 }
+
+type DriverDenyTaxiCallTag struct {
+	bun.BaseModel `bun:"table:driver_deny_taxi_call_tag"`
+
+	DriverId string `bun:"driver_id,pk"`
+	TagId    int    `bun:"tag_id,pk"`
+	Tag      string `bun:"-"`
+}

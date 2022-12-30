@@ -641,3 +641,69 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 
 	return nil
 }
+
+func (t taxicallApp) AddDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error {
+	_, err := value.GetTagById(tagId)
+	if err != nil {
+		return fmt.Errorf("app.taxicallApp.AddDriverDenyTaxiCallTag: error while get tag by id: %w", err)
+	}
+	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		denyTag := entity.DriverDenyTaxiCallTag{
+			DriverId: driverId,
+			TagId:    tagId,
+		}
+
+		if err := t.repository.taxiCallRequest.CreateDriverDenyTaxiCallTag(ctx, i, denyTag); err != nil {
+			return fmt.Errorf("app.taxicallApp.AddDriverDenyTaxiCallTag: error while create deny tag: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (t taxicallApp) DeleteDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error {
+	_, err := value.GetTagById(tagId)
+	if err != nil {
+		return fmt.Errorf("app.taxicallApp.DeleteDriverDenyTaxiCallTag: error while get tag by id: %w", err)
+	}
+	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		denyTag := entity.DriverDenyTaxiCallTag{
+			DriverId: driverId,
+			TagId:    tagId,
+		}
+
+		if err := t.repository.taxiCallRequest.DeleteDriverDenyTaxiCallTag(ctx, i, denyTag); err != nil {
+			return fmt.Errorf("app.taxicallApp.DeleteDriverDenyTaxiCallTag: error while create delete tag: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (t taxicallApp) ListDriverDenyTaxiCallTag(ctx context.Context, driverId string) ([]value.Tag, error) {
+	var denyTags []value.Tag
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		tags, err := t.repository.taxiCallRequest.ListDriverDenyTaxiCallTag(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.taxicallApp.ListDriverDenyTaxiCallTag: error while list tag: %w", err)
+		}
+		denyTags, err = slices.MapErr(tags, func(i entity.DriverDenyTaxiCallTag) (value.Tag, error) {
+			tag, err := value.GetTagById(i.TagId)
+			if err != nil {
+				return value.Tag{}, err
+			}
+			return value.Tag{Tag: tag, Id: i.TagId}, nil
+		})
+		if err != nil {
+			return fmt.Errorf("app.taxicallApp.ListDriverDenyTaxiCallTag: error while get tag by id: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return []value.Tag{}, err
+	}
+
+	return denyTags, nil
+}

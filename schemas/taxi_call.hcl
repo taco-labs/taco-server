@@ -348,3 +348,38 @@ table "driver_location" {
     on_update = NO_ACTION
   }
 }
+
+table "driver_deny_taxi_call_tag" {
+  schema = schema.taco
+
+  column "driver_id" {
+    type = uuid
+    null = false
+  }
+
+  column "tag_id" {
+    type = int
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.driver_id,
+      column.tag_id,
+    ]
+  }
+
+  foreign_key "driver_deny_taxi_call_tag_driver_fk" {
+    columns = [
+      column.driver_id,
+    ]
+
+    ref_columns = [
+      table.driver.column.id,
+    ]
+
+    on_delete = CASCADE
+
+    on_update = NO_ACTION
+  }
+}

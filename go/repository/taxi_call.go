@@ -38,7 +38,11 @@ type TaxiCallRepository interface {
 	GetDriverTaxiCallContextByTicketId(context.Context, bun.IDB, string) ([]entity.DriverTaxiCallContext, error)
 
 	GetDriverTaxiCallContextWithinRadius(context.Context, bun.IDB,
-		value.Location, value.Location, int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
+		value.Location, value.Location, int, []int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
+
+	ListDriverDenyTaxiCallTag(context.Context, bun.IDB, string) ([]entity.DriverDenyTaxiCallTag, error)
+	CreateDriverDenyTaxiCallTag(context.Context, bun.IDB, entity.DriverDenyTaxiCallTag) error
+	DeleteDriverDenyTaxiCallTag(context.Context, bun.IDB, entity.DriverDenyTaxiCallTag) error
 }
 
 type taxiCallRepository struct{}
@@ -312,7 +316,8 @@ func (t taxiCallRepository) Update(ctx context.Context, db bun.IDB, taxiCallRequ
 }
 
 func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Context, db bun.IDB,
-	departure value.Location, arrival value.Location, raidus int, ticketId string, requestTime time.Time) ([]entity.DriverTaxiCallContext, error) {
+	departure value.Location, arrival value.Location, raidus int, requestTagIds []int,
+	ticketId string, requestTime time.Time) ([]entity.DriverTaxiCallContext, error) {
 
 	type tempModel struct {
 		entity.DriverTaxiCallContext `bun:",extend"`
@@ -345,6 +350,8 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		Where("service_region = ?", departure.Address.ServiceRegion).
 		WhereOr("service_region = ?", arrival.Address.ServiceRegion)
 
+		// TODO (taekyeom) deny tag handling
+
 	err := db.NewSelect().
 		With("driver_distance", locationWithDistance).
 		With("driver_distance_filtered", locationWithDistanceFiltered).
@@ -357,6 +364,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		Join("JOIN driver_service_region AS t3 ON t3.id = ?TableName.driver_id").
 		Where("block_until is NULL or block_until < ?", requestTime).
 		Where("can_receive").
+		Where("NOT EXISTS (SELECT 1 FROM driver_deny_taxi_call_tag WHERE driver_id = ?TableName.driver_id AND tag_id IN (?))", bun.In(requestTagIds)).
 		Where("last_received_request_ticket <> ? AND (rejected_last_request_ticket OR ? - last_receive_time > '10 seconds')", ticketId, requestTime).
 		Order("distance").
 		Limit(20). // TODO (taekyeom) To be smart limit..
@@ -421,6 +429,54 @@ func (t taxiCallRepository) UpsertDriverTaxiCallContext(ctx context.Context, db 
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	return nil
+}
+
+func (t taxiCallRepository) ListDriverDenyTaxiCallTag(ctx context.Context, db bun.IDB, driverId string) ([]entity.DriverDenyTaxiCallTag, error) {
+	resp := []entity.DriverDenyTaxiCallTag{}
+
+	err := db.NewSelect().Model(&resp).Where("driver_id = ?", driverId).Order("tag_id").Scan(ctx)
+
+	if err != nil {
+		return []entity.DriverDenyTaxiCallTag{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (t taxiCallRepository) CreateDriverDenyTaxiCallTag(ctx context.Context, db bun.IDB, denyTag entity.DriverDenyTaxiCallTag) error {
+	res, err := db.NewInsert().Model(&denyTag).Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (t taxiCallRepository) DeleteDriverDenyTaxiCallTag(ctx context.Context, db bun.IDB, denyTag entity.DriverDenyTaxiCallTag) error {
+	res, err := db.NewDelete().Model(&denyTag).WherePK().Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
 	}
 
 	return nil

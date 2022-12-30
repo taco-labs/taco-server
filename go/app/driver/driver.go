@@ -52,6 +52,9 @@ type driverTaxiCallInterface interface {
 	DoneTaxiCallRequest(ctx context.Context, driverId string, req request.DoneTaxiCallRequest) error
 	DriverCancelTaxiCallRequest(context.Context, string, request.CancelTaxiCallRequest) error
 	DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (entity.DriverLatestTaxiCallRequestTicket, error)
+	AddDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error
+	DeleteDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error
+	ListDriverDenyTaxiCallTag(ctx context.Context, driverId string) ([]value.Tag, error)
 }
 
 type driverSettlementInterface interface {

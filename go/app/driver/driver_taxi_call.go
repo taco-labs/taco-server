@@ -5,6 +5,7 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/request"
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/utils"
 )
 
@@ -50,4 +51,16 @@ func (d driverApp) CancelTaxiCallRequest(ctx context.Context, req request.Cancel
 
 func (d driverApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId string) (entity.DriverLatestTaxiCallRequestTicket, error) {
 	return d.service.taxiCall.DriverLatestTaxiCallTicket(ctx, driverId)
+}
+
+func (d driverApp) AddDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error {
+	return d.service.taxiCall.AddDriverDenyTaxiCallTag(ctx, driverId, tagId)
+}
+
+func (d driverApp) DeleteDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error {
+	return d.service.taxiCall.DeleteDriverDenyTaxiCallTag(ctx, driverId, tagId)
+}
+
+func (d driverApp) ListDriverDenyTaxiCallTag(ctx context.Context, driverId string) ([]value.Tag, error) {
+	return d.service.taxiCall.ListDriverDenyTaxiCallTag(ctx, driverId)
 }
