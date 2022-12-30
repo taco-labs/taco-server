@@ -22,6 +22,8 @@ type driverApp interface {
 	DoneTaxiCallRequest(context.Context, request.DoneTaxiCallRequest) error
 
 	ListNonActivatedDriver(context.Context, request.ListNonActivatedDriverRequest) ([]entity.DriverDto, string, error)
+
+	GetDriverSettlementAccount(ctx context.Context, driverId string) (entity.DriverSettlementAccount, error)
 }
 
 type userApp interface {
@@ -61,6 +63,7 @@ func (b *backofficeServer) initController() error {
 	driverGroup.PUT("/:driverId/force_accept/:taxiCallRequestId", b.ForceAcceptTaxiCallRequest)
 	driverGroup.PUT("/:driverId/to_arrival/:taxiCallRequestId", b.DriverToArrival)
 	driverGroup.PUT("/:driverId/done/:taxiCallRequestId", b.DoneTaxiCallRequest)
+	driverGroup.GET("/:driverId/settlement_account", b.GetDriverSettlementAccount)
 
 	userGroup := b.echo.Group("/user")
 	userGroup.GET("/:userId", b.GetUser)

@@ -150,3 +150,18 @@ func (b backofficeServer) ListNonActivatedDriver(e echo.Context) error {
 
 	return e.JSON(http.StatusOK, resp)
 }
+
+func (b backofficeServer) GetDriverSettlementAccount(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+
+	account, err := b.app.driver.GetDriverSettlementAccount(ctx, driverId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	resp := response.DriverSettlemtnAccountToResponse(account)
+
+	return e.JSON(http.StatusOK, resp)
+}
