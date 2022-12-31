@@ -34,6 +34,8 @@ type UserApp interface {
 
 	SearchLocation(context.Context, request.SearchLocationRequest) ([]value.LocationSummary, int, error)
 	GetAddress(context.Context, request.GetAddressRequest) (value.Address, error)
+
+	ListAvailableServiceRegion(context.Context) ([]string, error)
 }
 
 func (u userServer) SmsVerificationRequest(e echo.Context) error {
@@ -303,6 +305,17 @@ func (u userServer) GetUserPaymentPoint(e echo.Context) error {
 	}
 
 	resp := response.UserPaymentPointToResponse(userPoint)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (u userServer) ListAvailableServiceRegion(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	resp, err := u.app.user.ListAvailableServiceRegion(ctx)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
 
 	return e.JSON(http.StatusOK, resp)
 }

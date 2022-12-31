@@ -56,6 +56,9 @@ func (u *userServer) initController() error {
 	locationGroup := u.echo.Group("/location")
 	locationGroup.GET("/address", u.GetAddress)
 	locationGroup.GET("/search", u.SearchLocation)
+
+	u.echo.GET("/service_region", u.ListAvailableServiceRegion)
+
 	return nil
 }
 

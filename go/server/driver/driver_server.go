@@ -43,7 +43,7 @@ type driverApp interface {
 	ListDriverSettlementHistory(context.Context, request.ListDriverSettlementHistoryRequest) ([]entity.DriverSettlementHistory, time.Time, error)
 	RequestSettlementTransfer(ctx context.Context, driverId string) (int, error)
 
-	AvailableServiceRegions(ctx context.Context) ([]string, error)
+	ListAvailableServiceRegion(ctx context.Context) ([]string, error)
 
 	AddDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error
 	DeleteDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error
@@ -444,10 +444,10 @@ func (d driverServer) RequestDriverSettlementTransfer(e echo.Context) error {
 	})
 }
 
-func (d driverServer) AvailableServiceRegions(e echo.Context) error {
+func (d driverServer) ListAvailableServiceRegion(e echo.Context) error {
 	ctx := e.Request().Context()
 
-	resp, err := d.app.driver.AvailableServiceRegions(ctx)
+	resp, err := d.app.driver.ListAvailableServiceRegion(ctx)
 	if err != nil {
 		return server.ToResponse(e, err)
 	}

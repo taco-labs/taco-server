@@ -410,12 +410,6 @@ func (u userApp) DeleteUser(ctx context.Context, userId string) error {
 	})
 }
 
-func NewUserApp(opts ...userAppOption) (*userApp, error) {
-	ua := &userApp{}
-
-	for _, opt := range opts {
-		opt(ua)
-	}
-
-	return ua, ua.validateApp()
+func (u userApp) ListAvailableServiceRegion(ctx context.Context) ([]string, error) {
+	return value.UserSupportedServiceRegionList, nil
 }

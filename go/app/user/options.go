@@ -77,6 +77,16 @@ func WithDriverAppService(svc driverAppInterface) userAppOption {
 	}
 }
 
+func NewUserApp(opts ...userAppOption) (*userApp, error) {
+	ua := &userApp{}
+
+	for _, opt := range opts {
+		opt(ua)
+	}
+
+	return ua, ua.validateApp()
+}
+
 func (u userApp) validateApp() error {
 	if u.Transactor == nil {
 		return errors.New("user app need transator")

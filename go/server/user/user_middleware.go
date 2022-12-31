@@ -42,7 +42,12 @@ func (s sessionMiddleware) Get() echo.MiddlewareFunc {
 		Validator: s.validateSession,
 		KeyLookup: fmt.Sprintf("header:%s,query:apiKey", echo.HeaderAuthorization),
 		ErrorHandler: func(err error, c echo.Context) error {
-			return server.ToResponse(c, err)
+			tacoErr := value.TacoError{}
+			if errors.As(err, &tacoErr) {
+				return server.ToResponse(c, err)
+			}
+			wrappedErr := fmt.Errorf("%w: error from key auth: %v", value.ErrUnAuthenticated, err)
+			return server.ToResponse(c, wrappedErr)
 		},
 	})
 }

@@ -158,8 +158,11 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 		return entity.TaxiCallRequest{}, fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while get %w", err)
 	}
 
+	_, departureAvailableRegion := value.UserSupportedServiceRegionMap[departure.ServiceRegion]
+	_, arrivalAvailableRegion := value.UserSupportedServiceRegionMap[arrival.ServiceRegion]
+
 	// TODO(taekyeom) To be paramterized
-	if !(departure.AvailableRegion() && arrival.AvailableRegion()) {
+	if !(departureAvailableRegion || arrivalAvailableRegion) {
 		return entity.TaxiCallRequest{}, fmt.Errorf("%w: not supported region", value.ErrUnsupportedServiceRegion)
 	}
 
