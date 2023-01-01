@@ -55,9 +55,8 @@ func getS3Key(basePath string, path string) string {
 }
 
 type cachedUrlService struct {
-	svc              ImageUploadUrlService
-	downloadUrlCache cache.CacheInterface[string]
-	uploadUrlCache   cache.CacheInterface[string]
+	svc            ImageUploadUrlService
+	uploadUrlCache cache.CacheInterface[string]
 }
 
 func (c cachedUrlService) GetUploadUrl(ctx context.Context, key string) (string, error) {
