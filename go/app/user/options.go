@@ -77,6 +77,12 @@ func WithDriverAppService(svc driverAppInterface) userAppOption {
 	}
 }
 
+func WithServiceRegionChecker(svc service.ServiceRegionChecker) userAppOption {
+	return func(ua *userApp) {
+		ua.service.serviceRegionChecker = svc
+	}
+}
+
 func NewUserApp(opts ...userAppOption) (*userApp, error) {
 	ua := &userApp{}
 
@@ -130,6 +136,10 @@ func (u userApp) validateApp() error {
 
 	if u.service.driver == nil {
 		return errors.New("user app need driver app service")
+	}
+
+	if u.service.serviceRegionChecker == nil {
+		return errors.New("user app need service region checker")
 	}
 
 	return nil

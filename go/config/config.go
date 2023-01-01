@@ -83,3 +83,8 @@ type S3PublicAccessConfig struct {
 	RegionalDomain string `env:"REGIONAL_DOMAIN,required"`
 	BasePath       string `env:"BASE_PATH,required"`
 }
+
+type ServiceRegionConfig struct {
+	DriverServiceRegions []string `env:"TACO_DRIVER_SERVICE_REGIONS"`
+	UserServiceRegions   []string `env:"TACO_USER_SERVICE_REGIONS"`
+}

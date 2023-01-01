@@ -64,6 +64,12 @@ func WithPaymentAppService(svc paymentAppInterface) taxicallAppOption {
 	}
 }
 
+func WithUserServiceRegionChecker(svc service.ServiceRegionChecker) taxicallAppOption {
+	return func(ta *taxicallApp) {
+		ta.service.userServiceRegionChecker = svc
+	}
+}
+
 func (t taxicallApp) validateApp() error {
 	if t.Transactor == nil {
 		return errors.New("taxi call app needs transactor ")
@@ -99,6 +105,10 @@ func (t taxicallApp) validateApp() error {
 
 	if t.service.payment == nil {
 		return errors.New("taxi call app needs payment service")
+	}
+
+	if t.service.userServiceRegionChecker == nil {
+		return errors.New("taxi call app needs user service region checker")
 	}
 
 	return nil

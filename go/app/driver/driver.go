@@ -79,16 +79,17 @@ type driverApp struct {
 	}
 
 	service struct {
-		smsSender         service.SmsSenderService
-		session           sessionServiceInterface
-		push              pushServiceInterface
-		taxiCall          driverTaxiCallInterface
-		imageUploadUrl    service.ImageUploadUrlService
-		imageDownloadUrl  service.ImageDownloadUrlService
-		settlementAccount service.SettlementAccountService // TODO (taekyeom) settlement app으로 이동
-		driverSettlement  driverSettlementInterface
-		payment           userPaymentApp
-		encryption        service.EncryptionService
+		smsSender            service.SmsSenderService
+		session              sessionServiceInterface
+		push                 pushServiceInterface
+		taxiCall             driverTaxiCallInterface
+		imageUploadUrl       service.ImageUploadUrlService
+		imageDownloadUrl     service.ImageDownloadUrlService
+		settlementAccount    service.SettlementAccountService // TODO (taekyeom) settlement app으로 이동
+		driverSettlement     driverSettlementInterface
+		payment              userPaymentApp
+		encryption           service.EncryptionService
+		serviceRegionChecker service.ServiceRegionChecker
 	}
 }
 
@@ -226,7 +227,10 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrInvalidOperation)
 		}
 
-		_, supportedRegion := value.DriverSupportedServiceRegionMap[req.ServiceRegion]
+		supportedRegion, err := d.service.serviceRegionChecker.CheckAvailableServiceRegion(ctx, req.ServiceRegion)
+		if err != nil {
+			return fmt.Errorf("app.Driver.Signup: error while check service region: %w", err)
+		}
 		if !supportedRegion {
 			return fmt.Errorf("app.Driver.Signup: unsupported service region: %w", value.ErrUnsupportedServiceRegion)
 		}
@@ -595,5 +599,10 @@ func (d driverApp) ListNonActivatedDriver(ctx context.Context, req request.ListN
 }
 
 func (d driverApp) ListAvailableServiceRegion(ctx context.Context) ([]string, error) {
-	return value.DriverSupportedServiceRegionList, nil
+	serviceRegions, err := d.service.serviceRegionChecker.ListServiceRegion(ctx)
+
+	if err != nil {
+		return []string{}, fmt.Errorf("app.driverApp.ListAvailableServiceRegion: error while list available service region: %w", err)
+	}
+	return serviceRegions, nil
 }

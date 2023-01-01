@@ -59,22 +59,6 @@ var SupportedServiceRegionMap = slices.ToMapWithValue(SupportedServiceRegionList
 	return i, struct{}{}
 })
 
-var DriverSupportedServiceRegionList = slices.Filter(SupportedServiceRegionList, func(i string) bool {
-	return i == "경기 고양"
-})
-
-var DriverSupportedServiceRegionMap = slices.ToMapWithValue(DriverSupportedServiceRegionList, func(i string) (string, struct{}) {
-	return i, struct{}{}
-})
-
-var UserSupportedServiceRegionList = slices.Filter(SupportedServiceRegionList, func(i string) bool {
-	return false
-})
-
-var UserSupportedServiceRegionMap = slices.ToMapWithValue(UserSupportedServiceRegionList, func(i string) (string, struct{}) {
-	return i, struct{}{}
-})
-
 type Address struct {
 	AddressName   string `json:"addressName"`
 	RegionDepth1  string `json:"regionDepth1"`

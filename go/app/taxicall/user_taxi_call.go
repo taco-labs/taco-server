@@ -159,12 +159,19 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 	}
 
 	isMockUser := userId == value.MockUserId // TODO (taekyeom) seperate service...
-	_, departureAvailableRegion := value.UserSupportedServiceRegionMap[departure.ServiceRegion]
-	_, arrivalAvailableRegion := value.UserSupportedServiceRegionMap[arrival.ServiceRegion]
+
+	departureAvailableRegion, err := t.service.userServiceRegionChecker.CheckAvailableServiceRegion(ctx, departure.ServiceRegion)
+	if err != nil {
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while check departure service region:\n%w", err)
+	}
+	arrivalAvailableRegion, err := t.service.userServiceRegionChecker.CheckAvailableServiceRegion(ctx, arrival.ServiceRegion)
+	if err != nil {
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while check arrival service region:\n%w", err)
+	}
 
 	// TODO(taekyeom) To be paramterized
 	if !isMockUser && !(departureAvailableRegion || arrivalAvailableRegion) {
-		return entity.TaxiCallRequest{}, fmt.Errorf("%w: not supported region", value.ErrUnsupportedServiceRegion)
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: not supported region: %w", value.ErrUnsupportedServiceRegion)
 	}
 
 	route, err := t.service.mapService.GetRoute(ctx, req.Departure, req.Arrival)

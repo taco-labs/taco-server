@@ -106,6 +106,12 @@ func WithEncryptionService(svc service.EncryptionService) driverAppOption {
 	}
 }
 
+func WithServiceRegionChecker(svc service.ServiceRegionChecker) driverAppOption {
+	return func(da *driverApp) {
+		da.service.serviceRegionChecker = svc
+	}
+}
+
 func NewDriverApp(opts ...driverAppOption) (*driverApp, error) {
 	da := &driverApp{}
 
@@ -179,6 +185,10 @@ func (d driverApp) validateApp() error {
 
 	if d.service.encryption == nil {
 		return errors.New("driver app need encryption service")
+	}
+
+	if d.service.serviceRegionChecker == nil {
+		return errors.New("driver app need service region checker")
 	}
 
 	return nil

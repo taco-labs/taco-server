@@ -18,7 +18,7 @@ type DriverDtoResponse struct {
 	Phone                      string `json:"phone"`
 	Gender                     string `json:"gender"`
 	AppOs                      string `json:"appOs"`
-	AppVersion                 string `json:"osVersion"`
+	AppVersion                 string `json:"appVersion"`
 	Active                     bool   `json:"active"`
 	OnDuty                     bool   `json:"onDuty"`
 	DriverLicenseId            string `json:"driverLicenseId"`

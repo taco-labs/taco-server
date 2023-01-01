@@ -19,7 +19,7 @@ type UserResponse struct {
 	Phone        string `json:"phone"`
 	Gender       string `json:"gender"`
 	AppOs        string `json:"appOs"`
-	AppVersion   string `json:"osVersion"`
+	AppVersion   string `json:"appVersion"`
 	UserPoint    int    `json:"userPoint"`
 	ReferralCode string `json:"referralCode"`
 }

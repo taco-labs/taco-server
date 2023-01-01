@@ -67,13 +67,14 @@ type userApp struct {
 	}
 
 	service struct {
-		driver      driverAppInterface
-		smsSender   service.SmsSenderService
-		session     sessionServiceInterface
-		mapService  service.MapService
-		push        pushServiceInterface
-		taxiCall    taxiCallInterface
-		userPayment userPaymentInterface
+		driver               driverAppInterface
+		smsSender            service.SmsSenderService
+		session              sessionServiceInterface
+		mapService           service.MapService
+		push                 pushServiceInterface
+		taxiCall             taxiCallInterface
+		userPayment          userPaymentInterface
+		serviceRegionChecker service.ServiceRegionChecker
 	}
 }
 
@@ -411,5 +412,10 @@ func (u userApp) DeleteUser(ctx context.Context, userId string) error {
 }
 
 func (u userApp) ListAvailableServiceRegion(ctx context.Context) ([]string, error) {
-	return value.UserSupportedServiceRegionList, nil
+	serviceRegions, err := u.service.serviceRegionChecker.ListServiceRegion(ctx)
+
+	if err != nil {
+		return []string{}, fmt.Errorf("app.driverApp.ListAvailableServiceRegion: error while list available service region: %w", err)
+	}
+	return serviceRegions, nil
 }

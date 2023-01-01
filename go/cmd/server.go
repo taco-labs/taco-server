@@ -200,6 +200,16 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	kmsClient := kms.NewFromConfig(awsconf)
 	kmsEncryptionService := service.NewAwsKMSEncryptionService(kmsClient, serverConfig.EncryptionService.KeyId)
 
+	userServiceRegionChecker, err := service.NewStaticServiceRegionChecker(serverConfig.ServiceRegion.UserServiceRegions)
+	if err != nil {
+		return fmt.Errorf("failed to setup user service region checker: %w", err)
+	}
+
+	driverServiceRegionChecker, err := service.NewStaticServiceRegionChecker(serverConfig.ServiceRegion.DriverServiceRegions)
+	if err != nil {
+		return fmt.Errorf("failed to setup driver service region checker: %w", err)
+	}
+
 	// Init apps
 	userAppDelegator := user.NewUserAppDelegator()
 	driverAppDelegator := driver.NewDriverAppDelegator()
@@ -249,6 +259,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		taxicall.WithDriverGetterService(driverAppDelegator),
 		taxicall.WithPaymentAppService(paymentApp),
 		taxicall.WithAnalyticsRepository(analyticsRepository),
+		taxicall.WithUserServiceRegionChecker(userServiceRegionChecker),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup taxi call app: %w", err)
@@ -282,6 +293,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		user.WithUserPaymentService(paymentApp),
 		user.WithDriverAppService(driverAppDelegator),
 		user.WithAnalyticsRepository(analyticsRepository),
+		user.WithServiceRegionChecker(userServiceRegionChecker),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup user app: %w", err)
@@ -304,6 +316,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		driver.WithUserPaymentAppService(paymentApp),
 		driver.WithEncryptionService(kmsEncryptionService),
 		driver.WithAnalyticsRepository(analyticsRepository),
+		driver.WithServiceRegionChecker(driverServiceRegionChecker),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup driver app: %w", err)
