@@ -122,6 +122,15 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 			if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 				return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] failed to update call request to failed state: %w", taxiCallRequest.Id, err)
 			}
+			failedAnalytics := entity.NewAnalytics(receiveTime, analytics.UserTaxiCallRequestFailedPayload{
+				Id:                        taxiCallRequest.Id,
+				UserId:                    taxiCallRequest.UserId,
+				FailedTime:                receiveTime,
+				TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
+			})
+			if t.repository.analytics.Create(ctx, i, failedAnalytics); err != nil {
+				return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] failed to create taxi call request failed analytics: %w", taxiCallRequest.Id, err)
+			}
 			events = append(events,
 				command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState, receiveTime, receiveTime))
 			return nil
@@ -149,6 +158,17 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 				if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 					return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] failed to update call request to failed state: %w", taxiCallRequest.Id, err)
 				}
+
+				driverNotAvailableAnalytics := entity.NewAnalytics(receiveTime, analytics.UserTaxiCallRequestDriverNotAvailablePayload{
+					Id:                        taxiCallRequest.Id,
+					UserId:                    taxiCallRequest.UserId,
+					FailedTime:                receiveTime,
+					TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
+				})
+				if t.repository.analytics.Create(ctx, i, driverNotAvailableAnalytics); err != nil {
+					return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] failed to create taxi call request failed analytics: %w", taxiCallRequest.Id, err)
+				}
+
 				events = append(events,
 					command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState, receiveTime, receiveTime))
 				return nil
@@ -231,7 +251,7 @@ func selectTaxiCallContextsToDistribute(taxiCallContexts []entity.DriverTaxiCall
 	}
 }
 
-func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
 	events := []entity.Event{}
 	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// TODO(taekyeom) Send location push message to user
@@ -272,7 +292,7 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 			taxiCallRequest,
 			taxiCallTicket,
 			driverTaxiCallContext,
-			recieveTime,
+			receiveTime,
 		))
 
 		return nil
@@ -285,11 +305,11 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 	return events, nil
 }
 
-func (t taxicallApp) handleDriverToArrival(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+func (t taxicallApp) handleDriverToArrival(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
 	// TODO(taekyeom) Send location push message to user
 	var events []entity.Event
 	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		events = append(events, command.NewPushUserTaxiCallCommand(taxiCallRequest, entity.TaxiCallTicket{}, entity.DriverTaxiCallContext{}, recieveTime))
+		events = append(events, command.NewPushUserTaxiCallCommand(taxiCallRequest, entity.TaxiCallTicket{}, entity.DriverTaxiCallContext{}, receiveTime))
 		return nil
 	})
 	if err != nil {
@@ -298,7 +318,7 @@ func (t taxicallApp) handleDriverToArrival(ctx context.Context, eventTime time.T
 	return events, nil
 }
 
-func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
 	logger := utils.GetLogger(ctx)
 	if eventTime.Before(taxiCallRequest.UpdateTime) {
 		logger.Warn("duplicated command...",
@@ -317,7 +337,7 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, reciev
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},
-			recieveTime,
+			receiveTime,
 		))
 		if taxiCallRequest.UserAdditionalPrice() > 0 {
 			events = append(events, command.NewUserPaymentTransactionRequestCommand(
@@ -343,7 +363,7 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, reciev
 	return events, nil
 }
 
-func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
 	logger := utils.GetLogger(ctx)
 	if eventTime.Before(taxiCallRequest.UpdateTime) {
 		logger.Warn("duplicated command...",
@@ -365,7 +385,7 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 				taxiCallRequest,
 				entity.TaxiCallTicket{},
 				entity.DriverTaxiCallContext{},
-				recieveTime,
+				receiveTime,
 			))
 
 			driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, taxiCallRequest.DriverId.String)
@@ -405,7 +425,7 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 	return events, nil
 }
 
-func (t taxicallApp) handleDriverCancelled(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+func (t taxicallApp) handleDriverCancelled(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
 	logger := utils.GetLogger(ctx)
 	if eventTime.Before(taxiCallRequest.UpdateTime) {
 		logger.Warn("duplicated command...",
@@ -435,7 +455,7 @@ func (t taxicallApp) handleDriverCancelled(ctx context.Context, eventTime time.T
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},
-			recieveTime,
+			receiveTime,
 		))
 
 		return nil
@@ -448,7 +468,7 @@ func (t taxicallApp) handleDriverCancelled(ctx context.Context, eventTime time.T
 	return events, nil
 }
 
-func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
 	logger := utils.GetLogger(ctx)
 	if eventTime.Before(taxiCallRequest.UpdateTime) {
 		logger.Warn("duplicated command...",
@@ -467,7 +487,7 @@ func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, reci
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},
-			recieveTime,
+			receiveTime,
 		))
 		return nil
 	})
@@ -479,7 +499,7 @@ func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, reci
 	return events, nil
 }
 
-func (t taxicallApp) handleDriverNotAvailable(ctx context.Context, eventTime time.Time, recieveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
+func (t taxicallApp) handleDriverNotAvailable(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) ([]entity.Event, error) {
 	logger := utils.GetLogger(ctx)
 	if eventTime.Before(taxiCallRequest.UpdateTime) {
 		logger.Warn("duplicated command...",
@@ -498,7 +518,7 @@ func (t taxicallApp) handleDriverNotAvailable(ctx context.Context, eventTime tim
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
 			entity.DriverTaxiCallContext{},
-			recieveTime,
+			receiveTime,
 		))
 		return nil
 	})

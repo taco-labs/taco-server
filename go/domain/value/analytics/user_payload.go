@@ -38,8 +38,22 @@ func (u UserTaxiCallRequestPayload) EventType() EventType {
 }
 
 type UserTaxiCallRequestFailedPayload struct {
-	UserId                    string
+	Id         string
+	UserId     string
+	FailedTime time.Time
+	// TODO (taekyeom) last ticket context
+	TaxiCallRequestCreateTime time.Time
+}
+
+func (u UserTaxiCallRequestDriverNotAvailablePayload) EventType() EventType {
+	return EventType_UserTaxiCallRequestDriverNotAvailable
+}
+
+// TODO (taekyeom) ticket attempt analytics
+
+type UserTaxiCallRequestDriverNotAvailablePayload struct {
 	Id                        string
+	UserId                    string
 	FailedTime                time.Time
 	TaxiCallRequestCreateTime time.Time
 }

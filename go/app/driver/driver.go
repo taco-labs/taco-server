@@ -484,6 +484,7 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 		driverOnDutyAnalyticsEvent := entity.NewAnalytics(requestTime, analytics.DriverOnDutyPayload{
 			DriverId: driver.Id,
 			OnDuty:   driver.OnDuty,
+			Duration: requestTime.Sub(driverOnDutyPrevUpdateTime),
 		})
 		if err := d.repository.analytics.Create(ctx, i, driverOnDutyAnalyticsEvent); err != nil {
 			return fmt.Errorf("app.Driver.UpdateOnDuty: error while create analytics event: %w", err)

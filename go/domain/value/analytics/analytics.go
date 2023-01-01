@@ -9,7 +9,9 @@ const (
 
 	EventType_UserCancelTaxiCallRequest EventType = "User_CancelTaxiCallRequest"
 
-	EventType_UserTaxiCallRequestFailed EventType = "User_taxiCallRequestFailed"
+	EventType_UserTaxiCallRequestFailed EventType = "User_TaxiCallRequestFailed"
+
+	EventType_UserTaxiCallRequestDriverNotAvailable EventType = "User_taxiCallRequestDriverNotAvailable"
 
 	EventType_UserReferralPointReceived EventType = "User_ReferralPointReceived"
 

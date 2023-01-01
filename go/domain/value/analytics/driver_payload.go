@@ -27,6 +27,7 @@ func (d DriverLocationPayload) EventType() EventType {
 type DriverOnDutyPayload struct {
 	DriverId string
 	OnDuty   bool
+	Duration time.Duration
 }
 
 func (d DriverOnDutyPayload) EventType() EventType {
