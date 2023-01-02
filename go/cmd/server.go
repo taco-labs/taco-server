@@ -27,6 +27,7 @@ import (
 	"github.com/taco-labs/taco/go/app/user"
 	"github.com/taco-labs/taco/go/app/usersession"
 	"github.com/taco-labs/taco/go/config"
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/server"
 	backofficeserver "github.com/taco-labs/taco/go/server/backoffice"
@@ -200,12 +201,12 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	kmsClient := kms.NewFromConfig(awsconf)
 	kmsEncryptionService := service.NewAwsKMSEncryptionService(kmsClient, serverConfig.EncryptionService.KeyId)
 
-	userServiceRegionChecker, err := service.NewStaticServiceRegionChecker(serverConfig.ServiceRegion.UserServiceRegions)
+	userServiceRegionChecker, err := service.NewStaticServiceRegionChecker(serverConfig.ServiceRegion.UserServiceRegions, serverConfig.ServiceRegion.UserServiceRegions)
 	if err != nil {
 		return fmt.Errorf("failed to setup user service region checker: %w", err)
 	}
 
-	driverServiceRegionChecker, err := service.NewStaticServiceRegionChecker(serverConfig.ServiceRegion.DriverServiceRegions)
+	driverServiceRegionChecker, err := service.NewStaticServiceRegionChecker(value.SupportedServiceRegionList, serverConfig.ServiceRegion.DriverServiceRegions)
 	if err != nil {
 		return fmt.Errorf("failed to setup driver service region checker: %w", err)
 	}

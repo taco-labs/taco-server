@@ -227,14 +227,6 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrInvalidOperation)
 		}
 
-		supportedRegion, err := d.service.serviceRegionChecker.CheckAvailableServiceRegion(ctx, req.ServiceRegion)
-		if err != nil {
-			return fmt.Errorf("app.Driver.Signup: error while check service region: %w", err)
-		}
-		if !supportedRegion {
-			return fmt.Errorf("app.Driver.Signup: unsupported service region: %w", value.ErrUnsupportedServiceRegion)
-		}
-
 		// TODO (taekyeom) mock account seperation
 		var driverId string
 		if smsVerification.MockAccountPhone() {
@@ -455,6 +447,14 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 
 		if driver.OnDuty == req.OnDuty {
 			return fmt.Errorf("app.Driver.UpdateOnDuty: requested on duty parameter is same as current state: %w", value.ErrInvalidOperation)
+		}
+
+		supportedRegion, err := d.service.serviceRegionChecker.CheckAvailableServiceRegion(ctx, driver.ServiceRegion)
+		if err != nil {
+			return fmt.Errorf("app.Driver.UpdateOnDuty: error while check service region: %w", err)
+		}
+		if !supportedRegion {
+			return fmt.Errorf("app.Driver.UpdateOnDuty: unsupported service region: %w", value.ErrUnsupportedServiceRegion)
 		}
 
 		driver.OnDuty = req.OnDuty

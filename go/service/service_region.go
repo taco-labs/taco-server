@@ -14,12 +14,13 @@ type ServiceRegionChecker interface {
 }
 
 type staticServiceRegionChecker struct {
+	serviceRegions             []string
 	availableServiceRegions    []string
 	availableServiceRegionMaps map[string]struct{}
 }
 
 func (s staticServiceRegionChecker) ListServiceRegion(ctx context.Context) ([]string, error) {
-	return s.availableServiceRegions, nil
+	return s.serviceRegions, nil
 }
 
 func (s staticServiceRegionChecker) CheckAvailableServiceRegion(ctx context.Context, serviceRegion string) (bool, error) {
@@ -28,7 +29,7 @@ func (s staticServiceRegionChecker) CheckAvailableServiceRegion(ctx context.Cont
 	return ok, nil
 }
 
-func NewStaticServiceRegionChecker(availableServiceRegions []string) (*staticServiceRegionChecker, error) {
+func NewStaticServiceRegionChecker(serviceRegions []string, availableServiceRegions []string) (*staticServiceRegionChecker, error) {
 	if availableServiceRegions == nil {
 		availableServiceRegions = []string{}
 	}
@@ -44,6 +45,7 @@ func NewStaticServiceRegionChecker(availableServiceRegions []string) (*staticSer
 	})
 
 	return &staticServiceRegionChecker{
+		serviceRegions:             serviceRegions,
 		availableServiceRegions:    availableServiceRegions,
 		availableServiceRegionMaps: availableServiceRegionMaps,
 	}, nil
