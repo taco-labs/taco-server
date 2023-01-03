@@ -48,6 +48,13 @@ type driverApp interface {
 	AddDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error
 	DeleteDriverDenyTaxiCallTag(ctx context.Context, driverId string, tagId int) error
 	ListDriverDenyTaxiCallTag(ctx context.Context, driverId string) ([]value.Tag, error)
+
+	GetCarProfile(ctx context.Context, profileId string) (entity.DriverCarProfile, error)
+	ListCarProfile(ctx context.Context, driverId string) ([]entity.DriverCarProfile, error)
+	SelectCarProfile(ctx context.Context, driverId string, profileId string) (entity.DriverCarProfile, error)
+	AddCarProfile(ctx context.Context, req request.AddCarProfileRequest) (entity.DriverCarProfile, error)
+	UpdateCarProfile(ctx context.Context, req request.UpdateCarProfileRequest) (entity.DriverCarProfile, error)
+	DeleteCarProfile(ctx context.Context, profileId string) error
 }
 
 func (d driverServer) SmsVerificationRequest(e echo.Context) error {
@@ -500,4 +507,99 @@ func (d driverServer) ListDriverDenyTaxiCallTag(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) GetDriverCarProfile(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	carProfileId := e.Param("carProfileId")
+
+	profile, err := d.app.driver.GetCarProfile(ctx, carProfileId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	resp := response.DriverCarProfileToResponse(profile)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) ListDriverCarProfile(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+
+	profiles, err := d.app.driver.ListCarProfile(ctx, driverId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	resp := slices.Map(profiles, response.DriverCarProfileToResponse)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) SelectDriverCarProfile(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+	carProfileId := e.Param("carProfileId")
+
+	profile, err := d.app.driver.SelectCarProfile(ctx, driverId, carProfileId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	resp := response.DriverCarProfileToResponse(profile)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) AddDriverCarProfile(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.AddCarProfileRequest{}
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	profile, err := d.app.driver.AddCarProfile(ctx, req)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	resp := response.DriverCarProfileToResponse(profile)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) UpdateDriverCarProfile(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.UpdateCarProfileRequest{}
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	profile, err := d.app.driver.UpdateCarProfile(ctx, req)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	resp := response.DriverCarProfileToResponse(profile)
+
+	return e.JSON(http.StatusOK, resp)
+}
+
+func (d driverServer) DeleteDriverCarProfile(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	carProfileId := e.Param("carProfileId")
+
+	err := d.app.driver.DeleteCarProfile(ctx, carProfileId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
 }

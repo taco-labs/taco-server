@@ -13,9 +13,10 @@ type DriverSignupRequest struct {
 	AppFcmToken                string `json:"appFcmToken"`
 	DriverLicenseId            string `json:"driverLicenseId"`
 	SmsVerificationStateKey    string `json:"smsVerificationStateKey"`
-	CompanyRegistrationNumber  string `json:"CompanyRegistrationNumber"`
+	CompanyRegistrationNumber  string `json:"companyRegistrationNumber"`
 	CompanyName                string `json:"companyName"`
-	CarNumber                  string `json:"CarNumber"`
+	CarNumber                  string `json:"carNumber"`
+	CarType                    string `json:"carType"`
 	ServiceRegion              string `json:"serviceRegion"`
 	ResidentRegistrationNumber string `json:"residentRegistrationNumber"`
 }
@@ -27,7 +28,8 @@ type DriverUpdateRequest struct {
 	AppFcmToken          string `json:"appFcmToken"`
 	LicenseImageUploaded bool   `json:"licenseImageUploaded"`
 	ProfileImageUploaded bool   `json:"profileImageUploaded"`
-	CarNumber            string `json:"carNumber"`
+	// Deprecated: use car profile instead
+	CarNumber string `json:"carNumber"`
 }
 
 type DriverOnDutyUpdateRequest struct {
@@ -56,4 +58,15 @@ type DriverSettlementAccountUpdateRequest struct {
 type ListNonActivatedDriverRequest struct {
 	PageToken string `param:"pageToken"`
 	Count     int    `param:"count"`
+}
+
+type AddCarProfileRequest struct {
+	CarNumber string `json:"carNumber"`
+	CarType   string `json:"carType"`
+}
+
+type UpdateCarProfileRequest struct {
+	ProfileId string `param:"carProfileId"`
+	CarNumber string `json:"carNumber"`
+	CarType   string `json:"carType"`
 }

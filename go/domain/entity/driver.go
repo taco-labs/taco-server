@@ -18,29 +18,30 @@ type Driver struct {
 type DriverDto struct {
 	bun.BaseModel `bun:"table:driver"`
 
-	Id                         string          `bun:"id,pk"`
-	DriverType                 enum.DriverType `bun:"driver_type"`
-	FirstName                  string          `bun:"first_name"`
-	LastName                   string          `bun:"last_name"`
-	BirthDay                   string          `bun:"birthday"`
-	Phone                      string          `bun:"phone"`
-	Gender                     string          `bun:"gender"`
-	AppOs                      enum.OsType     `bun:"app_os"`
-	AppVersion                 string          `bun:"app_version"`
-	UserUniqueKey              string          `bun:"user_unique_key"`
-	DriverLicenseId            string          `bun:"driver_license_id"`
-	CompanyRegistrationNumber  string          `bun:"company_registration_number"`
-	CompanyName                string          `bun:"company_name"`
-	ServiceRegion              string          `bun:"service_region"`
-	CarNumber                  string          `bun:"car_number"`
-	DriverLicenseImageUploaded bool            `bun:"driver_license_image_uploaded"`
-	DriverProfileImageUploaded bool            `bun:"driver_profile_image_uploaded"`
-	Active                     bool            `bun:"active"`
-	OnDuty                     bool            `bun:"on_duty"`
-	OnDutyUpdateTime           time.Time       `bun:"on_duty_update_time"`
-	CreateTime                 time.Time       `bun:"create_time"`
-	UpdateTime                 time.Time       `bun:"update_time"`
-	DeleteTime                 time.Time       `bun:"delete_time"`
+	Id                         string           `bun:"id,pk"`
+	DriverType                 enum.DriverType  `bun:"driver_type"`
+	FirstName                  string           `bun:"first_name"`
+	LastName                   string           `bun:"last_name"`
+	BirthDay                   string           `bun:"birthday"`
+	Phone                      string           `bun:"phone"`
+	Gender                     string           `bun:"gender"`
+	AppOs                      enum.OsType      `bun:"app_os"`
+	AppVersion                 string           `bun:"app_version"`
+	UserUniqueKey              string           `bun:"user_unique_key"`
+	DriverLicenseId            string           `bun:"driver_license_id"`
+	CompanyRegistrationNumber  string           `bun:"company_registration_number"`
+	CompanyName                string           `bun:"company_name"`
+	ServiceRegion              string           `bun:"service_region"`
+	CarProfileId               string           `bun:"car_profile_id"`
+	CarProfile                 DriverCarProfile `bun:"rel:belongs-to,join:car_profile_id=id"`
+	DriverLicenseImageUploaded bool             `bun:"driver_license_image_uploaded"`
+	DriverProfileImageUploaded bool             `bun:"driver_profile_image_uploaded"`
+	Active                     bool             `bun:"active"`
+	OnDuty                     bool             `bun:"on_duty"`
+	OnDutyUpdateTime           time.Time        `bun:"on_duty_update_time"`
+	CreateTime                 time.Time        `bun:"create_time"`
+	UpdateTime                 time.Time        `bun:"update_time"`
+	DeleteTime                 time.Time        `bun:"delete_time"`
 }
 
 func (d DriverDto) MockAccount() bool {
@@ -87,4 +88,15 @@ type DriverResidentRegistrationNumber struct {
 
 	DriverId                            string `bun:"driver_id,pk"`
 	EncryptedResidentRegistrationNumber []byte `bun:"encrypted_resident_registration_number"`
+}
+
+type DriverCarProfile struct {
+	bun.BaseModel `bun:"table:driver_car_profile"`
+	Id            string    `bun:"id,pk"`
+	Selected      bool      `bun:"selected,scanonly"`
+	DriverId      string    `bun:"driver_id"`
+	CarNumber     string    `bun:"car_number"`
+	CarType       string    `bun:"car_type"`
+	CreateTime    time.Time `bun:"create_time"`
+	UpdateTime    time.Time `bun:"update_time"`
 }

@@ -235,6 +235,15 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			driverId = utils.MustNewUUID()
 		}
 
+		newDriverCarProfile := entity.DriverCarProfile{
+			Id:         utils.MustNewUUID(),
+			DriverId:   driverId,
+			CarNumber:  req.CarNumber,
+			CarType:    req.CarType,
+			CreateTime: requestTime,
+			UpdateTime: requestTime,
+		}
+
 		newDriverDto = entity.DriverDto{
 			Id:                         driverId,
 			DriverType:                 enum.DriverTypeFromString(req.DriverType),
@@ -248,7 +257,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			UserUniqueKey:              req.Phone,
 			DriverLicenseId:            req.DriverLicenseId,
 			CompanyRegistrationNumber:  req.CompanyRegistrationNumber,
-			CarNumber:                  req.CarNumber,
+			CarProfileId:               newDriverCarProfile.Id,
 			ServiceRegion:              req.ServiceRegion,
 			DriverLicenseImageUploaded: false,
 			DriverProfileImageUploaded: false,
@@ -261,6 +270,10 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 
 		if err := d.repository.driver.Create(ctx, i, newDriverDto); err != nil {
 			return fmt.Errorf("app.Driver.Signup: error while create driver:%w", err)
+		}
+
+		if err := d.repository.driver.CreateDriverCarProfile(ctx, i, newDriverCarProfile); err != nil {
+			return fmt.Errorf("app.Driver.Signup: error while create driver car profile:%w", err)
 		}
 
 		if err := d.repository.driver.CreateDriverRegistrationNumber(ctx, i, entity.DriverResidentRegistrationNumber{
@@ -392,11 +405,19 @@ func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateReq
 		driverDto.AppVersion = req.AppVersion
 		driverDto.DriverLicenseImageUploaded = req.LicenseImageUploaded
 		driverDto.DriverProfileImageUploaded = req.ProfileImageUploaded
-		driverDto.CarNumber = req.CarNumber
 		driverDto.UpdateTime = requestTime
 
 		if err := d.repository.driver.Update(ctx, i, driverDto); err != nil {
 			return fmt.Errorf("app.Driver.UpdateDriver: error while update driver: %w", err)
+		}
+
+		// TODO (taekyeom) 하위 호환성을 위해 car number update로직을 남겨둠, 나중에 car profile로 migratrion한 후에 삭제 필요
+		if driverDto.CarProfile.CarNumber != req.CarNumber {
+			driverDto.CarProfile.CarNumber = req.CarNumber
+			driverDto.CarProfile.UpdateTime = requestTime
+			if err := d.repository.driver.UpdateDriverCarProfile(ctx, i, driverDto.CarProfile); err != nil {
+				return fmt.Errorf("app.Driver.UpdateDriver: error while update driver car profile: %w", err)
+			}
 		}
 
 		// Update push token

@@ -18,6 +18,7 @@ const (
 	ERR_ALREADY_EXISTS         ErrCode = "ERR_ALREADY_EXISTS"
 	ERR_INVALID                ErrCode = "ERR_INVALID"
 	ERR_INTERNAL               ErrCode = "ERR_INTERNAL"
+	ERR_IN_USE                 ErrCode = "ERR_IN_USE"
 	ERR_NEED_CONFIRMATION      ErrCode = "ERR_NEED_CONFIRMATION"
 	ERR_UNSUPPORTED            ErrCode = "ERR_UNSUPPORTED"
 	ERR_CALL_REQUEST_FAILED    ErrCode = "ERR_CALL_REQUEST_FAILED"
@@ -26,6 +27,7 @@ const (
 	ERR_INVALID_REFERRAL_CODE  ErrCode = "ERR_INVALID_REFERRAL_CODE"
 	ERR_NOTFOUND_REFERRAL_CODE ErrCode = "ERR_NOTFOUND_REFERRAL_CODE"
 	ERR_USER_TAG_TOO_LONG      ErrCode = "ERR_USER_TAG_TOO_LONG"
+	ERR_NOT_ALLOWED            ErrCode = "ERR_NOT_ALLOWED"
 
 	ERR_PAYMENT_DUPLICATED_ORDER        ErrCode = "ERR_PAYMENT_DUPLICATED_ORDER"
 	ERR_PAYMENT_INVALID_CARD_EXPIRATION ErrCode = "ERR_PAYMENT_INVALID_CARD_EXPIRATION"
@@ -108,6 +110,10 @@ var (
 	ErrPaymentRejectAccountPayment = TacoError{ERR_PAYMENT_REJECT_ACCOUNT_PAYMENT, "reject account payment"}
 
 	ErrUserTagTooLong = TacoError{ERR_USER_TAG_TOO_LONG, "user tag too long"}
+
+	ErrInUse = TacoError{ERR_IN_USE, "selected resource in use"}
+
+	ErrNotAllowed = TacoError{ERR_NOT_ALLOWED, "not allowed state"}
 )
 
 func NewTacoError(errCode ErrCode, message string) TacoError {

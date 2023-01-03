@@ -59,8 +59,8 @@ table "driver" {
     null = false
   }
 
-  column "car_number" {
-    type = text
+  column "car_profile_id" {
+    type = uuid
     null = false
   }
 
@@ -150,6 +150,67 @@ table "driver" {
       column.create_time,
     ]
     where = "not active"
+  }
+}
+
+table "driver_car_profile" {
+  schema = schema.taco
+
+  column "id" {
+    type = uuid
+    null = false
+  }
+
+  column "driver_id" {
+    type = uuid
+    null = false
+  }
+
+  column "car_number" {
+    type = text
+    null = false
+  }
+
+  column "car_type" {
+    type = text
+    null = false
+  }
+
+  column "create_time" {
+    type = timestamp
+    null = false
+  }
+
+  column "update_time" {
+    type = timestamp
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.id,
+    ]
+  }
+
+  index "driver_car_profile_driver_id_idx" {
+    unique = false
+    columns = [
+      column.driver_id,
+    ]
+  }
+
+  foreign_key "driver_car_profile_driver_id_fk" {
+    columns = [
+      column.driver_id,
+    ]
+
+    ref_columns = [
+      table.driver.column.id,
+    ]
+
+    on_delete = CASCADE
+
+    on_update = NO_ACTION
   }
 }
 

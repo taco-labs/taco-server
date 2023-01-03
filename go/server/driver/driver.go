@@ -56,6 +56,9 @@ func (d *driverServer) initController() error {
 	driverGroup.DELETE("/:driverId/deny_taxi_call_tag/:tagId", d.DeleteDriverDenyTaxiCallTag)
 	driverGroup.GET("/:driverId/deny_taxi_call_tag", d.ListDriverDenyTaxiCallTag)
 
+	driverGroup.GET("/:driverId/car_profile", d.ListDriverCarProfile)
+	driverGroup.PUT("/:driverId/car_profile/:carProfileId", d.SelectDriverCarProfile)
+
 	taxiCallGroup := d.echo.Group("/taxicall")
 	taxiCallGroup.PUT("/ticket/:ticketId", d.AcceptTaxiCallRequest)
 	taxiCallGroup.DELETE("/ticket/:ticketId", d.RejectTaxiCallRequest)
@@ -64,6 +67,12 @@ func (d *driverServer) initController() error {
 	taxiCallGroup.DELETE("/:taxiCallRequestId", d.CancelTaxiCallRequest)
 	taxiCallGroup.PUT("/:taxiCallRequestId/to_arrival", d.DriverToArrival)
 	taxiCallGroup.PUT("/:taxiCallRequestId/done", d.DoneTaxiCallRequest)
+
+	carProfileGroup := d.echo.Group("/car_profile")
+	carProfileGroup.POST("", d.AddDriverCarProfile)
+	carProfileGroup.GET("/:carProfileId", d.GetDriverCarProfile)
+	carProfileGroup.PUT("/:carProfileId", d.UpdateDriverCarProfile)
+	carProfileGroup.DELETE("/:carProfileId", d.DeleteDriverCarProfile)
 
 	d.echo.GET("/service_region", d.ListAvailableServiceRegion)
 

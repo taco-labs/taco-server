@@ -25,6 +25,7 @@ type DriverDtoResponse struct {
 	CompanyRegistrationNumber  string `json:"companyRegistrationNumber"`
 	CompanyName                string `json:"companyName"`
 	CarNumber                  string `json:"carNumber"`
+	CarType                    string `json:"carType"`
 	ServiceRegion              string `json:"serviceRegion"`
 	DriverLicenseImageUploaded bool   `json:"driverLicenseImageUploaded"`
 	DriverProfileImageUploaded bool   `json:"driverProfileImageUploaded"`
@@ -41,7 +42,8 @@ func DriverDtoToResponse(driverDto entity.DriverDto) DriverDtoResponse {
 		Phone:                      driverDto.Phone,
 		Gender:                     driverDto.Gender,
 		DriverLicenseId:            driverDto.DriverLicenseId,
-		CarNumber:                  driverDto.CarNumber,
+		CarNumber:                  driverDto.CarProfile.CarNumber,
+		CarType:                    driverDto.CarProfile.CarType,
 		ServiceRegion:              driverDto.ServiceRegion,
 		CompanyRegistrationNumber:  driverDto.CompanyRegistrationNumber,
 		CompanyName:                driverDto.CompanyName,
@@ -156,4 +158,22 @@ type DriverSettlementTransferResponse struct {
 type ListNonActivatedDriverResponse struct {
 	PageToken string              `json:"pageToken"`
 	Drivers   []DriverDtoResponse `json:"drivers"`
+}
+
+type DriverCarProfileResponse struct {
+	Id        string `json:"id"`
+	Selected  bool   `json:"selected"`
+	DriverId  string `json:"driverId"`
+	CarNumber string `json:"carNumber"`
+	CarType   string `json:"carType"`
+}
+
+func DriverCarProfileToResponse(profile entity.DriverCarProfile) DriverCarProfileResponse {
+	return DriverCarProfileResponse{
+		Id:        profile.Id,
+		Selected:  profile.Selected,
+		DriverId:  profile.DriverId,
+		CarNumber: profile.CarNumber,
+		CarType:   profile.CarType,
+	}
 }
