@@ -352,7 +352,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 
 		// TODO (taekyeom) deny tag handling
 
-	err := db.NewSelect().
+	driverTaxiCallContexts := db.NewSelect().
 		With("driver_distance", locationWithDistance).
 		With("driver_distance_filtered", locationWithDistanceFiltered).
 		With("driver_service_region", driverServiceRegion).
@@ -364,11 +364,16 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		Join("JOIN driver_service_region AS t3 ON t3.id = ?TableName.driver_id").
 		Where("block_until is NULL or block_until < ?", requestTime).
 		Where("can_receive").
-		Where("NOT EXISTS (SELECT 1 FROM driver_deny_taxi_call_tag WHERE driver_id = ?TableName.driver_id AND tag_id IN (?))", bun.In(requestTagIds)).
 		Where("last_received_request_ticket <> ? AND (rejected_last_request_ticket OR ? - last_receive_time > '10 seconds')", ticketId, requestTime).
 		Order("distance").
-		Limit(20). // TODO (taekyeom) To be smart limit..
-		Scan(ctx)
+		Limit(20) // TODO (taekyeom) To be smart limit..
+
+	if len(requestTagIds) > 0 {
+		driverTaxiCallContexts = driverTaxiCallContexts.
+			Where("NOT EXISTS (SELECT 1 FROM driver_deny_taxi_call_tag WHERE driver_id = ?TableName.driver_id AND tag_id IN (?))", bun.In(requestTagIds))
+	}
+
+	err := driverTaxiCallContexts.Scan(ctx)
 
 	if err != nil {
 		return []entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
