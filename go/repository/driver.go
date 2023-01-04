@@ -21,6 +21,7 @@ type DriverRepository interface {
 
 	ListNotActivatedDriver(context.Context, bun.IDB, string, int) ([]entity.DriverDto, string, error)
 
+	GetDriverRegistrationNumber(context.Context, bun.IDB, string) (entity.DriverResidentRegistrationNumber, error)
 	CreateDriverRegistrationNumber(context.Context, bun.IDB, entity.DriverResidentRegistrationNumber) error
 
 	GetDriverCarProfile(context.Context, bun.IDB, string) (entity.DriverCarProfile, error)
@@ -142,6 +143,23 @@ func (u driverRepository) ListNotActivatedDriver(ctx context.Context, db bun.IDB
 		return resp, pageToken, nil
 	}
 	return resp, resp[resultCount-1].Id, nil
+}
+
+func (u driverRepository) GetDriverRegistrationNumber(ctx context.Context, db bun.IDB, driverId string) (entity.DriverResidentRegistrationNumber, error) {
+	resp := entity.DriverResidentRegistrationNumber{
+		DriverId: driverId,
+	}
+
+	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
+
+	if errors.Is(err, value.ErrNotFound) {
+		return entity.DriverResidentRegistrationNumber{}, value.ErrNotFound
+	}
+	if err != nil {
+		return entity.DriverResidentRegistrationNumber{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
 }
 
 func (u driverRepository) CreateDriverRegistrationNumber(ctx context.Context, db bun.IDB, registrationNumber entity.DriverResidentRegistrationNumber) error {
