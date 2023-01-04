@@ -1,13 +1,14 @@
-FROM ubuntu:20.04
+FROM alpine:3.17.0 as builder
 
-RUN apt-get update && \
-  apt-get install -y postgresql-client curl
+RUN apk add go gcc musl-dev
+RUN go install ariga.io/atlas/cmd/atlas@v0.8.3
 
-RUN curl -LO https://release.ariga.io/atlas/atlas-linux-amd64-v0.7.0
-RUN install -o root -g root -m 0755 ./atlas-linux-amd64-v0.7.0 /usr/local/bin/atlas
+FROM alpine:3.17.0
 
-RUN apt-get remove --auto-remove -y curl && \
-  apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apk add --no-cache postgresql14-client  musl-dev
+
+COPY --from=builder /root/go/bin/atlas /atlas
+RUN install -o root -g root -m 0755 /atlas /usr/local/bin/atlas
 
 COPY ./docker/entrypoint.migration.sh /entrypoint.sh
 
