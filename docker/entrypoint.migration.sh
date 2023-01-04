@@ -12,4 +12,4 @@ PGPASSWORD=$POSTGRES_PASSWORD psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$
 CREATE EXTENSION IF NOT EXISTS postgis;
 EOF
 
-atlas schema apply --auto-approve -u "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}?sslmode=disable" --file .
+atlas schema apply --exclude "topology.*" --auto-approve -u "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}?sslmode=disable" --file .
