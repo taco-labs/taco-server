@@ -165,3 +165,22 @@ func (b backofficeServer) GetDriverSettlementAccount(e echo.Context) error {
 
 	return e.JSON(http.StatusOK, resp)
 }
+
+func (b backofficeServer) ListDriverTaxiCallContextInRadius(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	req := request.ListDriverTaxiCallContextInRadiusRequest{}
+
+	if err := e.Bind(&req); err != nil {
+		return err
+	}
+
+	driverContexts, err := b.app.taxicall.ListDriverTaxiCallContextInRadius(ctx, req)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	resp := slices.Map(driverContexts, response.DriverTaxiCallContextToResponse)
+
+	return e.JSON(http.StatusOK, resp)
+}

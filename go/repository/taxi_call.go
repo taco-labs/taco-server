@@ -10,6 +10,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
+	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
 )
@@ -39,6 +40,8 @@ type TaxiCallRepository interface {
 
 	GetDriverTaxiCallContextWithinRadius(context.Context, bun.IDB,
 		value.Location, value.Location, int, []int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
+
+	ListDriverTaxiCallContextInRadius(context.Context, bun.IDB, value.Point, string, int) ([]entity.DriverTaxiCallContext, error)
 
 	ListDriverDenyTaxiCallTag(context.Context, bun.IDB, string) ([]entity.DriverDenyTaxiCallTag, error)
 	CreateDriverDenyTaxiCallTag(context.Context, bun.IDB, entity.DriverDenyTaxiCallTag) error
@@ -316,7 +319,7 @@ func (t taxiCallRepository) Update(ctx context.Context, db bun.IDB, taxiCallRequ
 }
 
 func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Context, db bun.IDB,
-	departure value.Location, arrival value.Location, raidus int, requestTagIds []int,
+	departure value.Location, arrival value.Location, radius int, requestTagIds []int,
 	ticketId string, requestTime time.Time) ([]entity.DriverTaxiCallContext, error) {
 
 	type tempModel struct {
@@ -341,7 +344,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		ColumnExpr("driver_id").
 		ColumnExpr("location").
 		ColumnExpr("distance").
-		Where("distance <= ?", raidus)
+		Where("distance <= ?", radius)
 
 	driverServiceRegion := db.NewSelect().
 		TableExpr("driver").
@@ -370,6 +373,71 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		driverTaxiCallContexts = driverTaxiCallContexts.
 			Where("NOT EXISTS (SELECT 1 FROM driver_deny_taxi_call_tag WHERE driver_id = ?TableName.driver_id AND tag_id IN (?))", bun.In(requestTagIds))
 	}
+
+	err := driverTaxiCallContexts.Scan(ctx)
+
+	if err != nil {
+		return []entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return slices.MapErr(resp, func(i tempModel) (entity.DriverTaxiCallContext, error) {
+		if err := i.Location.FromEwkbHex(i.EwkbHex); err != nil {
+			return entity.DriverTaxiCallContext{}, err
+		}
+		i.DriverTaxiCallContext.ToDepartureDistance = i.Distance
+
+		return i.DriverTaxiCallContext, nil
+	})
+}
+
+func (t taxiCallRepository) ListDriverTaxiCallContextInRadius(ctx context.Context, db bun.IDB, point value.Point, serviceRegion string, radius int) ([]entity.DriverTaxiCallContext, error) {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	type tempModel struct {
+		entity.DriverTaxiCallContext `bun:",extend"`
+
+		Distance int    `bun:"distance"`
+		EwkbHex  string `bun:"location"`
+	}
+
+	var resp []tempModel
+
+	locationWithDistance := db.NewSelect().
+		TableExpr("driver_location").
+		ColumnExpr("driver_id").
+		ColumnExpr("location").
+		// TODO (taekyeom) Handle public schema search path...
+		ColumnExpr("public.ST_DistanceSphere(location, public.ST_GeomFromText('POINT(? ?)',4326)) as distance",
+			point.Longitude, point.Latitude)
+
+	locationWithDistanceFiltered := db.NewSelect().
+		TableExpr("driver_distance").
+		ColumnExpr("driver_id").
+		ColumnExpr("location").
+		ColumnExpr("distance").
+		Where("distance <= ?", radius)
+
+	driverServiceRegion := db.NewSelect().
+		TableExpr("driver").
+		Column("id").
+		ColumnExpr("service_region").
+		Where("service_region = ?", serviceRegion).
+		WhereOr("service_region = ?", serviceRegion)
+
+	driverTaxiCallContexts := db.NewSelect().
+		With("driver_distance", locationWithDistance).
+		With("driver_distance_filtered", locationWithDistanceFiltered).
+		With("driver_service_region", driverServiceRegion).
+		Model(&resp).
+		ColumnExpr("driver_taxi_call_context.*").
+		ColumnExpr("location").
+		ColumnExpr("CAST(distance AS int) as distance").
+		Join("JOIN driver_distance_filtered AS t2 ON t2.driver_id = ?TableName.driver_id").
+		Join("JOIN driver_service_region AS t3 ON t3.id = ?TableName.driver_id").
+		Where("block_until is NULL or block_until < ?", requestTime).
+		Where("can_receive").
+		Order("distance").
+		Limit(20) // TODO (taekyeom) To be smart limit..
 
 	err := driverTaxiCallContexts.Scan(ctx)
 

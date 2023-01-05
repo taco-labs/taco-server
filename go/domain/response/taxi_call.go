@@ -202,3 +202,17 @@ func DriverLatestTaxiCallRequestTicketToResponse(driverLatestTaxiCallRequestTick
 		Attempt:                             driverLatestTaxiCallRequestTicket.Attempt,
 	}
 }
+
+type DriverTaxiCallContextResponse struct {
+	DriverId            string `json:"driverId"`
+	CanReceive          bool   `json:"canReceive"`
+	ToDepartureDistance int    `json:"toDepartureDistance"` // In meter
+}
+
+func DriverTaxiCallContextToResponse(d entity.DriverTaxiCallContext) DriverTaxiCallContextResponse {
+	return DriverTaxiCallContextResponse{
+		DriverId:            d.DriverId,
+		CanReceive:          d.CanReceive,
+		ToDepartureDistance: d.ToDepartureDistance,
+	}
+}

@@ -694,3 +694,21 @@ func (t taxicallApp) ListDriverDenyTaxiCallTag(ctx context.Context, driverId str
 
 	return denyTags, nil
 }
+
+func (t taxicallApp) ListDriverTaxiCallContextInRadius(ctx context.Context, req request.ListDriverTaxiCallContextInRadiusRequest) ([]entity.DriverTaxiCallContext, error) {
+	var driverContexts []entity.DriverTaxiCallContext
+	var err error
+	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverContexts, err = t.repository.taxiCallRequest.ListDriverTaxiCallContextInRadius(ctx, i, value.Point{Latitude: req.Latitude, Longitude: req.Longitude}, req.ServiceRegion, req.Radius)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.ListDriverTaxiCallContextInRadius: error while list contexts: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return []entity.DriverTaxiCallContext{}, err
+	}
+
+	return driverContexts, nil
+}

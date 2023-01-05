@@ -404,6 +404,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		backofficeserver.WithPort(18883),
 		backofficeserver.WithDriverApp(driverApp),
 		backofficeserver.WithUserApp(userApp),
+		backofficeserver.WithTaxicallApp(taxicallApp),
 		backofficeserver.WithMiddleware(loggerMiddleware.Process),
 		backofficeserver.WithMiddleware(backofficeSessionMiddleware.Get()),
 	)

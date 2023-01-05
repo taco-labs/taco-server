@@ -26,6 +26,10 @@ type driverApp interface {
 	GetDriverSettlementAccount(ctx context.Context, driverId string) (entity.DriverSettlementAccount, error)
 }
 
+type taxicallApp interface {
+	ListDriverTaxiCallContextInRadius(ctx context.Context, req request.ListDriverTaxiCallContextInRadiusRequest) ([]entity.DriverTaxiCallContext, error)
+}
+
 type userApp interface {
 	GetUser(context.Context, string) (entity.User, error)
 	DeleteUser(context.Context, string) error
@@ -36,8 +40,9 @@ type backofficeServer struct {
 	endpoint string
 	port     int
 	app      struct {
-		driver driverApp
-		user   userApp
+		driver   driverApp
+		user     userApp
+		taxicall taxicallApp
 	}
 	middlewares []echo.MiddlewareFunc
 }
@@ -69,6 +74,9 @@ func (b *backofficeServer) initController() error {
 	userGroup.GET("/:userId", b.GetUser)
 	userGroup.DELETE("/:userId", b.DeleteUser)
 
+	taxicallGroup := b.echo.Group("/taxicall")
+	taxicallGroup.GET("/available_drivers", b.ListDriverTaxiCallContextInRadius)
+
 	return nil
 }
 
@@ -79,6 +87,10 @@ func (b backofficeServer) validate() error {
 
 	if b.app.user == nil {
 		return errors.New("backoffice server need user app")
+	}
+
+	if b.app.taxicall == nil {
+		return errors.New("backoffice server need taxi call app")
 	}
 
 	return nil

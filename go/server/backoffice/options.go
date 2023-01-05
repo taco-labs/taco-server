@@ -22,6 +22,12 @@ func WithDriverApp(driverApp driverApp) backofficeOption {
 	}
 }
 
+func WithTaxicallApp(taxicallApp taxicallApp) backofficeOption {
+	return func(bs *backofficeServer) {
+		bs.app.taxicall = taxicallApp
+	}
+}
+
 func WithUserApp(userApp userApp) backofficeOption {
 	return func(bs *backofficeServer) {
 		bs.app.user = userApp
