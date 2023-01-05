@@ -9,11 +9,11 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
+	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
-	"go.uber.org/zap"
 )
 
 func (d driversettlementApp) Accept(ctx context.Context, event entity.Event) bool {
@@ -57,41 +57,22 @@ func (d driversettlementApp) Process(ctx context.Context, event entity.Event) er
 
 func (d driversettlementApp) handleSettlementRequest(ctx context.Context, event entity.Event) error {
 	cmd := command.DriverSettlementRequestCommand{}
-	logger := utils.GetLogger(ctx)
 	err := json.Unmarshal(event.Payload, &cmd)
 	if err != nil {
 		return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while unmarshal command: %w", err)
 	}
 
-	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		settlementRequest, err := d.repository.settlement.GetDriverSettlementRequest(ctx, i, cmd.TaxiCallRequestId)
-		if err != nil && !errors.Is(err, value.ErrNotFound) {
-			return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while get settlement request: %w", err)
-		}
-		if settlementRequest.TaxiCallRequestId != "" {
-			logger.Warn("duplicated message",
-				zap.Any("cmd", cmd),
-				zap.String("type", "settlement"),
-				zap.String("method", "handleSettlementRequest"),
-			)
-			return nil
-		}
-
-		settlementRequest = entity.DriverSettlementRequest{
-			TaxiCallRequestId: cmd.TaxiCallRequestId,
-			DriverId:          cmd.DriverId,
-			Amount:            cmd.Amount,
-			CreateTime:        cmd.RequestTime,
-		}
-		if err := d.repository.settlement.CreateDriverSettlementRequest(ctx, i, settlementRequest); err != nil {
-			return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while create settlement request: %w", err)
-		}
-		if err := d.repository.settlement.UpdateTotalDriverSettlement(ctx, i, cmd.DriverId, cmd.Amount); err != nil {
-			return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while update total settlement amount: %w", err)
-		}
-
-		return nil
+	ctx = utils.SetRequestTime(ctx, cmd.RequestTime)
+	err = d.ApplyDriverSettlementRequest(ctx, request.ApplyDriverSettlementPromotionRewardRequest{
+		DriverId: cmd.DriverId,
+		OrderId:  cmd.TaxiCallRequestId,
+		Amount:   cmd.Amount,
 	})
+	if err != nil {
+		return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while apply driver settlement: %w", err)
+	}
+
+	return nil
 }
 
 func (d driversettlementApp) handleSettlementTransferRequest(ctx context.Context, event entity.Event) error {

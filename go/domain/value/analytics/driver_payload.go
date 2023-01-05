@@ -7,8 +7,9 @@ import (
 )
 
 type DriverSignupPayload struct {
-	DriverId      string
-	ServiceRegion string
+	DriverId         string
+	ServiceRegion    string
+	ReferralDriverId string
 }
 
 func (d DriverSignupPayload) EventType() EventType {
@@ -64,7 +65,6 @@ type DriverTaxiCallTicketAcceptPayload struct {
 	RequestBasePrice                int
 	AdditionalPrice                 int
 	DriverSettlementAmount          int
-	DriverAdditionalReward          int
 	UserUsedPoint                   int
 	DriverLocation                  value.Point
 	ReceiveTime                     time.Time
@@ -128,7 +128,6 @@ type DriverTaxiDonePaylod struct {
 	RequestBasePrice          int
 	AdditionalPrice           int
 	DriverSettlementAmount    int
-	DriverAdditionalReward    int
 	UserUsedPoint             int
 	DriverLocation            value.Point
 	TaxiCallRequestCreateTime time.Time
@@ -149,4 +148,15 @@ type DriverPromotionReward struct {
 
 func (d DriverPromotionReward) EventType() EventType {
 	return EventType_DriverPromotionReward
+}
+
+type DriverReferralPointReceivedPayload struct {
+	DriverId      string
+	FromDriverId  string
+	OrderId       string
+	ReceiveAmount int
+}
+
+func (u DriverReferralPointReceivedPayload) EventType() EventType {
+	return EventType_DriverReferralPointReceived
 }

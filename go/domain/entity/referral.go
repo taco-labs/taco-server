@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	UserReferralRewardLimit = 5000
+	UserReferralRewardLimit = 3000
 	UserReferralRewardRate  = 5
 
-	DriverReferralRewardLimit = 10000
+	DriverReferralRewardLimit = 3000
 	DriverReferralRewardRate  = 5
 )
 
@@ -34,29 +34,22 @@ func (u *UserReferral) UseReward(price int) int {
 	return rewardCandidate
 }
 
-func (u *UserReferral) CancelReward(rewardPoint int) {
-	u.CurrentReward -= rewardPoint
-}
-
 type DriverReferral struct {
 	bun.BaseModel `bun:"table:driver_referral"`
 
-	DriverId      string    `bun:"driver_id,pk"`
+	FromDriverId  string    `bun:"from_driver_id,pk"`
+	ToDriverId    string    `bun:"to_driver_id"`
 	RewardRate    int       `bun:"reward_rate"`
 	CurrentReward int       `bun:"current_reward"`
 	RewardLimit   int       `bun:"reward_limit"`
 	CreateTime    time.Time `bun:"create_time"`
 }
 
-func (d *DriverReferral) UseReweard(price int) int {
+func (d *DriverReferral) UseReward(price int) int {
 	rewardCandidate := price * d.RewardRate / 100
 	if rewardCandidate+d.CurrentReward > d.RewardLimit {
 		rewardCandidate = d.RewardLimit - d.CurrentReward
 	}
 	d.CurrentReward += rewardCandidate
 	return rewardCandidate
-}
-
-func (d *DriverReferral) CancelReward(rewardPoint int) {
-	d.CurrentReward -= rewardPoint
 }

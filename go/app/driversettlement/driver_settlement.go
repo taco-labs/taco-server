@@ -33,6 +33,35 @@ type driversettlementApp struct {
 	}
 }
 
+func (d driversettlementApp) ApplyDriverSettlementRequest(ctx context.Context, req request.ApplyDriverSettlementPromotionRewardRequest) error {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		settlementRequest, err := d.repository.settlement.GetDriverSettlementRequest(ctx, i, req.DriverId, req.OrderId)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementRequest: error while get settlement request: %w", err)
+		}
+		// already exists
+		if settlementRequest.TaxiCallRequestId != "" {
+			return nil
+		}
+
+		settlementRequest = entity.DriverSettlementRequest{
+			TaxiCallRequestId: req.OrderId,
+			DriverId:          req.DriverId,
+			Amount:            req.Amount,
+			CreateTime:        requestTime,
+		}
+		if err := d.repository.settlement.CreateDriverSettlementRequest(ctx, i, settlementRequest); err != nil {
+			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementRequest: error while create settlement request: %w", err)
+		}
+		if err := d.repository.settlement.UpdateTotalDriverSettlement(ctx, i, req.DriverId, req.Amount); err != nil {
+			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementRequest: error while update total settlement amount: %w", err)
+		}
+
+		return nil
+	})
+}
+
 // TODO (taekyeom) To be parameterized
 func getSettlementRequestableTime(t time.Time) time.Time {
 	loc, _ := time.LoadLocation("Asia/Seoul")

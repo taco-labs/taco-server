@@ -34,6 +34,8 @@ const (
 	EventType_DriverTaxiDone EventType = "Driver_TaxiDone"
 
 	EventType_DriverPromotionReward EventType = "Driver_PromotionReward"
+
+	EventType_DriverReferralPointReceived EventType = "Driver_ReferralPointReceived"
 )
 
 type AnalyticsEvent interface {

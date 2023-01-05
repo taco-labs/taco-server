@@ -324,12 +324,6 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while add user used payment point: %w", err)
 		}
 
-		if taxiCallRequest.DriverId.Valid {
-			if err := t.service.payment.CancelDriverReferralReward(ctx, taxiCallRequest.DriverId.String, taxiCallRequest.DriverAdditionalRewardPrice); err != nil {
-				return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while cancel used driver referral reward: %w", err)
-			}
-		}
-
 		events = append(events, command.NewTaxiCallProgressCommand(
 			taxiCallRequest.Id,
 			taxiCallRequest.CurrentState,

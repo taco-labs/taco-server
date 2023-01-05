@@ -311,13 +311,6 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 		}
 		taxiCallRequest.UserUsedPoint = userPoint
 
-		driverAdditionalReward, err := t.service.payment.UseDriverReferralReward(ctx, driverId,
-			taxiCallRequest.DriverSettlementAdditonalPrice())
-		if err != nil {
-			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while use driver additional reward :%w", err)
-		}
-		taxiCallRequest.DriverAdditionalRewardPrice = driverAdditionalReward
-
 		if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while update taxi call request :%w", err)
 		}
@@ -359,7 +352,6 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			RequestBasePrice:                taxiCallRequest.RequestBasePrice,
 			AdditionalPrice:                 taxiCallRequest.AdditionalPrice,
 			DriverSettlementAmount:          taxiCallRequest.DriverSettlementAdditonalPrice(),
-			DriverAdditionalReward:          taxiCallRequest.DriverAdditionalRewardPrice,
 			UserUsedPoint:                   taxiCallRequest.UserUsedPoint,
 			DriverLocation:                  driverTaxiCallContext.Location,
 			ReceiveTime:                     driverTaxiCallContext.LastReceiveTime,
@@ -467,10 +459,6 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 
 		if err := t.service.payment.AddUserPaymentPoint(ctx, taxiCallRequest.UserId, taxiCallRequest.UserUsedPoint); err != nil {
 			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while add user used payment point: %w", err)
-		}
-
-		if err := t.service.payment.CancelDriverReferralReward(ctx, driverId, taxiCallRequest.DriverAdditionalRewardPrice); err != nil {
-			return fmt.Errorf("app.taxiCall.CancelTaxiCall: error while cancel used driver referral reward: %w", err)
 		}
 
 		if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
@@ -622,7 +610,6 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 			RequestBasePrice:          taxiCallRequest.RequestBasePrice,
 			AdditionalPrice:           taxiCallRequest.AdditionalPrice,
 			DriverSettlementAmount:    taxiCallRequest.DriverSettlementAdditonalPrice(),
-			DriverAdditionalReward:    taxiCallRequest.DriverAdditionalRewardPrice,
 			UserUsedPoint:             taxiCallRequest.UserUsedPoint,
 			DriverLocation:            driverTaxiCallContext.Location,
 			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,

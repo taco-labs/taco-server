@@ -41,7 +41,7 @@ func WithSessionService(app sessionServiceInterface) userAppOption {
 	}
 }
 
-func WithSmsSenderService(svc service.SmsSenderService) userAppOption {
+func WithSmsSenderService(svc service.SmsVerificationSenderService) userAppOption {
 	return func(ua *userApp) {
 		ua.service.smsSender = svc
 	}
@@ -68,12 +68,6 @@ func WithTaxiCallService(svc taxiCallInterface) userAppOption {
 func WithUserPaymentService(svc userPaymentInterface) userAppOption {
 	return func(ua *userApp) {
 		ua.service.userPayment = svc
-	}
-}
-
-func WithDriverAppService(svc driverAppInterface) userAppOption {
-	return func(ua *userApp) {
-		ua.service.driver = svc
 	}
 }
 
@@ -132,10 +126,6 @@ func (u userApp) validateApp() error {
 
 	if u.service.userPayment == nil {
 		return errors.New("user app need user payment service")
-	}
-
-	if u.service.driver == nil {
-		return errors.New("user app need driver app service")
 	}
 
 	if u.service.serviceRegionChecker == nil {

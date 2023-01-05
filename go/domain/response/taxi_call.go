@@ -58,28 +58,29 @@ func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummar
 }
 
 type DriverTaxiCallRequestResponse struct {
-	Dryrun                      bool           `json:"dryrun"`
-	ToArrivalDistance           int            `json:"toArrivalDistance"`
-	ToArrivalETA                time.Duration  `json:"toArrivalEta"`
-	ToArrivalPath               []value.Point  `json:"toArrivalPath"`
-	Id                          string         `json:"id"`
-	UserId                      string         `json:"userId"`
-	DriverId                    string         `json:"driverId"`
-	Departure                   value.Location `json:"departure"`
-	Arrival                     value.Location `json:"arrival"`
-	Tags                        []string       `json:"tags"`
-	UserTag                     string         `json:"userTag"`
-	RequestBasePrice            int            `json:"requestBasePrice"`
-	RequestMinAdditionalPrice   int            `json:"requestMinAdditionalPrice"`
-	RequestMaxAdditionalPrice   int            `json:"requestMaxAdditionalPrice"`
-	BasePrice                   int            `json:"basePrice"`
-	CancelPenaltyPrice          int            `json:"cancelPenaltyPrice"`
-	TollFee                     int            `json:"tollFee"`
-	AdditionalPrice             int            `json:"additionalPrice"`
-	DriverAdditionalRewardPrice int            `json:"driverAdditionalRewardPrice"`
-	CurrentState                string         `json:"currentState"`
-	CreateTime                  time.Time      `json:"createTime"`
-	UpdateTime                  time.Time      `json:"updateTime"`
+	Dryrun                    bool           `json:"dryrun"`
+	ToArrivalDistance         int            `json:"toArrivalDistance"`
+	ToArrivalETA              time.Duration  `json:"toArrivalEta"`
+	ToArrivalPath             []value.Point  `json:"toArrivalPath"`
+	Id                        string         `json:"id"`
+	UserId                    string         `json:"userId"`
+	DriverId                  string         `json:"driverId"`
+	Departure                 value.Location `json:"departure"`
+	Arrival                   value.Location `json:"arrival"`
+	Tags                      []string       `json:"tags"`
+	UserTag                   string         `json:"userTag"`
+	RequestBasePrice          int            `json:"requestBasePrice"`
+	RequestMinAdditionalPrice int            `json:"requestMinAdditionalPrice"`
+	RequestMaxAdditionalPrice int            `json:"requestMaxAdditionalPrice"`
+	BasePrice                 int            `json:"basePrice"`
+	CancelPenaltyPrice        int            `json:"cancelPenaltyPrice"`
+	TollFee                   int            `json:"tollFee"`
+	AdditionalPrice           int            `json:"additionalPrice"`
+	// Deprecated: do not use this field
+	DriverAdditionalRewardPrice int       `json:"driverAdditionalRewardPrice"`
+	CurrentState                string    `json:"currentState"`
+	CreateTime                  time.Time `json:"createTime"`
+	UpdateTime                  time.Time `json:"updateTime"`
 }
 
 func UserTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) UserTaxiCallRequestResponse {
@@ -131,21 +132,20 @@ func DriverTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) Dri
 			}
 			return ""
 		}(),
-		Departure:                   taxiCallRequest.Departure,
-		Arrival:                     taxiCallRequest.Arrival,
-		Tags:                        append([]string{}, taxiCallRequest.Tags...),
-		UserTag:                     taxiCallRequest.UserTag,
-		RequestBasePrice:            taxiCallRequest.RequestBasePrice,
-		RequestMinAdditionalPrice:   taxiCallRequest.RequestMinAdditionalPrice,
-		RequestMaxAdditionalPrice:   taxiCallRequest.RequestMaxAdditionalPrice,
-		BasePrice:                   taxiCallRequest.BasePrice,
-		CancelPenaltyPrice:          taxiCallRequest.DriverSettlementCancelPenaltyPrice(),
-		TollFee:                     taxiCallRequest.TollFee,
-		AdditionalPrice:             taxiCallRequest.DriverSettlementAdditonalPrice(),
-		DriverAdditionalRewardPrice: taxiCallRequest.DriverAdditionalRewardPrice,
-		CurrentState:                string(taxiCallRequest.CurrentState),
-		CreateTime:                  taxiCallRequest.CreateTime,
-		UpdateTime:                  taxiCallRequest.UpdateTime,
+		Departure:                 taxiCallRequest.Departure,
+		Arrival:                   taxiCallRequest.Arrival,
+		Tags:                      append([]string{}, taxiCallRequest.Tags...),
+		UserTag:                   taxiCallRequest.UserTag,
+		RequestBasePrice:          taxiCallRequest.RequestBasePrice,
+		RequestMinAdditionalPrice: taxiCallRequest.RequestMinAdditionalPrice,
+		RequestMaxAdditionalPrice: taxiCallRequest.RequestMaxAdditionalPrice,
+		BasePrice:                 taxiCallRequest.BasePrice,
+		CancelPenaltyPrice:        taxiCallRequest.DriverSettlementCancelPenaltyPrice(),
+		TollFee:                   taxiCallRequest.TollFee,
+		AdditionalPrice:           taxiCallRequest.DriverSettlementAdditonalPrice(),
+		CurrentState:              string(taxiCallRequest.CurrentState),
+		CreateTime:                taxiCallRequest.CreateTime,
+		UpdateTime:                taxiCallRequest.UpdateTime,
 	}
 
 	return resp

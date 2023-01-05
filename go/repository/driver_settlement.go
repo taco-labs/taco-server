@@ -13,7 +13,7 @@ import (
 )
 
 type DriverSettlementRepository interface {
-	GetDriverSettlementRequest(context.Context, bun.IDB, string) (entity.DriverSettlementRequest, error)
+	GetDriverSettlementRequest(context.Context, bun.IDB, string, string) (entity.DriverSettlementRequest, error)
 	CreateDriverSettlementRequest(context.Context, bun.IDB, entity.DriverSettlementRequest) error
 
 	GetDriverTotalSettlement(context.Context, bun.IDB, string) (entity.DriverTotalSettlement, error)
@@ -49,8 +49,9 @@ type DriverSettlementRepository interface {
 
 type driverSettlementRepository struct{}
 
-func (d driverSettlementRepository) GetDriverSettlementRequest(ctx context.Context, db bun.IDB, taxiCallRquestId string) (entity.DriverSettlementRequest, error) {
+func (d driverSettlementRepository) GetDriverSettlementRequest(ctx context.Context, db bun.IDB, driverId string, taxiCallRquestId string) (entity.DriverSettlementRequest, error) {
 	resp := entity.DriverSettlementRequest{
+		DriverId:          driverId,
 		TaxiCallRequestId: taxiCallRquestId,
 	}
 

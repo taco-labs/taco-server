@@ -20,16 +20,15 @@ var (
 )
 
 type PaymentUserTransactionRequestCommand struct {
-	UserId                    string `json:"userId"`
-	PaymentId                 string `json:"paymentId"`
-	OrderId                   string `json:"orderId"`
-	OrderName                 string `json:"orderName"`
-	Amount                    int    `json:"amount"`
-	UsedPoint                 int    `json:"usedPoint"`
-	SettlementTargetId        string `json:"settlementTargetId"`
-	SettlementAmount          int    `json:"settlementAmount"`
-	AdditonalSettlementAmount int    `json:"additionalSettlementAmount"`
-	Recovery                  bool   `json:"recovery"`
+	UserId             string `json:"userId"`
+	PaymentId          string `json:"paymentId"`
+	OrderId            string `json:"orderId"`
+	OrderName          string `json:"orderName"`
+	Amount             int    `json:"amount"`
+	UsedPoint          int    `json:"usedPoint"`
+	SettlementTargetId string `json:"settlementTargetId"`
+	SettlementAmount   int    `json:"settlementAmount"`
+	Recovery           bool   `json:"recovery"`
 }
 
 type PaymentUserTransactionSuccessCommand struct {
@@ -69,18 +68,17 @@ func NewPaymentUserPaymentDeleteCommand(userId string, paymentId string, billing
 }
 
 func NewUserPaymentTransactionRequestCommand(userId, paymentId, orderId, orderName, settlementTargetId string, amount,
-	usedPoint, settlementAmount, addditionalSettlementAmount int, inRecovery bool) entity.Event {
+	usedPoint, settlementAmount int, inRecovery bool) entity.Event {
 	cmd := PaymentUserTransactionRequestCommand{
-		UserId:                    userId,
-		PaymentId:                 paymentId,
-		OrderId:                   orderId,
-		OrderName:                 orderName,
-		Amount:                    amount,
-		UsedPoint:                 usedPoint,
-		SettlementTargetId:        settlementTargetId,
-		SettlementAmount:          settlementAmount,
-		AdditonalSettlementAmount: addditionalSettlementAmount,
-		Recovery:                  inRecovery,
+		UserId:             userId,
+		PaymentId:          paymentId,
+		OrderId:            orderId,
+		OrderName:          orderName,
+		Amount:             amount,
+		UsedPoint:          usedPoint,
+		SettlementTargetId: settlementTargetId,
+		SettlementAmount:   settlementAmount,
+		Recovery:           inRecovery,
 	}
 
 	cmdJson, _ := json.Marshal(cmd)

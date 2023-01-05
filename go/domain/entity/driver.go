@@ -53,12 +53,9 @@ func (d DriverDto) FullName() string {
 }
 
 func (d DriverDto) ReferralCode() string {
-	referralCode, _ := value.EncodeReferralCode(value.ReferralCode{
-		ReferralType: enum.ReferralType_Driver,
-		PhoneNumber:  d.Phone,
+	return value.EncodeReferralCode(value.ReferralCode{
+		PhoneNumber: d.Phone,
 	})
-
-	return referralCode
 }
 
 type DriverSettlementAccount struct {

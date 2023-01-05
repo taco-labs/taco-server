@@ -19,6 +19,7 @@ type DriverSignupRequest struct {
 	CarType                    string `json:"carType"`
 	ServiceRegion              string `json:"serviceRegion"`
 	ResidentRegistrationNumber string `json:"residentRegistrationNumber"`
+	ReferralCode               string `json:"referralCode"`
 }
 
 type DriverUpdateRequest struct {

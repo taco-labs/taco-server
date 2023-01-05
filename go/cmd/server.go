@@ -99,17 +99,29 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	pushTokenRepository := repository.NewPushTokenRepository()
 
 	// Init services
-	smsSenderService := service.NewCoolSmsSenderService(
-		serverConfig.SmsSender.Endpoint,
-		serverConfig.SmsSender.SenderPhone,
-		serverConfig.SmsSender.ApiKey,
-		serverConfig.SmsSender.ApiSecret,
-	)
+	var smsVerificationService service.SmsVerificationSenderService
+	switch serverConfig.SmsSender.Type {
+	case "mock":
+		smsVerificationService = service.NewMockSmsSenderService()
+	case "coolsms":
+		smsVerificationService = service.NewCoolSmsSenderService(
+			serverConfig.SmsSender.Endpoint,
+			serverConfig.SmsSender.SenderPhone,
+			serverConfig.SmsSender.ApiKey,
+			serverConfig.SmsSender.ApiSecret,
+		)
+	}
 
-	mapService := service.NewNhnMapsService(
-		serverConfig.MapService.Endpoint,
-		serverConfig.MapService.ApiKey,
-	)
+	var mapService service.MapService
+	switch serverConfig.MapService.Type {
+	case "mock":
+		mapService = service.NewMockMapService()
+	case "nhn":
+		mapService = service.NewNhnMapsService(
+			serverConfig.MapService.Endpoint,
+			serverConfig.MapService.ApiKey,
+		)
+	}
 
 	// TODO(taekyeom) Replace mock to real one
 	payplePaymentService := service.NewPayplePaymentService(
@@ -287,12 +299,11 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		user.WithUserRepository(userRepository),
 		user.WithSessionService(userSessionApp),
 		user.WithSmsVerificationRepository(smsVerificationRepository),
-		user.WithSmsSenderService(smsSenderService),
+		user.WithSmsSenderService(smsVerificationService),
 		user.WithMapService(mapService),
 		user.WithPushService(pushApp),
 		user.WithTaxiCallService(taxicallApp),
 		user.WithUserPaymentService(paymentApp),
-		user.WithDriverAppService(driverAppDelegator),
 		user.WithAnalyticsRepository(analyticsRepository),
 		user.WithServiceRegionChecker(userServiceRegionChecker),
 	)
@@ -305,7 +316,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		driver.WithDriverRepository(driverRepository),
 		driver.WithSettlementAccountRepository(driverSettlementAccountRepository),
 		driver.WithSessionService(driverSessionApp),
-		driver.WithSmsSenderService(smsSenderService),
+		driver.WithSmsSenderService(smsVerificationService),
 		driver.WithSmsVerificationRepository(smsVerificationRepository),
 		driver.WithEventRepository(eventRepository),
 		driver.WithPushService(pushApp),

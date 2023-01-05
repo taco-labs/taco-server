@@ -1,9 +1,6 @@
 package entity
 
 import (
-	"fmt"
-	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -11,7 +8,6 @@ import (
 
 var (
 	MockAccountPhone = "01000000000"
-	codes            = []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}
 )
 
 type SmsVerification struct {
@@ -28,26 +24,14 @@ func (s SmsVerification) MockAccountPhone() bool {
 	return s.Phone == MockAccountPhone
 }
 
-func (s SmsVerification) VerficationMessage() string {
-	return fmt.Sprintf("[타코] 인증 코드 [%s]를 입력해주세요.", s.VerificationCode)
-}
-
-func NewSmsVerification(id string, currentTime time.Time, phone string) SmsVerification {
+func NewSmsVerification(id string, verificationCode string, currentTime time.Time, phone string) SmsVerification {
 	return SmsVerification{
 		Id:               id,
-		VerificationCode: generateRandomCode(6),
+		VerificationCode: verificationCode,
 		Verified:         false,
 		ExpireTime:       currentTime.Add(time.Minute * 3),
 		Phone:            phone,
 	}
-}
-
-func generateRandomCode(length int) string {
-	b := make([]string, length)
-	for i := range b {
-		b[i] = codes[rand.Intn(len(codes))]
-	}
-	return strings.Join(b, "")
 }
 
 func NewMockSmsVerification(id string, currentTime time.Time) SmsVerification {

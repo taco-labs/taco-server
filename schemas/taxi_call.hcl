@@ -105,12 +105,6 @@ table "taxi_call_request" {
     comment = "유저가 사용한 타코 할인 금액"
   }
 
-  column "driver_additional_reward_price" {
-    type = int
-    null = false
-    comment = "기사 추가 타코"
-  }
-
   column "to_departure_route" {
     type = jsonb
     null = false

@@ -18,6 +18,7 @@ type DatabaseConfig struct {
 }
 
 type SmsSenderConfig struct {
+	Type        string `env:"TACO_SMS_SENDER_TYPE,default=mock"`
 	Endpoint    string `env:"TACO_SMS_SENDER_ENDPOINT,required"`
 	SenderPhone string `env:"TACO_SMS_SENDER_PHONE,required"`
 	ApiKey      string `env:"TACO_SMS_SENDER_API_KEY,required"`
@@ -40,6 +41,7 @@ type SettlementAccountServiceConfig struct {
 }
 
 type MapServiceConfig struct {
+	Type     string `env:"TACO_MAP_SERVICE_TYPE,default=mock"`
 	Endpoint string `env:"TACO_MAP_SERVICE_ENDPOINT,required"`
 	ApiKey   string `env:"TACO_MAP_SERVICE_API_KEY,required"`
 }

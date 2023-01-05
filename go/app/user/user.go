@@ -24,10 +24,6 @@ type sessionServiceInterface interface {
 	CreateSession(context.Context, entity.UserSession) error
 }
 
-type driverAppInterface interface {
-	GetDriverByUserUniqueKey(ctx context.Context, uniqueKey string) (entity.DriverDto, error)
-}
-
 type pushServiceInterface interface {
 	CreatePushToken(context.Context, request.CreatePushTokenRequest) (entity.PushToken, error)
 	UpdatePushToken(context.Context, request.UpdatePushTokenRequest) error
@@ -55,7 +51,6 @@ type userPaymentInterface interface {
 	CreateUserPaymentPoint(ctx context.Context, userPaymentPoint entity.UserPaymentPoint) error
 	GetUserPaymentPoint(ctx context.Context, userId string) (entity.UserPaymentPoint, error)
 	CreateUserReferral(ctx context.Context, fromUserId string, toUserId string) error
-	AddDriverReferralReward(ctx context.Context, driverId string) error
 }
 
 type userApp struct {
@@ -67,8 +62,7 @@ type userApp struct {
 	}
 
 	service struct {
-		driver               driverAppInterface
-		smsSender            service.SmsSenderService
+		smsSender            service.SmsVerificationSenderService
 		session              sessionServiceInterface
 		mapService           service.MapService
 		push                 pushServiceInterface
@@ -85,7 +79,11 @@ func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVeri
 	if req.Phone == entity.MockAccountPhone {
 		smsVerification = entity.NewMockSmsVerification(req.StateKey, requestTime)
 	} else {
-		smsVerification = entity.NewSmsVerification(req.StateKey, requestTime, req.Phone)
+		verificationCode, err := u.service.smsSender.SendSmsVerification(ctx, req.Phone)
+		if err != nil {
+			return entity.SmsVerification{}, fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
+		}
+		smsVerification = entity.NewSmsVerification(req.StateKey, verificationCode, requestTime, req.Phone)
 	}
 
 	err := u.Run(ctx, func(ctx context.Context, db bun.IDB) error {
@@ -93,9 +91,6 @@ func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVeri
 			return fmt.Errorf("app.User.SmsVerificationRequest: error while create sms verification:\n%w", err)
 		}
 
-		if err := u.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerficationMessage()); err != nil {
-			return fmt.Errorf("app.User.SmsVerificationRequest: error while send sms message:\n%w", err)
-		}
 		return nil
 	})
 
@@ -171,7 +166,6 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 	var err error
 	var newUser entity.User
 	var userSession entity.UserSession
-	referralType := enum.ReferralType_Unknown
 	referralId := ""
 
 	err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
@@ -222,46 +216,22 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 		}
 
 		if req.ReferralCode != "" && !newUser.MockAccount() {
-			referralCode, err := value.DecodeReferralCode(req.ReferralCode)
+			referralCode := value.DecodeReferralCode(req.ReferralCode)
+
+			referralUser, err := u.repository.user.FindByUserUniqueKey(ctx, i, referralCode.PhoneNumber)
+			if errors.Is(err, value.ErrNotFound) {
+				return fmt.Errorf("app.User.Signup: user not found: %w",
+					value.NewTacoError(value.ERR_NOTFOUND_REFERRAL_CODE, "user referral not found"))
+			}
 			if err != nil {
-				return fmt.Errorf("app.User.Signup: invalid refferral code: %w (%v)", value.ErrInvalidReferralCode, err)
+				return fmt.Errorf("app.User.Signup: error while get referral user: %w", err)
 			}
 
-			switch referralCode.ReferralType {
-			case enum.ReferralType_User:
-				referralUser, err := u.repository.user.FindByUserUniqueKey(ctx, i, referralCode.PhoneNumber)
-				if errors.Is(err, value.ErrNotFound) {
-					return fmt.Errorf("app.User.Signup: user not found: %w",
-						value.NewTacoError(value.ERR_NOTFOUND_REFERRAL_CODE, "user referral not found"))
+			if !referralUser.MockAccount() {
+				if err := u.service.userPayment.CreateUserReferral(ctx, newUser.Id, referralUser.Id); err != nil {
+					return fmt.Errorf("app.User.Signup: error while create user referral: %w", err)
 				}
-				if err != nil {
-					return fmt.Errorf("app.User.Signup: error while get referral user: %w", err)
-				}
-
-				if !referralUser.MockAccount() {
-					if err := u.service.userPayment.CreateUserReferral(ctx, newUser.Id, referralUser.Id); err != nil {
-						return fmt.Errorf("app.User.Signup: error while create user referral: %w", err)
-					}
-					referralType = enum.ReferralType_User
-					referralId = referralUser.Id
-				}
-			case enum.ReferralType_Driver:
-				referralDriver, err := u.service.driver.GetDriverByUserUniqueKey(ctx, referralCode.PhoneNumber)
-				if errors.Is(err, value.ErrNotFound) {
-					return fmt.Errorf("app.User.Signup: driver not found: %w",
-						value.NewTacoError(value.ERR_NOTFOUND_REFERRAL_CODE, "driver referral not found"))
-				}
-				if err != nil {
-					return fmt.Errorf("app.User.Signup: error while get driver by unique key: %w", err)
-				}
-
-				if !referralDriver.MockAccount() {
-					if err := u.service.userPayment.AddDriverReferralReward(ctx, referralDriver.Id); err != nil {
-						return fmt.Errorf("app.User.Signup: error while update driver referral: %w", err)
-					}
-					referralType = enum.ReferralType_Driver
-					referralId = referralDriver.Id
-				}
+				referralId = referralUser.Id
 			}
 		}
 
@@ -304,9 +274,8 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 		}
 
 		userSignupAnalytics := entity.NewAnalytics(requestTime, analytics.UserSignupPayload{
-			UserId:       newUser.Id,
-			ReferralType: referralType,
-			ReferralId:   referralId,
+			UserId:     newUser.Id,
+			ReferralId: referralId,
 		})
 		if err := u.repository.analytics.Create(ctx, i, userSignupAnalytics); err != nil {
 			return fmt.Errorf("app.User.Signup: error while create analytics event: %w", err)

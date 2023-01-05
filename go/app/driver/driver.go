@@ -65,7 +65,7 @@ type driverSettlementInterface interface {
 }
 
 type userPaymentApp interface {
-	CreateDriverReferral(ctx context.Context, driverId string) error
+	CreateDriverReferral(ctx context.Context, fromDriverId, toDriverId string) error
 }
 
 type driverApp struct {
@@ -79,7 +79,7 @@ type driverApp struct {
 	}
 
 	service struct {
-		smsSender            service.SmsSenderService
+		smsSender            service.SmsVerificationSenderService
 		session              sessionServiceInterface
 		push                 pushServiceInterface
 		taxiCall             driverTaxiCallInterface
@@ -101,7 +101,11 @@ func (d driverApp) SmsVerificationRequest(ctx context.Context, req request.SmsVe
 	if req.Phone == entity.MockAccountPhone {
 		smsVerification = entity.NewMockSmsVerification(req.StateKey, requestTime)
 	} else {
-		smsVerification = entity.NewSmsVerification(req.StateKey, requestTime, req.Phone)
+		verificationCode, err := d.service.smsSender.SendSmsVerification(ctx, req.Phone)
+		if err != nil {
+			return entity.SmsVerification{}, fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
+		}
+		smsVerification = entity.NewSmsVerification(req.StateKey, verificationCode, requestTime, req.Phone)
 	}
 
 	err := d.Run(ctx, func(ctx context.Context, db bun.IDB) error {
@@ -109,11 +113,6 @@ func (d driverApp) SmsVerificationRequest(ctx context.Context, req request.SmsVe
 			return fmt.Errorf("app.Driver.SmsVerificationRequest: error while create sms verification:\n%w", err)
 		}
 
-		if req.Phone != entity.MockAccountPhone {
-			if err := d.service.smsSender.SendSms(ctx, req.Phone, smsVerification.VerficationMessage()); err != nil {
-				return fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
-			}
-		}
 		return nil
 	})
 
@@ -202,6 +201,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 
 	var newDriverDto entity.DriverDto
 	var driverSession entity.DriverSession
+	referralId := ""
 
 	encryptedResidentRegistrationNumber, err := d.service.encryption.Encrypt(ctx, req.ResidentRegistrationNumber)
 	if err != nil {
@@ -258,6 +258,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			DriverLicenseId:            req.DriverLicenseId,
 			CompanyRegistrationNumber:  req.CompanyRegistrationNumber,
 			CarProfileId:               newDriverCarProfile.Id,
+			CarProfile:                 newDriverCarProfile,
 			ServiceRegion:              req.ServiceRegion,
 			DriverLicenseImageUploaded: false,
 			DriverProfileImageUploaded: false,
@@ -283,17 +284,33 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: error while create driver registration number:%w", err)
 		}
 
+		// Referral
+		if req.ReferralCode != "" && !newDriverDto.MockAccount() {
+			referralCode := value.DecodeReferralCode(req.ReferralCode)
+
+			referralDriver, err := d.repository.driver.FindByUserUniqueKey(ctx, i, referralCode.PhoneNumber)
+			if errors.Is(err, value.ErrNotFound) {
+				return fmt.Errorf("app.Driver.Signup: driver not found: %w",
+					value.NewTacoError(value.ERR_NOTFOUND_REFERRAL_CODE, "driver referral not found"))
+			}
+			if err != nil {
+				return fmt.Errorf("app.Driver.Signup: error while get referral driver: %w", err)
+			}
+
+			if !referralDriver.MockAccount() {
+				if err := d.service.payment.CreateDriverReferral(ctx, newDriverDto.Id, referralDriver.Id); err != nil {
+					return fmt.Errorf("app.User.Signup: error while create user referral: %w", err)
+				}
+				referralId = referralDriver.Id
+			}
+		}
+
 		// Create push token
 		if _, err := d.service.push.CreatePushToken(ctx, request.CreatePushTokenRequest{
 			PrincipalId: newDriverDto.Id,
 			FcmToken:    req.AppFcmToken,
 		}); err != nil {
 			return fmt.Errorf("app.Driver.Signup: error while create push token: %w", err)
-		}
-
-		// Create driver referral reward
-		if err := d.service.payment.CreateDriverReferral(ctx, newDriverDto.Id); err != nil {
-			return fmt.Errorf("app.Driver.Signup: error while create driver referral: %w", err)
 		}
 
 		driverSession = entity.DriverSession{
@@ -311,8 +328,9 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 		}
 
 		driverSignupAnalyticsEvent := entity.NewAnalytics(requestTime, analytics.DriverSignupPayload{
-			DriverId:      newDriverDto.Id,
-			ServiceRegion: newDriverDto.ServiceRegion,
+			DriverId:         newDriverDto.Id,
+			ServiceRegion:    newDriverDto.ServiceRegion,
+			ReferralDriverId: referralId,
 		})
 
 		if err := d.repository.analytics.Create(ctx, i, driverSignupAnalyticsEvent); err != nil {

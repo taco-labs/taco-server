@@ -22,8 +22,6 @@ type paymentAppInterface interface {
 	UpdateUserPayment(ctx context.Context, userPayment entity.UserPayment) error
 	UseUserPaymentPoint(ctx context.Context, userId string, price int) (int, error)
 	AddUserPaymentPoint(ctx context.Context, userId string, point int) error
-	UseDriverReferralReward(ctx context.Context, driverId string, price int) (int, error)
-	CancelDriverReferralReward(ctx context.Context, driverId string, calcelReward int) error
 }
 
 type taxicallApp struct {

@@ -45,28 +45,27 @@ type TaxiCallRequest struct {
 	Dryrun bool     `bun:"-"`
 	Tags   []string `bun:"-"`
 
-	Id                          string               `bun:"id,pk"`
-	UserId                      string               `bun:"user_id"`
-	DriverId                    sql.NullString       `bun:"driver_id"`
-	Departure                   value.Location       `bun:"departure,type:jsonb"`
-	Arrival                     value.Location       `bun:"arrival,type:jsonb"`
-	TagIds                      []int                `bun:"tag_ids,array"`
-	UserTag                     string               `bun:"user_tag"`
-	PaymentSummary              value.PaymentSummary `bun:"payment_summary,type:jsonb"`
-	RequestBasePrice            int                  `bun:"request_base_price"`
-	RequestMinAdditionalPrice   int                  `bun:"request_min_additional_price"`
-	RequestMaxAdditionalPrice   int                  `bun:"request_max_additional_price"`
-	BasePrice                   int                  `bun:"base_price"`
-	TollFee                     int                  `bun:"toll_fee"`
-	CancelPenaltyPrice          int                  `bun:"cancel_penalty_price"`
-	AdditionalPrice             int                  `bun:"additional_price"`
-	UserUsedPoint               int                  `bun:"user_used_point"`
-	DriverAdditionalRewardPrice int                  `bun:"driver_additional_reward_price"`
-	CurrentState                enum.TaxiCallState   `bun:"taxi_call_state"`
-	ToDepartureRoute            value.Route          `bun:"to_departure_route"`
-	ToArrivalRoute              value.Route          `bun:"to_arrival_route"`
-	CreateTime                  time.Time            `bun:"create_time"`
-	UpdateTime                  time.Time            `bun:"update_time"`
+	Id                        string               `bun:"id,pk"`
+	UserId                    string               `bun:"user_id"`
+	DriverId                  sql.NullString       `bun:"driver_id"`
+	Departure                 value.Location       `bun:"departure,type:jsonb"`
+	Arrival                   value.Location       `bun:"arrival,type:jsonb"`
+	TagIds                    []int                `bun:"tag_ids,array"`
+	UserTag                   string               `bun:"user_tag"`
+	PaymentSummary            value.PaymentSummary `bun:"payment_summary,type:jsonb"`
+	RequestBasePrice          int                  `bun:"request_base_price"`
+	RequestMinAdditionalPrice int                  `bun:"request_min_additional_price"`
+	RequestMaxAdditionalPrice int                  `bun:"request_max_additional_price"`
+	BasePrice                 int                  `bun:"base_price"`
+	TollFee                   int                  `bun:"toll_fee"`
+	CancelPenaltyPrice        int                  `bun:"cancel_penalty_price"`
+	AdditionalPrice           int                  `bun:"additional_price"`
+	UserUsedPoint             int                  `bun:"user_used_point"`
+	CurrentState              enum.TaxiCallState   `bun:"taxi_call_state"`
+	ToDepartureRoute          value.Route          `bun:"to_departure_route"`
+	ToArrivalRoute            value.Route          `bun:"to_arrival_route"`
+	CreateTime                time.Time            `bun:"create_time"`
+	UpdateTime                time.Time            `bun:"update_time"`
 }
 
 func (t TaxiCallRequest) TotalPrice() int {

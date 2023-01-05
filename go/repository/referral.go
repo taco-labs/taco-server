@@ -98,7 +98,7 @@ func (u referralRepository) DeleteUserReferral(ctx context.Context, db bun.IDB, 
 
 func (u referralRepository) GetDriverReferral(ctx context.Context, db bun.IDB, driverId string) (entity.DriverReferral, error) {
 	resp := entity.DriverReferral{
-		DriverId: driverId,
+		FromDriverId: driverId,
 	}
 
 	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)

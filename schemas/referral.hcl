@@ -65,9 +65,16 @@ table "user_referral" {
 table "driver_referral" {
   schema = schema.taco
 
-  column "driver_id" {
+  column "from_driver_id" {
     type = uuid
     null = false
+    comment = "피추천인"
+  }
+
+  column "to_driver_id" {
+    type = uuid
+    null = false
+    comment = "추천인"
   }
 
   column "reward_rate" {
@@ -92,13 +99,24 @@ table "driver_referral" {
 
   primary_key {
     columns = [
-      column.driver_id,
+      column.from_driver_id,
     ]
   }
 
-  foreign_key "driver_referral_driver_id_fk" {
+  foreign_key "driver_referral_from_driver_id_fk" {
     columns = [
-      column.driver_id,
+      column.from_driver_id,
+    ]
+    ref_columns = [
+      table.driver.column.id,
+    ]
+    on_delete = CASCADE
+    on_update = NO_ACTION
+  }
+
+  foreign_key "driver_referral_to_driver_id_fk" {
+    columns = [
+      column.to_driver_id,
     ]
     ref_columns = [
       table.driver.column.id,

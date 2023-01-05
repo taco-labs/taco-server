@@ -29,12 +29,9 @@ type User struct {
 }
 
 func (u User) ReferralCode() string {
-	referralCode, _ := value.EncodeReferralCode(value.ReferralCode{
-		ReferralType: enum.ReferralType_User,
-		PhoneNumber:  u.Phone,
+	return value.EncodeReferralCode(value.ReferralCode{
+		PhoneNumber: u.Phone,
 	})
-
-	return referralCode
 }
 
 func (u User) MockAccount() bool {

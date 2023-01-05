@@ -350,8 +350,6 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		Where("service_region = ?", departure.Address.ServiceRegion).
 		WhereOr("service_region = ?", arrival.Address.ServiceRegion)
 
-		// TODO (taekyeom) deny tag handling
-
 	driverTaxiCallContexts := db.NewSelect().
 		With("driver_distance", locationWithDistance).
 		With("driver_distance_filtered", locationWithDistanceFiltered).

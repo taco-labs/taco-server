@@ -26,6 +26,24 @@ type MapService interface {
 	GetRoute(context.Context, value.Point, value.Point) (value.Route, error)
 }
 
+type mockMapService struct{}
+
+func (m mockMapService) SearchLocation(context.Context, value.Point, string, int, int) ([]value.LocationSummary, int, error) {
+	return []value.LocationSummary{}, 0, nil
+}
+
+func (m mockMapService) GetAddress(context.Context, value.Point) (value.Address, error) {
+	return value.NewAddress("", "서울", "", "", "", "", ""), nil
+}
+
+func (m mockMapService) GetRoute(context.Context, value.Point, value.Point) (value.Route, error) {
+	return value.Route{}, nil
+}
+
+func NewMockMapService() *mockMapService {
+	return &mockMapService{}
+}
+
 type nhnMapsService struct {
 	client *resty.Client
 }

@@ -69,17 +69,16 @@ func NewMockPayment(userId string, requestTime time.Time) UserPayment {
 type UserPaymentTransactionRequest struct {
 	bun.BaseModel `bun:"table:user_payment_transaction_request"`
 
-	OrderId                    string               `bun:"order_id,pk"`
-	UserId                     string               `bun:"user_id"`
-	PaymentSummary             value.PaymentSummary `bun:"payment_summary"`
-	OrderName                  string               `bun:"order_name"`
-	Amount                     int                  `bun:"amount"`
-	UsedPoint                  int                  `bun:"used_point"`
-	SettlementAmount           int                  `bun:"settlement_amount"`
-	AdditionalSettlementAmount int                  `bun:"additional_settlement_amount"`
-	SettlementTargetId         string               `bun:"settlement_target_id"`
-	Recovery                   bool                 `bun:"recovery"`
-	CreateTime                 time.Time            `bun:"create_time"`
+	OrderId            string               `bun:"order_id,pk"`
+	UserId             string               `bun:"user_id"`
+	PaymentSummary     value.PaymentSummary `bun:"payment_summary"`
+	OrderName          string               `bun:"order_name"`
+	Amount             int                  `bun:"amount"`
+	UsedPoint          int                  `bun:"used_point"`
+	SettlementAmount   int                  `bun:"settlement_amount"`
+	SettlementTargetId string               `bun:"settlement_target_id"`
+	Recovery           bool                 `bun:"recovery"`
+	CreateTime         time.Time            `bun:"create_time"`
 }
 
 func (u UserPaymentTransactionRequest) GetPaymentAmount() int {
@@ -87,7 +86,7 @@ func (u UserPaymentTransactionRequest) GetPaymentAmount() int {
 }
 
 func (u UserPaymentTransactionRequest) GetSettlementAmount(promotionReward int) int {
-	return u.SettlementAmount + u.AdditionalSettlementAmount + promotionReward
+	return u.SettlementAmount + promotionReward
 }
 
 type UserPaymentOrder struct {
@@ -107,15 +106,14 @@ type UserPaymentOrder struct {
 type UserPaymentFailedOrder struct {
 	bun.BaseModel `bun:"table:user_payment_failed_order"`
 
-	OrderId                    string    `bun:"order_id,pk"`
-	UserId                     string    `bun:"user_id"`
-	OrderName                  string    `bun:"order_name"`
-	Amount                     int       `bun:"amount"`
-	UsedPoint                  int       `bun:"used_point"`
-	SettlementAmount           int       `bun:"settlement_amount"`
-	AdditionalSettlementAmount int       `bun:"additional_settlement_amount"`
-	SettlementTargetId         string    `bun:"settlement_target_id"`
-	CreateTime                 time.Time `bun:"create_time"`
+	OrderId            string    `bun:"order_id,pk"`
+	UserId             string    `bun:"user_id"`
+	OrderName          string    `bun:"order_name"`
+	Amount             int       `bun:"amount"`
+	UsedPoint          int       `bun:"used_point"`
+	SettlementAmount   int       `bun:"settlement_amount"`
+	SettlementTargetId string    `bun:"settlement_target_id"`
+	CreateTime         time.Time `bun:"create_time"`
 }
 
 type UserPaymentPoint struct {

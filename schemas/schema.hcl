@@ -1,3 +1,2 @@
-schema "public" { }
 schema "taco" { }
-schema "topology" { }
+schema "public" { }

@@ -349,7 +349,6 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, receiv
 				taxiCallRequest.UserAdditionalPrice(),
 				taxiCallRequest.UserUsedPoint,
 				taxiCallRequest.DriverSettlementAdditonalPrice(),
-				taxiCallRequest.DriverAdditionalRewardPrice,
 				false,
 			))
 		}
@@ -410,7 +409,6 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 				taxiCallRequest.CancelPenaltyPrice,
 				0,
 				taxiCallRequest.DriverSettlementCancelPenaltyPrice(),
-				0,
 				false,
 			))
 		}

@@ -7,6 +7,12 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 )
 
+type ApplyDriverSettlementRequest struct {
+	DriverId string
+	OrderId  string
+	Amount   int
+}
+
 type ListDriverSettlementHistoryRequest struct {
 	DriverId  string `param:"driverId"`
 	Count     int    `query:"count"`

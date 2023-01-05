@@ -4,13 +4,11 @@ import (
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/value"
-	"github.com/taco-labs/taco/go/domain/value/enum"
 )
 
 type UserSignupPayload struct {
-	UserId       string
-	ReferralType enum.ReferralType
-	ReferralId   string
+	UserId     string
+	ReferralId string
 }
 
 func (u UserSignupPayload) EventType() EventType {

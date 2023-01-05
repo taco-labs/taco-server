@@ -143,11 +143,6 @@ table "user_payment_transaction_request" {
     null = false
   }
 
-  column "additional_settlement_amount" {
-    type = int
-    null = false
-  }
-
   column "settlement_target_id" {
     type = uuid
     null = false
@@ -277,11 +272,6 @@ table "user_payment_failed_order" {
   }
 
   column "settlement_amount" {
-    type = int
-    null = false
-  }
-
-  column "additional_settlement_amount" {
     type = int
     null = false
   }

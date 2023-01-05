@@ -52,7 +52,7 @@ func WithSessionService(svc sessionServiceInterface) driverAppOption {
 	}
 }
 
-func WithSmsSenderService(svc service.SmsSenderService) driverAppOption {
+func WithSmsSenderService(svc service.SmsVerificationSenderService) driverAppOption {
 	return func(da *driverApp) {
 		da.service.smsSender = svc
 	}

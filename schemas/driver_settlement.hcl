@@ -154,7 +154,9 @@ table "driver_settlement_request" {
 
   primary_key {
     columns = [
+      column.driver_id,
       column.taxi_call_request_id,
+      column.create_time,
     ]
   }
 
