@@ -155,7 +155,7 @@ func (d driverApp) UpdateCarProfile(ctx context.Context, req request.UpdateCarPr
 		profile.UpdateTime = requestTime
 
 		if err := d.repository.driver.UpdateDriverCarProfile(ctx, i, profile); err != nil {
-			return fmt.Errorf("app.driver.UpdateCarProfile: error while update car profile: %w", value.ErrInUse)
+			return fmt.Errorf("app.driver.UpdateCarProfile: error while update car profile: %w", err)
 		}
 
 		carProfile = profile
