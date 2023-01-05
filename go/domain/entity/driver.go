@@ -52,10 +52,9 @@ func (d DriverDto) FullName() string {
 	return fmt.Sprintf("%s%s", d.LastName, d.FirstName)
 }
 
+// TODO (taekyeom) driver 쪽은 그냥 전화번호를 referral code로 리턴
 func (d DriverDto) ReferralCode() string {
-	return value.EncodeReferralCode(value.ReferralCode{
-		PhoneNumber: d.Phone,
-	})
+	return d.Phone
 }
 
 type DriverSettlementAccount struct {

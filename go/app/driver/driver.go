@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/taco-labs/taco/go/app"
@@ -286,9 +287,14 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 
 		// Referral
 		if req.ReferralCode != "" && !newDriverDto.MockAccount() {
-			referralCode := value.DecodeReferralCode(req.ReferralCode)
+			var referralCode string
+			if strings.HasPrefix(req.ReferralCode, "010") {
+				referralCode = req.ReferralCode
+			} else {
+				referralCode = fmt.Sprintf("010%s", req.ReferralCode)
+			}
 
-			referralDriver, err := d.repository.driver.FindByUserUniqueKey(ctx, i, referralCode.PhoneNumber)
+			referralDriver, err := d.repository.driver.FindByUserUniqueKey(ctx, i, referralCode)
 			if errors.Is(err, value.ErrNotFound) {
 				return fmt.Errorf("app.Driver.Signup: driver not found: %w",
 					value.NewTacoError(value.ERR_NOTFOUND_REFERRAL_CODE, "driver referral not found"))
