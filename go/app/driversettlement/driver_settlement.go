@@ -87,7 +87,7 @@ func (d driversettlementApp) GetExpectedDriverSettlement(ctx context.Context, dr
 				TotalAmount: 0,
 			}
 		}
-		if err != nil {
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.driversettlementApp.GetExpectedDriverSetttlement: error while select expected settlement: %w", err)
 		}
 		expectedSettlement = es
@@ -99,7 +99,7 @@ func (d driversettlementApp) GetExpectedDriverSettlement(ctx context.Context, dr
 				TotalAmount: 0,
 			}
 		}
-		if err != nil {
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.driversettlementApp.GetExpectedDriverSetttlement: error while get promotion settlement: %w", err)
 		}
 		expectedSettlement.TotalAmount += promotionAmount.TotalAmount
