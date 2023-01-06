@@ -2,6 +2,7 @@ package entity
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/value"
@@ -54,7 +55,7 @@ func (d DriverDto) FullName() string {
 
 // TODO (taekyeom) driver 쪽은 그냥 전화번호를 referral code로 리턴
 func (d DriverDto) ReferralCode() string {
-	return d.Phone
+	return strings.TrimPrefix(d.Phone, "010")
 }
 
 type DriverSettlementAccount struct {

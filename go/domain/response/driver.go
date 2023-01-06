@@ -102,7 +102,7 @@ type DriverImageUrlResponse struct {
 type DriverTotalSettlementResponse struct {
 	DriverId                    string `json:"driverId"`
 	TotalAmount                 int    `json:"totalAmount"`
-	TotalAmountWithoutTax       int    `json:"TotalAmountWithoutTax"`
+	TotalAmountWithoutTax       int    `json:"totalAmountWithoutTax"`
 	RequestableAmount           int    `json:"requestableAmount"`
 	RequestableAmountWithoutTax int    `json:"requestableAmountWithoutTax"`
 }
