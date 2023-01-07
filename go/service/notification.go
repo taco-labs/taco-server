@@ -44,6 +44,13 @@ func notificationToFcmMessage(notification value.Notification) *messaging.Messag
 		Token: notification.Principal,
 		Data:  data,
 	}
+	message.Android = &messaging.AndroidConfig{}
+	message.APNS = &messaging.APNSConfig{}
+	message.APNS.Payload = &messaging.APNSPayload{
+		Aps: &messaging.Aps{
+			ContentAvailable: true,
+		},
+	}
 	if notification.Message.Title != "" {
 		message.Notification = &messaging.Notification{
 			Title: notification.Message.Title,
@@ -52,13 +59,13 @@ func notificationToFcmMessage(notification value.Notification) *messaging.Messag
 	}
 
 	if notification.MessageKey != "" {
-		message.Android = &messaging.AndroidConfig{
-			CollapseKey: notification.MessageKey,
+		message.Android.CollapseKey = notification.MessageKey
+		message.Android.Notification = &messaging.AndroidNotification{
+			Tag: notification.MessageKey,
 		}
-		message.APNS = &messaging.APNSConfig{
-			Headers: map[string]string{
-				"apns-collapse-id": notification.MessageKey,
-			},
+
+		message.APNS.Headers = map[string]string{
+			"apns-collapse-id": notification.MessageKey,
 		}
 	}
 
