@@ -175,10 +175,6 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 			}
 		}
 
-		if err := t.repository.taxiCallRequest.CreateTicket(ctx, i, taxiCallTicket); err != nil {
-			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while create new ticket: %w", taxiCallRequest.Id, err)
-		}
-
 		if len(driverTaxiCallContexts) > 0 {
 			// TODO (taekyeom) Tit-for-tat paramter 도 나중엔 configurable 하게 바꿔야 함
 			// - Total entites: query로 부터 최대 몇 개의 entity를 가져 올 것인지
@@ -224,6 +220,10 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 			if err := t.repository.analytics.BatchCreate(ctx, i, ticketDistributionAnalytics); err != nil {
 				return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while create ticket distribution analytics events: %w", taxiCallRequest.Id, err)
 			}
+		}
+
+		if err := t.repository.taxiCallRequest.CreateTicket(ctx, i, taxiCallTicket); err != nil {
+			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while create new ticket: %w", taxiCallRequest.Id, err)
 		}
 
 		taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState,

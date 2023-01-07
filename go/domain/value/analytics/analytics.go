@@ -11,7 +11,7 @@ const (
 
 	EventType_UserTaxiCallRequestFailed EventType = "User_TaxiCallRequestFailed"
 
-	EventType_UserTaxiCallRequestDriverNotAvailable EventType = "User_taxiCallRequestDriverNotAvailable"
+	EventType_UserTaxiCallRequestDriverNotAvailable EventType = "User_TaxiCallRequestDriverNotAvailable"
 
 	EventType_UserReferralPointReceived EventType = "User_ReferralPointReceived"
 

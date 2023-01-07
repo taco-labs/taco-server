@@ -43,8 +43,8 @@ type UserTaxiCallRequestFailedPayload struct {
 	TaxiCallRequestCreateTime time.Time
 }
 
-func (u UserTaxiCallRequestDriverNotAvailablePayload) EventType() EventType {
-	return EventType_UserTaxiCallRequestDriverNotAvailable
+func (u UserTaxiCallRequestFailedPayload) EventType() EventType {
+	return EventType_UserTaxiCallRequestFailed
 }
 
 // TODO (taekyeom) ticket attempt analytics
@@ -56,8 +56,8 @@ type UserTaxiCallRequestDriverNotAvailablePayload struct {
 	TaxiCallRequestCreateTime time.Time
 }
 
-func (u UserTaxiCallRequestFailedPayload) EventType() EventType {
-	return EventType_UserTaxiCallRequestFailed
+func (u UserTaxiCallRequestDriverNotAvailablePayload) EventType() EventType {
+	return EventType_UserTaxiCallRequestDriverNotAvailable
 }
 
 type UserCancelTaxiCallRequestPayload struct {

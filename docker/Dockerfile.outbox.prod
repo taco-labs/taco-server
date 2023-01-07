@@ -6,6 +6,5 @@ FROM gcr.io/distroless/static-debian11
 WORKDIR /
 
 COPY --from=builder /go/src/github.com/taco-labs/taco/main /main
-COPY --from=builder /go/src/github.com/taco-labs/taco/go/templates /go/templates
 
 CMD ["/main"]
