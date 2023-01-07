@@ -192,12 +192,10 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 				return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while upsert driver contexts within radius: %w", taxiCallRequest.Id, err)
 			}
 
-			userCmd := command.NewPushUserTaxiCallCommand(taxiCallRequest, taxiCallTicket, entity.DriverTaxiCallContext{}, receiveTime)
 			driverCmds := slices.Map(driverTaxiCallContexts, func(i entity.DriverTaxiCallContext) entity.Event {
 				return command.NewPushDriverTaxiCallCommand(i.DriverId, taxiCallRequest, taxiCallTicket, i, receiveTime)
 			})
 
-			events = append(events, userCmd)
 			events = append(events, driverCmds...)
 
 			taxiCallTicket.DistributedCount = len(driverTaxiCallContexts)
@@ -226,9 +224,11 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while create new ticket: %w", taxiCallRequest.Id, err)
 		}
 
+		userCmd := command.NewPushUserTaxiCallCommand(taxiCallRequest, taxiCallTicket, entity.DriverTaxiCallContext{}, receiveTime)
+
 		taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState,
 			receiveTime, receiveTime.Add(time.Second*10))
-		events = append(events, taxiCallCmd)
+		events = append(events, taxiCallCmd, userCmd)
 
 		return nil
 	})
