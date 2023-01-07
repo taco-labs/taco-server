@@ -2,21 +2,25 @@ package request
 
 // TODO(taekyeom) validation
 type DriverSignupRequest struct {
-	DriverType                 string `json:"driverType"`
-	FirstName                  string `json:"firstName"`
-	LastName                   string `json:"lastName"`
-	Gender                     string `json:"gender"`
-	Birthday                   string `json:"birthday"`
-	Phone                      string `json:"phone"`
-	AppOs                      string `json:"appOs"`
-	AppVersion                 string `json:"appVersion"`
-	AppFcmToken                string `json:"appFcmToken"`
-	DriverLicenseId            string `json:"driverLicenseId"`
-	SmsVerificationStateKey    string `json:"smsVerificationStateKey"`
-	CompanyRegistrationNumber  string `json:"companyRegistrationNumber"`
-	CompanyName                string `json:"companyName"`
-	CarNumber                  string `json:"carNumber"`
-	CarType                    string `json:"carType"`
+	DriverType                string `json:"driverType"`
+	FirstName                 string `json:"firstName"`
+	LastName                  string `json:"lastName"`
+	Gender                    string `json:"gender"`
+	Birthday                  string `json:"birthday"`
+	Phone                     string `json:"phone"`
+	AppOs                     string `json:"appOs"`
+	AppVersion                string `json:"appVersion"`
+	AppFcmToken               string `json:"appFcmToken"`
+	DriverLicenseId           string `json:"driverLicenseId"`
+	SmsVerificationStateKey   string `json:"smsVerificationStateKey"`
+	CompanyRegistrationNumber string `json:"companyRegistrationNumber"`
+	CompanyName               string `json:"companyName"`
+	// Deprecated: use driver car profile apis
+	TaxiCategory string `json:"taxiCategory"`
+	// Deprecated: use driver car profile apis
+	CarNumber string `json:"carNumber"`
+	// Deprecated: use driver car profile apis
+	CarModel                   string `json:"carModel"`
 	ServiceRegion              string `json:"serviceRegion"`
 	ResidentRegistrationNumber string `json:"residentRegistrationNumber"`
 	ReferralCode               string `json:"referralCode"`
@@ -62,12 +66,15 @@ type ListNonActivatedDriverRequest struct {
 }
 
 type AddCarProfileRequest struct {
-	CarNumber string `json:"carNumber"`
-	CarType   string `json:"carType"`
+	SelectAsProfile bool   `json:"selectAsProfile"`
+	TaxiCategory    string `json:"taxiCategory"`
+	CarNumber       string `json:"carNumber"`
+	CarModel        string `json:"carModel"`
 }
 
 type UpdateCarProfileRequest struct {
-	ProfileId string `param:"carProfileId"`
-	CarNumber string `json:"carNumber"`
-	CarType   string `json:"carType"`
+	TaxiCategory string `json:"taxiCategory"`
+	ProfileId    string `param:"carProfileId"`
+	CarNumber    string `json:"carNumber"`
+	CarModel     string `json:"carModel"`
 }

@@ -236,15 +236,6 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			driverId = utils.MustNewUUID()
 		}
 
-		newDriverCarProfile := entity.DriverCarProfile{
-			Id:         utils.MustNewUUID(),
-			DriverId:   driverId,
-			CarNumber:  req.CarNumber,
-			CarType:    req.CarType,
-			CreateTime: requestTime,
-			UpdateTime: requestTime,
-		}
-
 		newDriverDto = entity.DriverDto{
 			Id:                         driverId,
 			DriverType:                 enum.DriverTypeFromString(req.DriverType),
@@ -258,8 +249,6 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			UserUniqueKey:              req.Phone,
 			DriverLicenseId:            req.DriverLicenseId,
 			CompanyRegistrationNumber:  req.CompanyRegistrationNumber,
-			CarProfileId:               newDriverCarProfile.Id,
-			CarProfile:                 newDriverCarProfile,
 			ServiceRegion:              req.ServiceRegion,
 			DriverLicenseImageUploaded: false,
 			DriverProfileImageUploaded: false,
@@ -270,12 +259,30 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			DeleteTime:                 time.Time{},
 		}
 
-		if err := d.repository.driver.Create(ctx, i, newDriverDto); err != nil {
-			return fmt.Errorf("app.Driver.Signup: error while create driver:%w", err)
-		}
+		if req.CarNumber != "" {
+			newDriverCarProfile := entity.DriverCarProfile{
+				Id:           utils.MustNewUUID(),
+				DriverId:     driverId,
+				TaxiCategory: req.TaxiCategory,
+				CarNumber:    req.CarNumber,
+				CarModel:     req.CarModel,
+				CreateTime:   requestTime,
+				UpdateTime:   requestTime,
+			}
+			newDriverDto.CarProfileId = newDriverCarProfile.Id
+			newDriverDto.CarProfile = newDriverCarProfile
+			if err := d.repository.driver.Create(ctx, i, newDriverDto); err != nil {
+				return fmt.Errorf("app.Driver.Signup: error while create driver:%w", err)
+			}
 
-		if err := d.repository.driver.CreateDriverCarProfile(ctx, i, newDriverCarProfile); err != nil {
-			return fmt.Errorf("app.Driver.Signup: error while create driver car profile:%w", err)
+			if err := d.repository.driver.CreateDriverCarProfile(ctx, i, newDriverCarProfile); err != nil {
+				return fmt.Errorf("app.Driver.Signup: error while create driver car profile:%w", err)
+			}
+
+		} else {
+			if err := d.repository.driver.Create(ctx, i, newDriverDto); err != nil {
+				return fmt.Errorf("app.Driver.Signup: error while create driver:%w", err)
+			}
 		}
 
 		if err := d.repository.driver.CreateDriverRegistrationNumber(ctx, i, entity.DriverResidentRegistrationNumber{
@@ -500,6 +507,10 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 		}
 		if !supportedRegion {
 			return fmt.Errorf("app.Driver.UpdateOnDuty: unsupported service region: %w", value.ErrUnsupportedServiceRegion)
+		}
+
+		if driver.CarProfileId == "" {
+			return fmt.Errorf("app.Driver.UpdateOnDuty: select car profile first: %w", value.ErrCarProfileNotSelected)
 		}
 
 		driver.OnDuty = req.OnDuty

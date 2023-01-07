@@ -104,18 +104,39 @@ func (d driverApp) AddCarProfile(ctx context.Context, req request.AddCarProfileR
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	carProfile := entity.DriverCarProfile{
-		Id:         utils.MustNewUUID(),
-		DriverId:   driverId,
-		CarNumber:  req.CarNumber,
-		CarType:    req.CarType,
-		CreateTime: requestTime,
-		UpdateTime: requestTime,
+		Id:           utils.MustNewUUID(),
+		DriverId:     driverId,
+		Selected:     req.SelectAsProfile,
+		TaxiCategory: req.TaxiCategory,
+		CarNumber:    req.CarNumber,
+		CarModel:     req.CarModel,
+		CreateTime:   requestTime,
+		UpdateTime:   requestTime,
 	}
 
 	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driver, err := d.repository.driver.FindById(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.driver.AddCarProfile: error while get driver: %w", err)
+		}
+
+		if driver.OnDuty {
+			return fmt.Errorf("app.driver.AddCarProfile: add profile is allowed when driver is not on duty: %w", value.ErrNotAllowed)
+		}
+
 		if err := d.repository.driver.CreateDriverCarProfile(ctx, i, carProfile); err != nil {
 			return fmt.Errorf("app.driver.AddCarProfile: error while create car profile: %w", err)
 		}
+
+		if req.SelectAsProfile {
+			driver.CarProfileId = carProfile.Id
+			driver.UpdateTime = requestTime
+
+			if err := d.repository.driver.Update(ctx, i, driver); err != nil {
+				return fmt.Errorf("app.driver.AddCarProfile: error while update driver: %w", err)
+			}
+		}
+
 		return nil
 	})
 
@@ -150,8 +171,9 @@ func (d driverApp) UpdateCarProfile(ctx context.Context, req request.UpdateCarPr
 			return fmt.Errorf("app.driver.UpdateCarProfile: update profile is allowed when driver is not on duty: %w", value.ErrNotAllowed)
 		}
 
+		profile.TaxiCategory = req.TaxiCategory
 		profile.CarNumber = req.CarNumber
-		profile.CarType = req.CarType
+		profile.CarModel = req.CarModel
 		profile.UpdateTime = requestTime
 
 		if err := d.repository.driver.UpdateDriverCarProfile(ctx, i, profile); err != nil {

@@ -24,8 +24,9 @@ type DriverDtoResponse struct {
 	DriverLicenseId            string `json:"driverLicenseId"`
 	CompanyRegistrationNumber  string `json:"companyRegistrationNumber"`
 	CompanyName                string `json:"companyName"`
+	TaxiCategory               string `json:"taxiCategory"`
 	CarNumber                  string `json:"carNumber"`
-	CarType                    string `json:"carType"`
+	CarModel                   string `json:"carModel"`
 	ServiceRegion              string `json:"serviceRegion"`
 	DriverLicenseImageUploaded bool   `json:"driverLicenseImageUploaded"`
 	DriverProfileImageUploaded bool   `json:"driverProfileImageUploaded"`
@@ -42,8 +43,9 @@ func DriverDtoToResponse(driverDto entity.DriverDto) DriverDtoResponse {
 		Phone:                      driverDto.Phone,
 		Gender:                     driverDto.Gender,
 		DriverLicenseId:            driverDto.DriverLicenseId,
+		TaxiCategory:               driverDto.CarProfile.TaxiCategory,
 		CarNumber:                  driverDto.CarProfile.CarNumber,
-		CarType:                    driverDto.CarProfile.CarType,
+		CarModel:                   driverDto.CarProfile.CarModel,
 		ServiceRegion:              driverDto.ServiceRegion,
 		CompanyRegistrationNumber:  driverDto.CompanyRegistrationNumber,
 		CompanyName:                driverDto.CompanyName,
@@ -161,19 +163,21 @@ type ListNonActivatedDriverResponse struct {
 }
 
 type DriverCarProfileResponse struct {
-	Id        string `json:"id"`
-	Selected  bool   `json:"selected"`
-	DriverId  string `json:"driverId"`
-	CarNumber string `json:"carNumber"`
-	CarType   string `json:"carType"`
+	Id           string `json:"id"`
+	Selected     bool   `json:"selected"`
+	DriverId     string `json:"driverId"`
+	TaxiCategory string `json:"taxiCategory"`
+	CarNumber    string `json:"carNumber"`
+	CarModel     string `json:"carModel"`
 }
 
 func DriverCarProfileToResponse(profile entity.DriverCarProfile) DriverCarProfileResponse {
 	return DriverCarProfileResponse{
-		Id:        profile.Id,
-		Selected:  profile.Selected,
-		DriverId:  profile.DriverId,
-		CarNumber: profile.CarNumber,
-		CarType:   profile.CarType,
+		Id:           profile.Id,
+		Selected:     profile.Selected,
+		TaxiCategory: profile.TaxiCategory,
+		DriverId:     profile.DriverId,
+		CarNumber:    profile.CarNumber,
+		CarModel:     profile.CarModel,
 	}
 }

@@ -33,7 +33,7 @@ type DriverDto struct {
 	CompanyRegistrationNumber  string           `bun:"company_registration_number"`
 	CompanyName                string           `bun:"company_name"`
 	ServiceRegion              string           `bun:"service_region"`
-	CarProfileId               string           `bun:"car_profile_id"`
+	CarProfileId               string           `bun:"car_profile_id,nullzero"`
 	CarProfile                 DriverCarProfile `bun:"rel:belongs-to,join:car_profile_id=id"`
 	DriverLicenseImageUploaded bool             `bun:"driver_license_image_uploaded"`
 	DriverProfileImageUploaded bool             `bun:"driver_profile_image_uploaded"`
@@ -92,8 +92,9 @@ type DriverCarProfile struct {
 	Id            string    `bun:"id,pk"`
 	Selected      bool      `bun:"selected,scanonly"`
 	DriverId      string    `bun:"driver_id"`
+	TaxiCategory  string    `bun:"taxi_category"`
 	CarNumber     string    `bun:"car_number"`
-	CarType       string    `bun:"car_type"`
+	CarModel      string    `bun:"car_model"`
 	CreateTime    time.Time `bun:"create_time"`
 	UpdateTime    time.Time `bun:"update_time"`
 }

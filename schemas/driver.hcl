@@ -61,7 +61,7 @@ table "driver" {
 
   column "car_profile_id" {
     type = uuid
-    null = false
+    null = true
   }
 
   column "active" {
@@ -166,12 +166,17 @@ table "driver_car_profile" {
     null = false
   }
 
+  column "taxi_category" {
+    type = text
+    null = true
+  }
+
   column "car_number" {
     type = text
     null = false
   }
 
-  column "car_type" {
+  column "car_model" {
     type = text
     null = false
   }
