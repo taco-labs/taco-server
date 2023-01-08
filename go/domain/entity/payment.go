@@ -42,9 +42,10 @@ type UserPayment struct {
 
 func (u UserPayment) ToSummary() value.PaymentSummary {
 	return value.PaymentSummary{
-		PaymentId:  u.Id,
-		Company:    u.CardCompany,
-		CardNumber: u.RedactedCardNumber,
+		PaymentId:   u.Id,
+		Company:     u.CardCompany,
+		CardNumber:  u.RedactedCardNumber,
+		LastUseTime: u.LastUseTime,
 	}
 }
 

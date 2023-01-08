@@ -8,9 +8,10 @@ import (
 )
 
 type PaymentSummaryResponse struct {
-	PaymentId  string `json:"paymentId"`
-	Company    string `json:"company"`
-	CardNumber string `json:"cardNumber"`
+	PaymentId   string    `json:"paymentId"`
+	Company     string    `json:"company"`
+	CardNumber  string    `json:"cardNumber"`
+	LastUseTime time.Time `json:"lastUseTime"`
 }
 
 type UserTaxiCallRequestResponse struct {
@@ -51,9 +52,10 @@ type DriverTaxiCallRequestPageResponse struct {
 
 func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummaryResponse {
 	return PaymentSummaryResponse{
-		PaymentId:  paymentSummary.PaymentId,
-		Company:    paymentSummary.Company,
-		CardNumber: paymentSummary.CardNumber,
+		PaymentId:   paymentSummary.PaymentId,
+		Company:     paymentSummary.Company,
+		CardNumber:  paymentSummary.CardNumber,
+		LastUseTime: paymentSummary.LastUseTime,
 	}
 }
 
