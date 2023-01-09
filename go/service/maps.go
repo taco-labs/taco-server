@@ -69,13 +69,13 @@ func (n nhnMapsService) SearchLocation(ctx context.Context, point value.Point, k
 		Get(searchLocationPath)
 
 	if err != nil {
-		return []value.LocationSummary{}, 0, fmt.Errorf("%w: error from nhn maps api: %v", value.ErrExternal, err)
+		return []value.LocationSummary{}, pageToken, fmt.Errorf("%w: error from nhn maps api: %v", value.ErrExternal, err)
 	}
 
 	nhnMapsSearchResp := resp.Result().(*nhnMapsSearchLocationResponse)
 
 	if err := nhnMapsSearchResp.Err(); err != nil {
-		return []value.LocationSummary{}, 0, err
+		return []value.LocationSummary{}, pageToken, err
 	}
 
 	var nextPageToken int

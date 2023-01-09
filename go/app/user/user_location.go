@@ -31,11 +31,8 @@ func (u userApp) SearchLocation(ctx context.Context, req request.SearchLocationR
 		Latitude:  req.Latitude,
 		Longitude: req.Longitude,
 	}
-	resp, pageToken, err := u.service.mapService.SearchLocation(ctx, point, req.Keyword, req.PageToken, req.PageCount)
-
-	if err != nil {
-		return []value.LocationSummary{}, pageToken, fmt.Errorf("app.user.SearchLocation: error from search location: %w", err)
-	}
+	// TOOD (taekyeom) suppress error as client could not correctly handle error
+	resp, pageToken, _ := u.service.mapService.SearchLocation(ctx, point, req.Keyword, req.PageToken, req.PageCount)
 
 	return resp, pageToken, nil
 }
