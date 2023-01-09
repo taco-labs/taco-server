@@ -254,7 +254,48 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 	var driverLatestTaxiCallRequest entity.DriverLatestTaxiCallRequest
 
+	var driverLocation value.Point
+	var departurePoint value.Point
+
 	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get taxi call context:%w", err)
+		}
+		if driverTaxiCallContext.LastReceivedRequestTicket != ticketId {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: invalid ticket id: %w", value.ErrInvalidOperation)
+		}
+
+		receivedTicket, err := t.repository.taxiCallRequest.GetTicketById(ctx, i, ticketId)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get taxi call ticket:%w", err)
+		}
+
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, receivedTicket.TaxiCallRequestId)
+		if err != nil {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get taxi call request:%w", err)
+		}
+
+		if !taxiCallRequest.CurrentState.Requested() {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: already expired taxi call request:%w", value.ErrAlreadyExpiredCallRequest)
+		}
+
+		departurePoint = taxiCallRequest.Departure.Point
+		driverLocation = driverTaxiCallContext.Location
+
+		return nil
+	})
+
+	if err != nil {
+		return entity.DriverLatestTaxiCallRequest{}, nil
+	}
+
+	routeToDeparture, err := t.service.mapService.GetRoute(ctx, driverLocation, departurePoint)
+	if err != nil {
+		return entity.DriverLatestTaxiCallRequest{}, fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get route between departure:%w", err)
+	}
+
+	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// TODO(taeykeom) Do we need check on duty & last call request?
 		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
 		if err != nil {
@@ -290,12 +331,6 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 
 		if err := taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_DRIVER_TO_DEPARTURE); err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: invalid state change:%w", err)
-		}
-
-		// TODO (taekyeom) call outside of transaction
-		routeToDeparture, err := t.service.mapService.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
-		if err != nil {
-			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get route between departure:%w", err)
 		}
 
 		taxiCallRequest.AdditionalPrice = actualTicket.AdditionalPrice
