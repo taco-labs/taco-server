@@ -488,6 +488,18 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 			return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while create analytics event: %w", err)
 		}
 
+		if taxiCallRequest.PaymentSummary.PaymentType == enum.PaymentType_SignupPromition {
+			userPayment, err := t.service.payment.GetUserPayment(ctx, taxiCallRequest.UserId, taxiCallRequest.PaymentSummary.PaymentId)
+			if err != nil {
+				return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while get user payment: %w", err)
+			}
+			userPayment.Invalid = false
+			userPayment.InvalidErrorMessage = ""
+			if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
+				return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while update user payment: %w", err)
+			}
+		}
+
 		return nil
 	})
 }

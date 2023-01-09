@@ -22,6 +22,11 @@ func (c CreateTaxiCallRequest) Validate() error {
 	if utf8.RuneCountInString(c.UserTag) > 20 {
 		return value.ErrUserTagTooLong
 	}
+
+	if c.MinAdditionalPrice > c.MaxAdditionalPrice {
+		return value.ErrInvalidAdditionalPriceRange
+	}
+
 	return nil
 }
 

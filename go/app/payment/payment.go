@@ -179,11 +179,6 @@ func (u paymentApp) GetUserPayment(ctx context.Context, userId string, userPayme
 		return entity.UserPayment{}, err
 	}
 
-	if userPayment.Invalid {
-		err = value.NewTacoError(value.ERR_INVALID_USER_PAYMENT, userPayment.InvalidErrorMessage)
-		return entity.UserPayment{}, fmt.Errorf("app.userPayment.GetUserPayment: invalid user payment: %w", err)
-	}
-
 	return userPayment, nil
 }
 

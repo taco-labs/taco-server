@@ -2,6 +2,8 @@ package value
 
 import (
 	"time"
+
+	"github.com/taco-labs/taco/go/domain/value/enum"
 )
 
 type PaymentRegistrationRequestParam struct {
@@ -32,11 +34,11 @@ type PaymentCancel struct {
 }
 
 type PaymentSummary struct {
-	PaymentId   string    `json:"paymentId"`
-	PaymentType string    `json:"paymentType"`
-	Company     string    `json:"company"`
-	CardNumber  string    `json:"cardNumber"`
-	LastUseTime time.Time `json:"lastUseTime"`
+	PaymentId   string           `json:"paymentId"`
+	PaymentType enum.PaymentType `json:"paymentType"`
+	Company     string           `json:"company"`
+	CardNumber  string           `json:"cardNumber"`
+	LastUseTime time.Time        `json:"lastUseTime"`
 }
 
 type CardPaymentInfo struct {

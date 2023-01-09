@@ -11,6 +11,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
 )
@@ -75,11 +76,11 @@ func (p paymentApp) handleTransactionRequest(ctx context.Context, event entity.E
 		return err
 	}
 
-	if userPayment.MockPayment() {
+	if userPayment.PaymentType == enum.PaymentType_Mock || userPayment.PaymentType == enum.PaymentType_SignupPromition {
 		// orderId, paymentKey, receiptUrl string, createTime time.Time
 		successCmd := command.NewUserPaymentTransactionSuccessCommand(
 			transactionRequest.OrderId,
-			"mock-payment-key",
+			"",
 			"",
 			event.CreateTime,
 		)
@@ -148,12 +149,18 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 		if err != nil {
 			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to get user payment: %w", err)
 		}
-		if userPayment.MockPayment() {
+
+		switch userPayment.PaymentType {
+		case enum.PaymentType_Mock:
 			if err := p.AddUserPaymentPoint(ctx, transactionRequest.UserId, transactionRequest.UsedPoint); err != nil {
 				return fmt.Errorf("app.payment.handleTransactionSuccess: failed to cancel user used point for mock payment: %w", err)
 			}
 
 			return nil
+		case enum.PaymentType_SignupPromition:
+			if err := p.repository.payment.DeleteUserPayment(ctx, i, userPayment.Id); err != nil {
+				return fmt.Errorf("app.payment.handleTransactionSuccess: failed to delete user promotion payment: %w", err)
+			}
 		}
 
 		userReferralReward, err := p.ApplyUserReferralReward(ctx, transactionRequest.UserId, transactionRequest.OrderId, transactionRequest.Amount)

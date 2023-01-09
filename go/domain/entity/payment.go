@@ -12,6 +12,8 @@ import (
 const (
 	MinimumPointToUse = 1000
 	MinimumPriceToPay = 100
+
+	SignupPromotionMaxAdditionalPrice = 10000
 )
 
 type UserPaymentRegistrationRequest struct {
@@ -42,15 +44,11 @@ type UserPayment struct {
 func (u UserPayment) ToSummary() value.PaymentSummary {
 	return value.PaymentSummary{
 		PaymentId:   u.Id,
-		PaymentType: string(u.PaymentType),
+		PaymentType: u.PaymentType,
 		Company:     u.CardCompany,
 		CardNumber:  u.RedactedCardNumber,
 		LastUseTime: u.LastUseTime,
 	}
-}
-
-func (u UserPayment) MockPayment() bool {
-	return u.PaymentType == enum.PaymentType_Mock
 }
 
 func NewUserPayment(id, userId, cardCompany, cardNumber, billingKey string, requestTime time.Time) UserPayment {

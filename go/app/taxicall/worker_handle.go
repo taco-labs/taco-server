@@ -399,20 +399,6 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 			}
 		}
 
-		if taxiCallRequest.CancelPenaltyPrice > 0 {
-			events = append(events, command.NewUserPaymentTransactionRequestCommand(
-				taxiCallRequest.UserId,
-				taxiCallRequest.PaymentSummary.PaymentId,
-				taxiCallRequest.Id,
-				"타코 택시 취소 수수료",
-				taxiCallRequest.DriverId.String,
-				taxiCallRequest.CancelPenaltyPrice,
-				0,
-				taxiCallRequest.DriverSettlementCancelPenaltyPrice(),
-				false,
-			))
-		}
-
 		return nil
 	})
 

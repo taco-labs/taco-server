@@ -216,10 +216,6 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while get user payment: %w", err)
 		}
-		userPayment.LastUseTime = requestTime
-		if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
-			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while update user payment: %w", err)
-		}
 
 		taxiCallRequest = entity.TaxiCallRequest{
 			Dryrun:         req.Dryrun,
@@ -246,6 +242,19 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User
 			UpdateTime:                requestTime,
 		}
 
+		if err := entity.CheckPaymentForTaxiCallRequest(taxiCallRequest, userPayment); err != nil {
+			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while check payment: %w", err)
+		}
+
+		userPayment.LastUseTime = requestTime
+		// TODO (taekyeom) centralize promotion payment operations...
+		if userPayment.PaymentType == enum.PaymentType_SignupPromition {
+			userPayment.Invalid = true
+			userPayment.InvalidErrorMessage = "이미 사용한 프로모션입니다"
+		}
+		if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
+			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while update user payment: %w", err)
+		}
 		if err = t.repository.taxiCallRequest.Create(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call request:%w", err)
 		}
@@ -330,6 +339,32 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 			taxiCallRequest.UpdateTime,
 			taxiCallRequest.UpdateTime,
 		))
+
+		if taxiCallRequest.CancelPenaltyPrice == 0 && taxiCallRequest.PaymentSummary.PaymentType == enum.PaymentType_SignupPromition {
+			userPayment, err := t.service.payment.GetUserPayment(ctx, taxiCallRequest.UserId, taxiCallRequest.PaymentSummary.PaymentId)
+			if err != nil {
+				return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while get user payment: %w", err)
+			}
+			userPayment.Invalid = false
+			userPayment.InvalidErrorMessage = ""
+			if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
+				return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while update user payment: %w", err)
+			}
+		}
+
+		if taxiCallRequest.CancelPenaltyPrice > 0 {
+			events = append(events, command.NewUserPaymentTransactionRequestCommand(
+				taxiCallRequest.UserId,
+				taxiCallRequest.PaymentSummary.PaymentId,
+				taxiCallRequest.Id,
+				"타코 택시 취소 수수료",
+				taxiCallRequest.DriverId.String,
+				taxiCallRequest.CancelPenaltyPrice,
+				0,
+				taxiCallRequest.DriverSettlementCancelPenaltyPrice(),
+				false,
+			))
+		}
 
 		if err := t.repository.event.BatchCreate(ctx, i, events); err != nil {
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call process event: %w", err)
