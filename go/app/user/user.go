@@ -34,7 +34,7 @@ type taxiCallInterface interface {
 	ListTags(context.Context) ([]value.Tag, error)
 	ListUserTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	LatestUserTaxiCallRequest(context.Context, string) (entity.UserLatestTaxiCallRequest, error)
-	CreateTaxiCallRequest(context.Context, string, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
+	CreateTaxiCallRequest(context.Context, entity.User, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	UserCancelTaxiCallRequest(context.Context, string, request.CancelTaxiCallRequest) error
 }
 
@@ -76,8 +76,8 @@ func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVeri
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	var smsVerification entity.SmsVerification
-	if req.Phone == entity.MockAccountPhone {
-		smsVerification = entity.NewMockSmsVerification(req.StateKey, requestTime)
+	if value.IsMockPhoneNumber(req.Phone) {
+		smsVerification = entity.NewMockSmsVerification(req.StateKey, requestTime, req.Phone)
 	} else {
 		verificationCode, err := u.service.smsSender.SendSmsVerification(ctx, req.Phone)
 		if err != nil {
@@ -189,12 +189,7 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 		}
 
 		// TODO (taekyeom) mock account seperation
-		var userId string
-		if smsVerification.MockAccountPhone() {
-			userId = value.MockUserId
-		} else {
-			userId = utils.MustNewUUID()
-		}
+		userId := utils.MustNewUUID()
 
 		// create user
 		newUser = entity.User{

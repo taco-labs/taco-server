@@ -11,8 +11,6 @@ import (
 const (
 	MinimumPointToUse = 1000
 	MinimumPriceToPay = 100
-
-	mockBillingKey = "mock-billing-key"
 )
 
 type UserPaymentRegistrationRequest struct {
@@ -50,7 +48,7 @@ func (u UserPayment) ToSummary() value.PaymentSummary {
 }
 
 func (u UserPayment) MockPayment() bool {
-	return u.BillingKey == mockBillingKey
+	return value.IsMockPayment(u.BillingKey)
 }
 
 func NewMockPayment(userId string, requestTime time.Time) UserPayment {
@@ -60,7 +58,7 @@ func NewMockPayment(userId string, requestTime time.Time) UserPayment {
 		Name:               "Mock Payment",
 		CardCompany:        "Taco",
 		RedactedCardNumber: "1234xxxxxxxx1234",
-		BillingKey:         mockBillingKey,
+		BillingKey:         value.MockBillingKey,
 		Invalid:            false,
 		CreateTime:         requestTime,
 		LastUseTime:        requestTime,

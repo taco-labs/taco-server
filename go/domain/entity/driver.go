@@ -46,7 +46,7 @@ type DriverDto struct {
 }
 
 func (d DriverDto) MockAccount() bool {
-	return d.Id == value.MockDriverId
+	return value.IsMockPhoneNumber(d.Phone)
 }
 
 func (d DriverDto) FullName() string {

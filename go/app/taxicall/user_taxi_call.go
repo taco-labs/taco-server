@@ -102,7 +102,7 @@ func (t taxicallApp) LatestUserTaxiCallRequest(ctx context.Context, userId strin
 	return latestTaxiCallRequest, nil
 }
 
-func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, req request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error) {
+func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User, req request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	tags, err := slices.MapErr(req.TagIds, value.GetTagById)
@@ -113,7 +113,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 	// First, check latest taxiCallRequest is active
 	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// check latest call
-		latestTaxiCallRequest, err := t.repository.taxiCallRequest.GetLatestByUserId(ctx, i, userId)
+		latestTaxiCallRequest, err := t.repository.taxiCallRequest.GetLatestByUserId(ctx, i, user.Id)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while get latest taxi call:\n%w", err)
 		}
@@ -158,7 +158,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 		return entity.TaxiCallRequest{}, fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while get %w", err)
 	}
 
-	isMockUser := userId == value.MockUserId // TODO (taekyeom) seperate service...
+	isMockUser := user.MockAccount()
 
 	departureAvailableRegion, err := t.service.userServiceRegionChecker.CheckAvailableServiceRegion(ctx, departure.ServiceRegion)
 	if err != nil {
@@ -184,7 +184,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 		maxAdditionalPrice := 10000
 		taxiCallRequest := entity.TaxiCallRequest{
 			Dryrun:         req.Dryrun,
-			UserId:         userId,
+			UserId:         user.Id,
 			ToArrivalRoute: route,
 			Departure: value.Location{
 				Point:   req.Departure,
@@ -212,7 +212,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 
 	err = t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// create taxi call request
-		userPayment, err := t.service.payment.GetUserPayment(ctx, userId, req.PaymentId)
+		userPayment, err := t.service.payment.GetUserPayment(ctx, user.Id, req.PaymentId)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while get user payment: %w", err)
 		}
@@ -225,7 +225,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, userId string, r
 			Dryrun:         req.Dryrun,
 			ToArrivalRoute: route,
 			Id:             utils.MustNewUUID(),
-			UserId:         userId,
+			UserId:         user.Id,
 			Departure: value.Location{
 				Point:   req.Departure,
 				Address: departure,

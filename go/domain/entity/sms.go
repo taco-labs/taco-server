@@ -3,11 +3,8 @@ package entity
 import (
 	"time"
 
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/uptrace/bun"
-)
-
-var (
-	MockAccountPhone = "01000000000"
 )
 
 type SmsVerification struct {
@@ -21,7 +18,7 @@ type SmsVerification struct {
 }
 
 func (s SmsVerification) MockAccountPhone() bool {
-	return s.Phone == MockAccountPhone
+	return value.IsMockPhoneNumber(s.Phone)
 }
 
 func NewSmsVerification(id string, verificationCode string, currentTime time.Time, phone string) SmsVerification {
@@ -34,12 +31,12 @@ func NewSmsVerification(id string, verificationCode string, currentTime time.Tim
 	}
 }
 
-func NewMockSmsVerification(id string, currentTime time.Time) SmsVerification {
+func NewMockSmsVerification(id string, currentTime time.Time, phone string) SmsVerification {
 	return SmsVerification{
 		Id:               id,
 		VerificationCode: "000000",
 		Verified:         false,
 		ExpireTime:       currentTime.Add(time.Minute * 3),
-		Phone:            MockAccountPhone,
+		Phone:            phone,
 	}
 }

@@ -1,8 +1,16 @@
 package value
 
-import "github.com/google/uuid"
-
 var (
-	MockDriverId = uuid.Nil.String()
-	MockUserId   = uuid.UUID([16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}).String()
+	MockAccountPhoneStart = "01000000000"
+	MockAccountPhoneEnd   = "01000010000"
+
+	MockBillingKey = "mock-billing-key"
 )
+
+func IsMockPhoneNumber(phone string) bool {
+	return phone >= MockAccountPhoneStart && phone < MockAccountPhoneEnd
+}
+
+func IsMockPayment(billingKey string) bool {
+	return billingKey == MockBillingKey
+}

@@ -35,5 +35,5 @@ func (u User) ReferralCode() string {
 }
 
 func (u User) MockAccount() bool {
-	return u.Id == value.MockUserId
+	return value.IsMockPhoneNumber(u.Phone)
 }

@@ -99,8 +99,8 @@ func (d driverApp) SmsVerificationRequest(ctx context.Context, req request.SmsVe
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	var smsVerification entity.SmsVerification
-	if req.Phone == entity.MockAccountPhone {
-		smsVerification = entity.NewMockSmsVerification(req.StateKey, requestTime)
+	if value.IsMockPhoneNumber(req.Phone) {
+		smsVerification = entity.NewMockSmsVerification(req.StateKey, requestTime, req.Phone)
 	} else {
 		verificationCode, err := d.service.smsSender.SendSmsVerification(ctx, req.Phone)
 		if err != nil {
@@ -228,13 +228,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			return fmt.Errorf("app.Driver.Signup: not verified phone:\n%w", value.ErrInvalidOperation)
 		}
 
-		// TODO (taekyeom) mock account seperation
-		var driverId string
-		if smsVerification.MockAccountPhone() {
-			driverId = value.MockDriverId
-		} else {
-			driverId = utils.MustNewUUID()
-		}
+		driverId := utils.MustNewUUID()
 
 		newDriverDto = entity.DriverDto{
 			Id:                         driverId,

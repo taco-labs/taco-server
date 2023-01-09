@@ -9,6 +9,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/utils"
+	"github.com/uptrace/bun"
 )
 
 func (u userApp) ListTags(ctx context.Context) ([]value.Tag, error) {
@@ -29,8 +30,22 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 	}
 
 	userId := utils.GetUserId(ctx)
+	var user entity.User
 
-	taxiCallRequest, err := u.service.taxiCall.CreateTaxiCallRequest(ctx, userId, req)
+	err := u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		u, err := u.repository.user.FindById(ctx, i, userId)
+		if err != nil {
+			return fmt.Errorf("app.user.CreateTaxiCallRequest: error while get user: %w", err)
+		}
+		user = u
+		return nil
+	})
+
+	if err != nil {
+		return entity.TaxiCallRequest{}, err
+	}
+
+	taxiCallRequest, err := u.service.taxiCall.CreateTaxiCallRequest(ctx, user, req)
 	if err != nil {
 		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while create taxi call request:%w", err)
 	}
