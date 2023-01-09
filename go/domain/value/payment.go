@@ -1,6 +1,8 @@
 package value
 
-import "time"
+import (
+	"time"
+)
 
 type PaymentRegistrationRequestParam struct {
 	RequestId       int
@@ -31,6 +33,7 @@ type PaymentCancel struct {
 
 type PaymentSummary struct {
 	PaymentId   string    `json:"paymentId"`
+	PaymentType string    `json:"paymentType"`
 	Company     string    `json:"company"`
 	CardNumber  string    `json:"cardNumber"`
 	LastUseTime time.Time `json:"lastUseTime"`

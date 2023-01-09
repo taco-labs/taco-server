@@ -11,7 +11,7 @@ table "user_payment" {
     null = false
   }
 
-  column "name" {
+  column "payment_type" {
     type = text
     null = false
   }
@@ -340,5 +340,31 @@ table "user_payment_point" {
     ]
     on_delete = CASCADE
     on_update = NO_ACTION
+  }
+}
+
+// TODO (taekyeom) make it as datafile
+table "user_payment_promotion" {
+  schema = schema.taco
+
+  column "payment_type" {
+    type = text
+    null = false
+  }
+
+  column "count" {
+    type = int
+    null = false
+  }
+
+  column "count_limit" {
+    type = int
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.payment_type,
+    ]
   }
 }

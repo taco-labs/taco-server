@@ -12,8 +12,8 @@ func NewPaymentFallbackNotification(
 	failedUserPayment entity.UserPayment, fallbackUserPayment entity.UserPayment,
 ) entity.Event {
 	messageTitle := "타코 서비스에 대한 이용 요금 결제에 실패했습니다."
-	messageBody := fmt.Sprintf("결제 수단 %s 대신 등록한 다른 결제 수단 (%s) 으로 결제를 시도합니다.",
-		failedUserPayment.Name, fallbackUserPayment.Name)
+	messageBody := fmt.Sprintf("결제 수단 (%s: %s) 대신 등록한 다른 결제 수단 (%s: %s) 으로 결제를 시도합니다.",
+		failedUserPayment.CardCompany, failedUserPayment.RedactedCardNumber, fallbackUserPayment.CardCompany, fallbackUserPayment.RedactedCardNumber)
 
 	return command.NewRawMessageCommand(failedUserPayment.UserId, value.NotificationCategory_Payment, messageTitle, messageBody, map[string]string{})
 }

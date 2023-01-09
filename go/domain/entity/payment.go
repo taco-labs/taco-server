@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
 )
@@ -25,22 +26,23 @@ type UserPaymentRegistrationRequest struct {
 type UserPayment struct {
 	bun.BaseModel `bun:"table:user_payment"`
 
-	Id                  string    `bun:"id,pk"`
-	UserId              string    `bun:"user_id"`
-	Name                string    `bun:"name"`
-	CardCompany         string    `bun:"card_company"`
-	RedactedCardNumber  string    `bun:"redacted_card_number"`
-	BillingKey          string    `bun:"billing_key"`
-	Invalid             bool      `bun:"invalid"`
-	InvalidErrorCode    string    `bun:"invalid_error_code"`
-	InvalidErrorMessage string    `bun:"invalid_error_message"`
-	CreateTime          time.Time `bun:"create_time"`
-	LastUseTime         time.Time `bun:"last_use_time"`
+	Id                  string           `bun:"id,pk"`
+	UserId              string           `bun:"user_id"`
+	PaymentType         enum.PaymentType `bun:"payment_type"`
+	CardCompany         string           `bun:"card_company"`
+	RedactedCardNumber  string           `bun:"redacted_card_number"`
+	BillingKey          string           `bun:"billing_key"`
+	Invalid             bool             `bun:"invalid"`
+	InvalidErrorCode    string           `bun:"invalid_error_code"`
+	InvalidErrorMessage string           `bun:"invalid_error_message"`
+	CreateTime          time.Time        `bun:"create_time"`
+	LastUseTime         time.Time        `bun:"last_use_time"`
 }
 
 func (u UserPayment) ToSummary() value.PaymentSummary {
 	return value.PaymentSummary{
 		PaymentId:   u.Id,
+		PaymentType: string(u.PaymentType),
 		Company:     u.CardCompany,
 		CardNumber:  u.RedactedCardNumber,
 		LastUseTime: u.LastUseTime,
@@ -48,17 +50,45 @@ func (u UserPayment) ToSummary() value.PaymentSummary {
 }
 
 func (u UserPayment) MockPayment() bool {
-	return value.IsMockPayment(u.BillingKey)
+	return u.PaymentType == enum.PaymentType_Mock
+}
+
+func NewUserPayment(id, userId, cardCompany, cardNumber, billingKey string, requestTime time.Time) UserPayment {
+	return UserPayment{
+		Id:                 id,
+		UserId:             userId,
+		PaymentType:        enum.PaymentType_Card,
+		CardCompany:        cardCompany,
+		RedactedCardNumber: cardCompany,
+		BillingKey:         billingKey,
+		Invalid:            false,
+		CreateTime:         requestTime,
+		LastUseTime:        requestTime,
+	}
+}
+
+func NewSignupPromotionPayment(userId string, requestTime time.Time) UserPayment {
+	return UserPayment{
+		Id:                 utils.MustNewUUID(),
+		UserId:             userId,
+		PaymentType:        enum.PaymentType_SignupPromition,
+		CardCompany:        "쿠폰",
+		RedactedCardNumber: "타코 첫 가입 이용료 할인 쿠폰",
+		BillingKey:         "",
+		Invalid:            false,
+		CreateTime:         requestTime,
+		LastUseTime:        requestTime,
+	}
 }
 
 func NewMockPayment(userId string, requestTime time.Time) UserPayment {
 	return UserPayment{
 		Id:                 utils.MustNewUUID(),
 		UserId:             userId,
-		Name:               "Mock Payment",
+		PaymentType:        enum.PaymentType_Mock,
 		CardCompany:        "Taco",
 		RedactedCardNumber: "1234xxxxxxxx1234",
-		BillingKey:         value.MockBillingKey,
+		BillingKey:         "",
 		Invalid:            false,
 		CreateTime:         requestTime,
 		LastUseTime:        requestTime,
@@ -141,4 +171,20 @@ func (u *UserPaymentPoint) UsePoint(price int) int {
 
 func (u *UserPaymentPoint) AddPoint(point int) {
 	u.Point += point
+}
+
+type UserPaymentPromotion struct {
+	bun.BaseModel `bun:"table:user_payment_promotion"`
+	PaymentType   enum.PaymentType `bun:"payment_type,pk"`
+	Count         int              `bun:"count"`
+	CountLimit    int              `bun:"count_limit"`
+}
+
+func (u *UserPaymentPromotion) Apply() bool {
+	if u.Count == u.CountLimit {
+		return false
+	}
+
+	u.Count += 1
+	return true
 }

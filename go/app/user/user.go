@@ -51,6 +51,7 @@ type userPaymentInterface interface {
 	CreateUserPaymentPoint(ctx context.Context, userPaymentPoint entity.UserPaymentPoint) error
 	GetUserPaymentPoint(ctx context.Context, userId string) (entity.UserPaymentPoint, error)
 	CreateUserReferral(ctx context.Context, fromUserId string, toUserId string) error
+	ApplyPaymentPromotion(ctx context.Context, userId string, paymentType enum.PaymentType) error
 }
 
 type userApp struct {
@@ -235,6 +236,10 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			mockPayment := entity.NewMockPayment(newUser.Id, requestTime)
 			if err := u.service.userPayment.CreateUserPayment(ctx, mockPayment); err != nil {
 				return fmt.Errorf("app.User.Signup: error while create mock payment: %w", err)
+			}
+		} else {
+			if err := u.service.userPayment.ApplyPaymentPromotion(ctx, newUser.Id, enum.PaymentType_SignupPromition); err != nil {
+				return fmt.Errorf("app.User.Signup: error while apply user promotion payment: %w", err)
 			}
 		}
 

@@ -47,7 +47,6 @@ type UserSignupResponse struct {
 type UserPaymentResponse struct {
 	Id                  string    `json:"id"`
 	UserId              string    `json:"userId"`
-	Name                string    `json:"name"`
 	CardCompany         string    `json:"cardCompany"`
 	RedactedCardNumber  string    `json:"redactedCardNumber"`
 	Invalid             bool      `json:"invalid"`
@@ -59,7 +58,6 @@ func UserPaymentToResponse(userPayment entity.UserPayment) UserPaymentResponse {
 	return UserPaymentResponse{
 		Id:                  userPayment.Id,
 		UserId:              userPayment.UserId,
-		Name:                userPayment.Name,
 		CardCompany:         userPayment.CardCompany,
 		RedactedCardNumber:  userPayment.RedactedCardNumber,
 		Invalid:             userPayment.Invalid,

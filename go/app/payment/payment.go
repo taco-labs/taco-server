@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -12,6 +11,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/analytics"
+	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
@@ -99,17 +99,14 @@ func (u paymentApp) RegistrationCallback(ctx context.Context, req request.Paymen
 
 		paymentRegistrationRequest = registrationRequest
 
-		userPayment = entity.UserPayment{
-			Id:                 registrationRequest.PaymentId,
-			UserId:             registrationRequest.UserId,
-			CardCompany:        req.CardCompany,
-			RedactedCardNumber: req.CardNumber,
-			BillingKey:         req.BillingKey,
-			Invalid:            false,
-			CreateTime:         requestTime,
-			LastUseTime:        time.Time{},
-		}
-
+		userPayment = entity.NewUserPayment(
+			registrationRequest.PaymentId,
+			registrationRequest.UserId,
+			req.CardCompany,
+			req.CardNumber,
+			req.BillingKey,
+			requestTime,
+		)
 		if err := u.repository.payment.CreateUserPayment(ctx, i, userPayment); err != nil {
 			return fmt.Errorf("app.payment.RegistrationCallback: error while create user payment: %w", err)
 		}
@@ -541,4 +538,30 @@ func (p paymentApp) ApplyDriverReferralReward(ctx context.Context, driverId, ord
 	}
 
 	return referralReward, nil
+}
+
+func (p paymentApp) ApplyPaymentPromotion(ctx context.Context, userId string, paymentType enum.PaymentType) error {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		promotion, err := p.repository.payment.GetUserPaymentPromotion(ctx, i, paymentType)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.payment.ApplyPaymentPromotion: error while get promotion info: %w", err)
+		}
+		if errors.Is(err, value.ErrNotFound) {
+			return nil
+		}
+
+		if promotion.Apply() {
+			promotionPayment := entity.NewSignupPromotionPayment(userId, requestTime)
+			if err := p.repository.payment.CreateUserPayment(ctx, i, promotionPayment); err != nil {
+				return fmt.Errorf("app.payment.ApplyPaymentPromotion: error while create promotion payment: %w", err)
+			}
+
+			if err := p.repository.payment.UpdateUserPaymentPromotion(ctx, i, promotion); err != nil {
+				return fmt.Errorf("app.payment.ApplyPaymentPromotion: error while update promotion: %w", err)
+			}
+		}
+
+		return nil
+	})
 }

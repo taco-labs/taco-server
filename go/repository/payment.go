@@ -8,6 +8,7 @@ import (
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/uptrace/bun"
 )
 
@@ -41,6 +42,9 @@ type PaymentRepository interface {
 	GetUserPaymentPoint(context.Context, bun.IDB, string) (entity.UserPaymentPoint, error)
 	CreateUserPaymentPoint(context.Context, bun.IDB, entity.UserPaymentPoint) error
 	UpdateUserPaymentPoint(context.Context, bun.IDB, entity.UserPaymentPoint) error
+
+	GetUserPaymentPromotion(context.Context, bun.IDB, enum.PaymentType) (entity.UserPaymentPromotion, error)
+	UpdateUserPaymentPromotion(context.Context, bun.IDB, entity.UserPaymentPromotion) error
 }
 
 type userPaymentRepository struct{}
@@ -380,6 +384,38 @@ func (u userPaymentRepository) UpdateUserPaymentPoint(ctx context.Context, db bu
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (u userPaymentRepository) GetUserPaymentPromotion(ctx context.Context, db bun.IDB, paymentType enum.PaymentType) (entity.UserPaymentPromotion, error) {
+	resp := entity.UserPaymentPromotion{PaymentType: paymentType}
+
+	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
+	if errors.Is(err, sql.ErrNoRows) {
+		return resp, value.ErrNotFound
+	}
+	if err != nil {
+		return resp, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (u userPaymentRepository) UpdateUserPaymentPromotion(ctx context.Context, db bun.IDB, paymentPromotion entity.UserPaymentPromotion) error {
+	res, err := db.NewUpdate().Model(&paymentPromotion).WherePK().Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
