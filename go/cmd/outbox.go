@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"runtime"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -18,6 +19,7 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/extra/bundebug"
+	_ "go.uber.org/automaxprocs"
 	"go.uber.org/zap"
 	"gocloud.dev/pubsub/awssnssqs"
 )
@@ -44,6 +46,9 @@ func RunOutbox(ctx context.Context, outboxConfig config.OutboxConfig, logger *za
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 
 	db := bun.NewDB(sqldb, pgdialect.New())
+	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
+	sqldb.SetMaxOpenConns(maxOpenConns)
+	sqldb.SetMaxIdleConns(maxOpenConns)
 
 	if outboxConfig.Log.Query {
 		hook := bundebug.NewQueryHook(bundebug.WithVerbose(false))

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 
 	firebase "firebase.google.com/go"
@@ -41,6 +42,7 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/extra/bundebug"
+	_ "go.uber.org/automaxprocs"
 	"go.uber.org/zap"
 	"gocloud.dev/pubsub/awssnssqs"
 	firebasepubsub "gocloud.dev/pubsub/firebase"
@@ -66,6 +68,9 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 
 	// TODO (taekyeom) connection pool parameter?
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
+	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
+	sqldb.SetMaxOpenConns(maxOpenConns)
+	sqldb.SetMaxIdleConns(maxOpenConns)
 
 	db := bun.NewDB(sqldb, pgdialect.New())
 

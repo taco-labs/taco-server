@@ -22,6 +22,7 @@ require (
 	github.com/uptrace/bun/dialect/pgdialect v1.1.7
 	github.com/uptrace/bun/driver/pgdriver v1.1.7
 	github.com/uptrace/bun/extra/bundebug v1.1.7
+	go.uber.org/automaxprocs v1.5.1
 	go.uber.org/zap v1.23.0
 	gocloud.dev v0.27.0
 	golang.org/x/net v0.0.0-20220909164309-bea034e7d591
