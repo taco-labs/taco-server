@@ -302,7 +302,7 @@ func (d driverApp) Signup(ctx context.Context, req request.DriverSignupRequest) 
 			}
 
 			referralDriver, err := d.repository.driver.FindByUserUniqueKey(ctx, i, referralCode)
-			if errors.Is(err, value.ErrNotFound) {
+			if errors.Is(err, value.ErrNotFound) || referralDriver.Id == newDriverDto.Id {
 				return fmt.Errorf("app.Driver.Signup: driver not found: %w",
 					value.NewTacoError(value.ERR_NOTFOUND_REFERRAL_CODE, "driver referral not found"))
 			}
