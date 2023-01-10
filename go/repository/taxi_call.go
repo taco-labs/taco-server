@@ -39,7 +39,7 @@ type TaxiCallRepository interface {
 	GetDriverTaxiCallContext(context.Context, bun.IDB, string) (entity.DriverTaxiCallContext, error)
 	UpsertDriverTaxiCallContext(context.Context, bun.IDB, entity.DriverTaxiCallContext) error
 	BulkUpsertDriverTaxiCallContext(context.Context, bun.IDB, []entity.DriverTaxiCallContext) error
-	GetDriverTaxiCallContextByTicketId(context.Context, bun.IDB, string) ([]entity.DriverTaxiCallContext, error)
+	ActivateTicketNonAcceptedDriverContext(context.Context, bun.IDB, string, string) error
 
 	GetDriverTaxiCallContextWithinRadius(context.Context, bun.IDB,
 		value.Location, value.Location, int, []int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
@@ -73,16 +73,17 @@ func (t taxiCallRepository) BulkUpsertDriverTaxiCallContext(ctx context.Context,
 	return nil
 }
 
-func (t taxiCallRepository) GetDriverTaxiCallContextByTicketId(ctx context.Context, db bun.IDB, ticketId string) ([]entity.DriverTaxiCallContext, error) {
-	resp := []entity.DriverTaxiCallContext{}
-
-	err := db.NewSelect().Model(&resp).Where("last_received_request_ticket = ?", ticketId).Scan(ctx)
+func (t taxiCallRepository) ActivateTicketNonAcceptedDriverContext(ctx context.Context, db bun.IDB, receivedDriverId string, ticketId string) error {
+	_, err := db.NewUpdate().Model((*entity.DriverTaxiCallContext)(nil)).
+		Where("driver_id <> ?", receivedDriverId).
+		Where("last_received_request_ticket = ?", ticketId).
+		Set("rejected_last_request_ticket = ?", true).Exec(ctx)
 
 	if err != nil {
-		return []entity.DriverTaxiCallContext{}, fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+		return fmt.Errorf("%w: error from db %v", value.ErrDBInternal, err)
 	}
 
-	return resp, nil
+	return nil
 }
 
 func (t taxiCallRepository) GetTicketById(ctx context.Context, db bun.IDB, ticketId string) (entity.TaxiCallTicket, error) {
