@@ -29,8 +29,10 @@ type PushUserTaxiCallCommand struct {
 	DriverLocation       value.Point    `json:"driverLocation,omitempty"`
 	Departure            value.Location `json:"departureAddress,omitempty"`
 	Arrival              value.Location `json:"arrivalAddress,omitempty"`
-	ToDepartureRoute     value.Route    `json:"toDepartureRoute"`
-	ToArrivalRoute       value.Route    `json:"toArrivalRoute"`
+	ToDepartureETA       time.Duration  `json:"toDepartureETA"`
+	ToDepartureDistance  int            `json:"toDepartureDistance"`
+	ToArrivalETA         time.Duration  `json:"toArrivalETA"`
+	ToArrivalDistance    int            `json:"toArrivalDistance"`
 	SearchRangeInMinutes int            `json:"searchRangeInMinutes,omitempty"`
 	UpdateTime           time.Time      `json:"updateTime"`
 }
@@ -48,8 +50,9 @@ type PushDriverTaxiCallCommand struct {
 	DriverAdditionalRewardPrice int            `json:"driverAdditionalRewardPrice"`
 	Departure                   value.Location `json:"departureAddress,omitempty"`
 	Arrival                     value.Location `json:"arrivalAddress,omitempty"`
-	ToArrivalRoute              value.Route    `json:"toArrivalRoute"`
 	ToDepartureDistance         int            `json:"toDepartureDistance"`
+	ToArrivalETA                time.Duration  `json:"toArrivalETA"`
+	ToArrivalDistance           int            `json:"toArrivalDistance"`
 	Tags                        []string       `json:"tags"`
 	UserTag                     string         `json:"userTag"`
 	Attempt                     int            `json:"attempt"`
@@ -81,8 +84,10 @@ func NewPushUserTaxiCallCommand(taxiCallRequest entity.TaxiCallRequest,
 		DriverLocation:       driverTaxiCallContext.Location,
 		Departure:            taxiCallRequest.Departure,
 		Arrival:              taxiCallRequest.Arrival,
-		ToDepartureRoute:     taxiCallRequest.ToDepartureRoute.Route,
-		ToArrivalRoute:       taxiCallRequest.ToArrivalRoute.Route,
+		ToDepartureETA:       taxiCallRequest.ToDepartureRoute.Route.ETA,
+		ToDepartureDistance:  taxiCallRequest.ToDepartureRoute.Route.Distance,
+		ToArrivalETA:         taxiCallRequest.ToArrivalRoute.Route.ETA,
+		ToArrivalDistance:    taxiCallRequest.ToArrivalRoute.Route.Distance,
 		SearchRangeInMinutes: taxiCallTicket.GetRadiusMinutes(),
 		UpdateTime:           updateTime,
 	}
@@ -117,7 +122,8 @@ func NewPushDriverTaxiCallCommand(
 		AdditionalPrice:     taxiCallTicket.DriverAdditionalPrice(),
 		Departure:           taxiCallRequest.Departure,
 		Arrival:             taxiCallRequest.Arrival,
-		ToArrivalRoute:      taxiCallRequest.ToArrivalRoute.Route,
+		ToArrivalETA:        taxiCallRequest.ToArrivalRoute.Route.ETA,
+		ToArrivalDistance:   taxiCallRequest.ToArrivalRoute.Route.Distance,
 		ToDepartureDistance: driverTaxiCallContext.ToDepartureDistance,
 		Tags:                taxiCallRequest.Tags,
 		UserTag:             taxiCallRequest.UserTag,

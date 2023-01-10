@@ -62,10 +62,10 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		"departureLongitude":  fmt.Sprint(cmd.Departure.Point.Longitude),
 		"arrivalLatitude":     fmt.Sprint(cmd.Arrival.Point.Latitude),
 		"arrivalLongitude":    fmt.Sprint(cmd.Arrival.Point.Longitude),
-		"toDepartureDistance": fmt.Sprint(cmd.ToDepartureRoute.Distance),
-		"toDepartureETA":      fmt.Sprint(cmd.ToDepartureRoute.ETA.Nanoseconds()),
-		"toArrivalDistance":   fmt.Sprint(cmd.ToArrivalRoute.Distance),
-		"toArrivalETA":        fmt.Sprint(cmd.ToArrivalRoute.ETA.Nanoseconds()),
+		"toDepartureDistance": fmt.Sprint(cmd.ToDepartureDistance),
+		"toDepartureETA":      fmt.Sprint(cmd.ToDepartureETA.Nanoseconds()),
+		"toArrivalDistance":   fmt.Sprint(cmd.ToArrivalDistance),
+		"toArrivalETA":        fmt.Sprint(cmd.ToArrivalETA.Nanoseconds()),
 		"updateTime":          cmd.UpdateTime.Format(time.RFC3339),
 	}
 
@@ -96,8 +96,8 @@ func (t taxiCallPushApp) handleUserTaxiCallDriverToArrival(ctx context.Context, 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
 		"taxiCallState":     cmd.TaxiCallState,
-		"toArrivalDistance": fmt.Sprint(cmd.ToArrivalRoute.Distance),
-		"toArrivalETA":      fmt.Sprint(cmd.ToArrivalRoute.ETA.Nanoseconds()),
+		"toArrivalDistance": fmt.Sprint(cmd.ToArrivalDistance),
+		"toArrivalETA":      fmt.Sprint(cmd.ToArrivalETA.Nanoseconds()),
 		"updateTime":        cmd.UpdateTime.Format(time.RFC3339),
 	}
 
