@@ -78,12 +78,11 @@ func (n nhnMapsService) SearchLocation(ctx context.Context, point value.Point, k
 		return []value.LocationSummary{}, pageToken, err
 	}
 
-	var nextPageToken int
 	if nhnMapsSearchResp.End() {
-		nextPageToken = pageToken
-	} else {
-		nextPageToken = pageToken + nhnMapsSearchResp.Search.Count
+		return []value.LocationSummary{}, pageToken, nil
 	}
+
+	nextPageToken := pageToken + nhnMapsSearchResp.Search.Count
 
 	return slices.Map(nhnMapsSearchResp.Search.Locations, nhnMapsLocationResponseToLocationSummary), nextPageToken, nil
 }

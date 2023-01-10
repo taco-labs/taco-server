@@ -10,5 +10,5 @@ type SearchLocationRequest struct {
 	Longitude float64 `query:"longitude"`
 	Keyword   string  `query:"keyword"`
 	PageToken int     `query:"pageToken"`
-	PageCount int     `query:"pageCount"`
+	Count     int     `query:"count"`
 }

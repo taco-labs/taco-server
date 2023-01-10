@@ -32,7 +32,7 @@ func (u userApp) SearchLocation(ctx context.Context, req request.SearchLocationR
 		Longitude: req.Longitude,
 	}
 	// TOOD (taekyeom) suppress error as client could not correctly handle error
-	resp, pageToken, _ := u.service.mapService.SearchLocation(ctx, point, req.Keyword, req.PageToken, req.PageCount)
+	resp, pageToken, _ := u.service.mapService.SearchLocation(ctx, point, req.Keyword, req.PageToken, req.Count)
 
 	return resp, pageToken, nil
 }
