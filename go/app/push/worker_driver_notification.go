@@ -76,8 +76,8 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 func (t taxiCallPushApp) handleUserTaxiCallRequestCanceled(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushDriverTaxiCallCommand) (value.Notification, error) {
 
-	messageTitle := "운행 취소"
-	messageBody := "승객이 택시 운행을 취소하였습니다."
+	messageTitle := "운행 취소, 승객이 호출을 취소하였습니다."
+	messageBody := "승객이 호출을 취소하였습니다. 취소수수료 부과 대상인 경우 적립된 타코포인트는 정산관리 메뉴에서 확인 가능합니다."
 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,

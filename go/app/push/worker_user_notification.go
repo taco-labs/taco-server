@@ -40,8 +40,10 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		return value.Notification{}, err
 	}
 
-	messageTitle := "배차 완료. 택시 기사님이 이동중입니다."
-	messageBody := fmt.Sprintf("%s (추가 요금 %d)", cmd.Departure.Address.AddressName, cmd.AdditionalPrice)
+	messageTitle := "배차 완료, 기사님이 이동중입니다."
+	messageBody := fmt.Sprintf("예상운임 %d원 (서비스 이용료 %d원). "+
+		"1분 경과후 취소 또는 기사님 도착 후 3분이내 연락두절, 미탑승시 취소수수료가 부과될 수 있습니다.",
+		cmd.RequestBasePrice, cmd.AdditionalPrice)
 
 	data := map[string]string{
 		"taxiCallRequestId":   cmd.TaxiCallRequestId,
@@ -73,8 +75,8 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 func (t taxiCallPushApp) handleUserTaxiCallRequestFailed(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
 
-	messageTitle := "배차 실패"
-	messageBody := "택시 배차에 실패했습니다"
+	messageTitle := "배차 실패, 다시 시도해주세요."
+	messageBody := "호출을 수락하는 택시를 찾지 못했습니다. 이용료 상한을 조정하여 다시 시도해주세요."
 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
@@ -86,8 +88,10 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestFailed(ctx context.Context, fc
 
 func (t taxiCallPushApp) handleUserTaxiCallDriverToArrival(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
-	messageTitle := "운행 시작"
-	messageBody := "택시 운행이 시작되었습니다."
+	messageTitle := "운행 시작, 목적지로 이동합니다."
+	messageBody := "나에게 딱 맞는 택시와 목적지로 이동합니다. " +
+		"지금 함께하고 계신 기사님은 누군가의 소중한 가족입니다. " +
+		"승객과 기사님 서로가 배려하는 따뜻한 이동을 만드는데 동참해주세요."
 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
@@ -103,8 +107,8 @@ func (t taxiCallPushApp) handleUserTaxiCallDriverToArrival(ctx context.Context, 
 func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
 
-	messageTitle := "운행 완료"
-	messageBody := "택시 운행이 완료되었습니다."
+	messageTitle := "운행 완료, 목적지에 도착하였습니다."
+	messageBody := "나에게 딱 맞는 택시와 목적지에 도착하였습니다. 오늘도 타코택시와 함께해주셔서 감사합니다."
 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
@@ -119,8 +123,9 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestDone(ctx context.Context, fcmT
 
 func (t taxiCallPushApp) handleDriverTaxiCallRequestCanceled(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
-	messageTitle := "운행 취소"
-	messageBody := "기사님이 택시 운행을 취소하였습니다."
+	messageTitle := "운행 취소, 기사님이 운행을 취소하였습니다."
+	messageBody := "기사님이 택시 운행을 취소하였습니다. " +
+		"기사님 도착후 연락두절, 장시간 미탑승 등 귀책사유가 있는 경우 취소 수수료가 발생할 수 있습니다."
 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,
@@ -134,8 +139,8 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestCanceled(ctx context.Context
 func (t taxiCallPushApp) handleDriverNotAvailable(ctx context.Context, fcmToken string,
 	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
 
-	messageTitle := "주변에 호출 가능한 택시가 없습니다"
-	messageBody := "주변에 호출 가능한 택시가 없습니다"
+	messageTitle := "배차 실패, 주변에 호출 가능한 택시가 없습니다"
+	messageBody := "현재 주변에 호출 가능한 택시가 없습니다. 다시 시도해 주세요."
 
 	data := map[string]string{
 		"taxiCallRequestId": cmd.TaxiCallRequestId,

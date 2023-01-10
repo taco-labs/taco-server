@@ -23,7 +23,7 @@ func settlementTransferSuccessMessage(driverId string, amount int) entity.Event 
 		driverId,
 		value.NotificationCategory_Settlement,
 		fmt.Sprintf("타코 정산 요청 (%d 타코)가 완료되었습니다.", amount),
-		fmt.Sprintf("정산 대상 타코 (%d 타코)가 정산 완료되어 기사님의 계좌로 지급되었습니다.", amount),
+		fmt.Sprintf("정산 대상 타코 (%d 타코)가 기사님의 지정 계좌로 지급되었습니다.", amount),
 		map[string]string{},
 	)
 }
