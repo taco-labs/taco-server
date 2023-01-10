@@ -183,9 +183,11 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User
 		// TODO (taekyeom) additional price 계산을 위한 별도 모듈로 빼야 함
 		maxAdditionalPrice := 10000
 		taxiCallRequest := entity.TaxiCallRequest{
-			Dryrun:         req.Dryrun,
-			UserId:         user.Id,
-			ToArrivalRoute: route,
+			Dryrun: req.Dryrun,
+			UserId: user.Id,
+			ToArrivalRoute: entity.TaxiCallToArrivalRoute{
+				Route: route,
+			},
 			Departure: value.Location{
 				Point:   req.Departure,
 				Address: departure,
@@ -217,10 +219,17 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while get user payment: %w", err)
 		}
 
+		taxiCallRequestId := utils.MustNewUUID()
+
+		toArrivalRoute := entity.TaxiCallToArrivalRoute{
+			TaxiCallRequestId: taxiCallRequestId,
+			Route:             route,
+		}
+
 		taxiCallRequest = entity.TaxiCallRequest{
+			Id:             taxiCallRequestId,
 			Dryrun:         req.Dryrun,
-			ToArrivalRoute: route,
-			Id:             utils.MustNewUUID(),
+			ToArrivalRoute: toArrivalRoute,
 			UserId:         user.Id,
 			Departure: value.Location{
 				Point:   req.Departure,
@@ -258,6 +267,9 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User
 		if err = t.repository.taxiCallRequest.Create(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call request:%w", err)
 		}
+		if err := t.repository.taxiCallRequest.CreateToArrivalRoute(ctx, i, toArrivalRoute); err != nil {
+			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while create taxi call to arrival route:%w", err)
+		}
 
 		processMessage := command.NewTaxiCallProgressCommand(
 			taxiCallRequest.Id,
@@ -275,8 +287,8 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User
 			Id:                        taxiCallRequest.Id,
 			Departure:                 taxiCallRequest.Departure,
 			Arrival:                   taxiCallRequest.Arrival,
-			ToArrivalETA:              taxiCallRequest.ToArrivalRoute.ETA,
-			ToArrivalDistance:         taxiCallRequest.ToArrivalRoute.Distance,
+			ToArrivalETA:              taxiCallRequest.ToArrivalRoute.Route.ETA,
+			ToArrivalDistance:         taxiCallRequest.ToArrivalRoute.Route.Distance,
 			TagIds:                    taxiCallRequest.TagIds,
 			Tags:                      taxiCallRequest.Tags,
 			UserTag:                   taxiCallRequest.UserTag,

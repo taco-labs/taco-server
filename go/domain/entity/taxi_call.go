@@ -38,6 +38,20 @@ type UserLatestTaxiCallRequest struct {
 	DriverCarNumber string
 }
 
+type TaxiCallToDepartureRoute struct {
+	bun.BaseModel `bun:"table:taxi_call_to_departure_route"`
+
+	TaxiCallRequestId string      `bun:"taxi_call_request_id,pk"`
+	Route             value.Route `bun:"route"`
+}
+
+type TaxiCallToArrivalRoute struct {
+	bun.BaseModel `bun:"table:taxi_call_to_arrival_route"`
+
+	TaxiCallRequestId string      `bun:"taxi_call_request_id,pk"`
+	Route             value.Route `bun:"route"`
+}
+
 type TaxiCallRequest struct {
 	bun.BaseModel `bun:"table:taxi_call_request"`
 
@@ -45,27 +59,27 @@ type TaxiCallRequest struct {
 	Dryrun bool     `bun:"-"`
 	Tags   []string `bun:"-"`
 
-	Id                        string               `bun:"id,pk"`
-	UserId                    string               `bun:"user_id"`
-	DriverId                  sql.NullString       `bun:"driver_id"`
-	Departure                 value.Location       `bun:"departure,type:jsonb"`
-	Arrival                   value.Location       `bun:"arrival,type:jsonb"`
-	TagIds                    []int                `bun:"tag_ids,array"`
-	UserTag                   string               `bun:"user_tag"`
-	PaymentSummary            value.PaymentSummary `bun:"payment_summary,type:jsonb"`
-	RequestBasePrice          int                  `bun:"request_base_price"`
-	RequestMinAdditionalPrice int                  `bun:"request_min_additional_price"`
-	RequestMaxAdditionalPrice int                  `bun:"request_max_additional_price"`
-	BasePrice                 int                  `bun:"base_price"`
-	TollFee                   int                  `bun:"toll_fee"`
-	CancelPenaltyPrice        int                  `bun:"cancel_penalty_price"`
-	AdditionalPrice           int                  `bun:"additional_price"`
-	UserUsedPoint             int                  `bun:"user_used_point"`
-	CurrentState              enum.TaxiCallState   `bun:"taxi_call_state"`
-	ToDepartureRoute          value.Route          `bun:"to_departure_route"`
-	ToArrivalRoute            value.Route          `bun:"to_arrival_route"`
-	CreateTime                time.Time            `bun:"create_time"`
-	UpdateTime                time.Time            `bun:"update_time"`
+	Id                        string                   `bun:"id,pk"`
+	UserId                    string                   `bun:"user_id"`
+	DriverId                  sql.NullString           `bun:"driver_id"`
+	Departure                 value.Location           `bun:"departure,type:jsonb"`
+	Arrival                   value.Location           `bun:"arrival,type:jsonb"`
+	TagIds                    []int                    `bun:"tag_ids,array"`
+	UserTag                   string                   `bun:"user_tag"`
+	PaymentSummary            value.PaymentSummary     `bun:"payment_summary,type:jsonb"`
+	RequestBasePrice          int                      `bun:"request_base_price"`
+	RequestMinAdditionalPrice int                      `bun:"request_min_additional_price"`
+	RequestMaxAdditionalPrice int                      `bun:"request_max_additional_price"`
+	BasePrice                 int                      `bun:"base_price"`
+	TollFee                   int                      `bun:"toll_fee"`
+	CancelPenaltyPrice        int                      `bun:"cancel_penalty_price"`
+	AdditionalPrice           int                      `bun:"additional_price"`
+	UserUsedPoint             int                      `bun:"user_used_point"`
+	CurrentState              enum.TaxiCallState       `bun:"taxi_call_state"`
+	ToDepartureRoute          TaxiCallToDepartureRoute `bun:"rel:belongs-to,join:id=taxi_call_request_id"`
+	ToArrivalRoute            TaxiCallToArrivalRoute   `bun:"rel:belongs-to,join:id=taxi_call_request_id"`
+	CreateTime                time.Time                `bun:"create_time"`
+	UpdateTime                time.Time                `bun:"update_time"`
 }
 
 func (t TaxiCallRequest) TotalPrice() int {

@@ -105,16 +105,6 @@ table "taxi_call_request" {
     comment = "유저가 사용한 타코 할인 금액"
   }
 
-  column "to_departure_route" {
-    type = jsonb
-    null = false
-  }
-
-  column "to_arrival_route" {
-    type = jsonb
-    null = false
-  }
-
   column "create_time" {
     type = timestamp
     null = false
@@ -153,6 +143,74 @@ table "taxi_call_request" {
     columns = [
       column.create_time,
     ]
+  }
+}
+
+table "taxi_call_to_departure_route" {
+  schema = schema.taco
+
+  column "taxi_call_request_id" {
+    type = uuid
+    null = false
+  }
+
+  column "route" {
+    type = jsonb
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.taxi_call_request_id,
+    ]
+  }
+
+  foreign_key "to_departure_route_taxi_call_request_id_fk" {
+    columns = [
+      column.taxi_call_request_id,
+    ]
+    
+    ref_columns = [
+      table.taxi_call_request.column.id,
+    ]
+
+    on_delete = CASCADE
+
+    on_update = NO_ACTION
+  }
+}
+
+table "taxi_call_to_arrival_route" {
+  schema = schema.taco
+
+  column "taxi_call_request_id" {
+    type = uuid
+    null = false
+  }
+
+  column "route" {
+    type = jsonb
+    null = false
+  }
+
+  primary_key {
+    columns = [
+      column.taxi_call_request_id,
+    ]
+  }
+
+  foreign_key "to_arrival_route_taxi_call_request_id_fk" {
+    columns = [
+      column.taxi_call_request_id,
+    ]
+    
+    ref_columns = [
+      table.taxi_call_request.column.id,
+    ]
+
+    on_delete = CASCADE
+
+    on_update = NO_ACTION
   }
 }
 
