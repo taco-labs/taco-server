@@ -63,6 +63,7 @@ func (t taxiCallRepository) BulkUpsertDriverTaxiCallContext(ctx context.Context,
 		Set("last_received_request_ticket = EXCLUDED.last_received_request_ticket").
 		Set("rejected_last_request_ticket = EXCLUDED.rejected_last_request_ticket").
 		Set("last_receive_time = EXCLUDED.last_receive_time").
+		Set("to_departure_distance = EXCLUDED.to_departure_distance").
 		Set("block_until = EXCLUDED.block_until").
 		Exec(ctx)
 
@@ -376,14 +377,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 	departure value.Location, arrival value.Location, radius int, requestTagIds []int,
 	ticketId string, requestTime time.Time) ([]entity.DriverTaxiCallContext, error) {
 
-	type tempModel struct {
-		entity.DriverTaxiCallContext `bun:",extend"`
-
-		Distance int    `bun:"distance"`
-		EwkbHex  string `bun:"location"`
-	}
-
-	var resp []tempModel
+	var resp []entity.DriverTaxiCallContext
 
 	locationWithDistance := db.NewSelect().
 		TableExpr("driver_location").
@@ -414,7 +408,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		Model(&resp).
 		ColumnExpr("driver_taxi_call_context.*").
 		ColumnExpr("location").
-		ColumnExpr("CAST(distance AS int) as distance").
+		ColumnExpr("CAST(distance AS int) as to_departure_distance").
 		Join("JOIN driver_distance_filtered AS t2 ON t2.driver_id = ?TableName.driver_id").
 		Join("JOIN driver_service_region AS t3 ON t3.id = ?TableName.driver_id").
 		Where("block_until is NULL or block_until < ?", requestTime).
@@ -434,14 +428,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 		return []entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
 	}
 
-	return slices.MapErr(resp, func(i tempModel) (entity.DriverTaxiCallContext, error) {
-		if err := i.Location.FromEwkbHex(i.EwkbHex); err != nil {
-			return entity.DriverTaxiCallContext{}, err
-		}
-		i.DriverTaxiCallContext.ToDepartureDistance = i.Distance
-
-		return i.DriverTaxiCallContext, nil
-	})
+	return resp, nil
 }
 
 func (t taxiCallRepository) ListDriverTaxiCallContextInRadius(ctx context.Context, db bun.IDB, point value.Point, serviceRegion string, radius int) ([]entity.DriverTaxiCallContext, error) {
@@ -510,14 +497,8 @@ func (t taxiCallRepository) ListDriverTaxiCallContextInRadius(ctx context.Contex
 }
 
 func (t taxiCallRepository) GetDriverTaxiCallContext(ctx context.Context, db bun.IDB, driverId string) (entity.DriverTaxiCallContext, error) {
-	resp := struct {
-		entity.DriverTaxiCallContext `bun:",extend"`
-
-		EwkbHex string `bun:"location"`
-	}{
-		DriverTaxiCallContext: entity.DriverTaxiCallContext{
-			DriverId: driverId,
-		},
+	resp := entity.DriverTaxiCallContext{
+		DriverId: driverId,
 	}
 
 	err := db.NewSelect().Model(&resp).
@@ -534,11 +515,7 @@ func (t taxiCallRepository) GetDriverTaxiCallContext(ctx context.Context, db bun
 		return entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
 	}
 
-	if err := resp.Location.FromEwkbHex(resp.EwkbHex); err != nil {
-		return entity.DriverTaxiCallContext{}, err
-	}
-
-	return resp.DriverTaxiCallContext, nil
+	return resp, nil
 }
 
 func (t taxiCallRepository) UpsertDriverTaxiCallContext(ctx context.Context, db bun.IDB, callContext entity.DriverTaxiCallContext) error {
@@ -549,6 +526,7 @@ func (t taxiCallRepository) UpsertDriverTaxiCallContext(ctx context.Context, db 
 		Set("last_received_request_ticket = EXCLUDED.last_received_request_ticket").
 		Set("rejected_last_request_ticket = EXCLUDED.rejected_last_request_ticket").
 		Set("last_receive_time = EXCLUDED.last_receive_time").
+		Set("to_departure_distance = EXCLUDED.to_departure_distance").
 		Set("block_until = EXCLUDED.block_until").
 		Exec(ctx)
 

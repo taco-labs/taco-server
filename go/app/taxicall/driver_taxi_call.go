@@ -192,6 +192,12 @@ func (t taxicallApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId st
 		taxiCallRequest.UpdateTime = taxiCallTicket.CreateTime
 		taxiCallRequest.DriverId.String = driverId
 		taxiCallRequest.DriverId.Valid = true
+		// TODO (taekyeom) for only departure distance
+		taxiCallRequest.ToDepartureRoute = entity.TaxiCallToDepartureRoute{
+			Route: value.Route{
+				Distance: driverTaxiCallContext.ToDepartureDistance,
+			},
+		}
 
 		latestTaxiCallRequest = entity.DriverLatestTaxiCallRequestTicket{
 			DriverLatestTaxiCallRequest: entity.DriverLatestTaxiCallRequest{

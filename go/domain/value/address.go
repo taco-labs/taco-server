@@ -1,6 +1,7 @@
 package value
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -121,6 +122,21 @@ func (p Point) MarshalJSON() ([]byte, error) {
 		Latitude:  number(p.Latitude),
 		Longitude: number(p.Longitude),
 	})
+}
+
+func (p *Point) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case string:
+		return p.FromEwkbHex(src)
+	case []uint8:
+		return p.FromEwkbHex(string(src))
+	default:
+		return fmt.Errorf("%w: invalid type: %T", ErrInternal, src)
+	}
+}
+
+func (p Point) Value() (driver.Value, error) {
+	return p.ToEwkbHex()
 }
 
 func (p Point) ToEwkbHex() (string, error) {

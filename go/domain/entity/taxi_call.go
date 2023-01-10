@@ -232,16 +232,14 @@ func (t TaxiCallTicket) GetRadiusMinutes() int {
 type DriverTaxiCallContext struct {
 	bun.BaseModel `bun:"table:driver_taxi_call_context"`
 
-	DriverId                  string    `bun:"driver_id,pk"`
-	CanReceive                bool      `bun:"can_receive"`
-	LastReceivedRequestTicket string    `bun:"last_received_request_ticket"`
-	RejectedLastRequestTicket bool      `bun:"rejected_last_request_ticket"`
-	LastReceiveTime           time.Time `bun:"last_receive_time"`
-	BlockUntil                time.Time `bun:"block_until"`
-
-	// Read Only
-	Location            value.Point `bun:"-"`
-	ToDepartureDistance int         `bun:"-"` // In meter
+	DriverId                  string      `bun:"driver_id,pk"`
+	CanReceive                bool        `bun:"can_receive"`
+	LastReceivedRequestTicket string      `bun:"last_received_request_ticket"`
+	RejectedLastRequestTicket bool        `bun:"rejected_last_request_ticket"`
+	LastReceiveTime           time.Time   `bun:"last_receive_time"`
+	ToDepartureDistance       int         `bun:"to_departure_distance"`
+	BlockUntil                time.Time   `bun:"block_until"`
+	Location                  value.Point `bun:"location,scanonly"`
 }
 
 func NewEmptyDriverTaxiCallContext(driverId string, canReceive bool, t time.Time) DriverTaxiCallContext {

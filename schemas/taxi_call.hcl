@@ -314,6 +314,12 @@ table "driver_taxi_call_context" {
     null = false
   }
 
+  column "to_departure_distance" {
+    type = int
+    null = false
+    comment = "Distance between driver location & last received ticket's departure in meters"
+  }
+
   column "block_until" {
     type = timestamp
     null = true
