@@ -454,10 +454,12 @@ func (t taxicallApp) RejectTaxiCallRequest(ctx context.Context, driverId string,
 	})
 }
 
-func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId string, req request.CancelTaxiCallRequest) error {
+func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId string, req request.DriverCancelTaxiCallRequest) error {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		var events []entity.Event
+
 		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, req.TaxiCallRequestId)
 		if err != nil {
 			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: error while get taxi call:%w", err)
@@ -488,6 +490,21 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 		driverTaxiCallContext.CanReceive = true
 		driverTaxiCallContext.RejectedLastRequestTicket = true
 
+		if req.IsUserFault {
+			taxiCallRequest.CancelPenaltyPrice = taxiCallRequest.UserCancelPenaltyPrice(requestTime)
+			events = append(events, command.NewUserPaymentTransactionRequestCommand(
+				taxiCallRequest.UserId,
+				taxiCallRequest.PaymentSummary.PaymentId,
+				taxiCallRequest.Id,
+				"타코 택시 취소 수수료",
+				taxiCallRequest.DriverId.String,
+				taxiCallRequest.CancelPenaltyPrice,
+				0,
+				taxiCallRequest.DriverSettlementCancelPenaltyPrice(),
+				false,
+			))
+		}
+
 		if err = t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxCall.DriverCancelTaxiCall: error while update taxi call:%w", err)
 		}
@@ -500,14 +517,26 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 			return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while upsert taxi call context: %w", err)
 		}
 
-		processMessage := command.NewTaxiCallProgressCommand(
+		events = append(events, command.NewTaxiCallProgressCommand(
 			taxiCallRequest.Id,
 			taxiCallRequest.CurrentState,
 			taxiCallRequest.UpdateTime,
 			taxiCallRequest.UpdateTime,
-		)
+		))
 
-		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
+		if taxiCallRequest.PaymentSummary.PaymentType == enum.PaymentType_SignupPromition && !req.IsUserFault {
+			userPayment, err := t.service.payment.GetUserPayment(ctx, taxiCallRequest.UserId, taxiCallRequest.PaymentSummary.PaymentId)
+			if err != nil {
+				return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while get user payment: %w", err)
+			}
+			userPayment.Invalid = false
+			userPayment.InvalidErrorMessage = ""
+			if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
+				return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while update user payment: %w", err)
+			}
+		}
+
+		if err := t.repository.event.BatchCreate(ctx, i, events); err != nil {
 			return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while create taxi call process event: %w", err)
 		}
 
@@ -518,21 +547,10 @@ func (t taxicallApp) DriverCancelTaxiCallRequest(ctx context.Context, driverId s
 			DriverLocation:            driverTaxiCallContext.Location,
 			AcceptTime:                taxiCallRequestAcceptTime,
 			TaxiCallRequestCreateTime: taxiCallRequest.CreateTime,
+			IsUserFault:               req.IsUserFault,
 		})
 		if err := t.repository.analytics.Create(ctx, i, driverTaxiCallCancelPayload); err != nil {
 			return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while create analytics event: %w", err)
-		}
-
-		if taxiCallRequest.PaymentSummary.PaymentType == enum.PaymentType_SignupPromition {
-			userPayment, err := t.service.payment.GetUserPayment(ctx, taxiCallRequest.UserId, taxiCallRequest.PaymentSummary.PaymentId)
-			if err != nil {
-				return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while get user payment: %w", err)
-			}
-			userPayment.Invalid = false
-			userPayment.InvalidErrorMessage = ""
-			if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
-				return fmt.Errorf("app.taxiCall.DriverCancelTaxiCall: error while update user payment: %w", err)
-			}
 		}
 
 		return nil

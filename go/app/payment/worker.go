@@ -2,12 +2,14 @@ package payment
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/uptrace/bun"
 )
 
 func (p paymentApp) Accept(ctx context.Context, event entity.Event) bool {
@@ -15,7 +17,30 @@ func (p paymentApp) Accept(ctx context.Context, event entity.Event) bool {
 }
 
 func (p paymentApp) OnFailure(ctx context.Context, event entity.Event, lastErr error) error {
-	return nil
+	var err error
+	switch event.EventUri {
+	case command.EventUri_UserTransactionRequest:
+		cmd := command.PaymentUserTransactionRequestCommand{}
+		err = json.Unmarshal(event.Payload, &cmd)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.OnFailure: error while unmarshal json: %v", err)
+		}
+		err = p.makeTransactionFail(ctx, cmd.OrderId, "결제 요청에 실패했습니다")
+	}
+	// TODO (taekyeom) transaction success 시 어떻게 처리해야 할까..? (일단은 수동으로 처리하자)
+	return err
+}
+
+func (p paymentApp) makeTransactionFail(ctx context.Context, orderId string, failureReason string) error {
+	return p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		cmd := command.NewUserPaymentTransactionFailCommand(orderId, string(value.ERR_EXTERNAL), failureReason)
+
+		if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{cmd}); err != nil {
+			return fmt.Errorf("app.payment.makeTransactionFail: error while make transaction fail: %w", err)
+		}
+
+		return nil
+	})
 }
 
 func (p paymentApp) Process(ctx context.Context, event entity.Event) error {

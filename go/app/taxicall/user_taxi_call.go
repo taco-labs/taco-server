@@ -299,7 +299,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User
 	return taxiCallRequest, nil
 }
 
-func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId string, req request.CancelTaxiCallRequest) error {
+func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId string, req request.UserCancelTaxiCallRequest) error {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) error {

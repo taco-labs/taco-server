@@ -35,7 +35,7 @@ type taxiCallInterface interface {
 	ListUserTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	LatestUserTaxiCallRequest(context.Context, string) (entity.UserLatestTaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, entity.User, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
-	UserCancelTaxiCallRequest(context.Context, string, request.CancelTaxiCallRequest) error
+	UserCancelTaxiCallRequest(context.Context, string, request.UserCancelTaxiCallRequest) error
 }
 
 type userPaymentInterface interface {

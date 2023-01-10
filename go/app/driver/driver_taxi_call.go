@@ -44,7 +44,7 @@ func (d driverApp) DoneTaxiCallRequest(ctx context.Context, req request.DoneTaxi
 	return d.service.taxiCall.DoneTaxiCallRequest(ctx, driverId, req)
 }
 
-func (d driverApp) CancelTaxiCallRequest(ctx context.Context, req request.CancelTaxiCallRequest) error {
+func (d driverApp) CancelTaxiCallRequest(ctx context.Context, req request.DriverCancelTaxiCallRequest) error {
 	driverId := utils.GetDriverId(ctx)
 	return d.service.taxiCall.DriverCancelTaxiCallRequest(ctx, driverId, req)
 }

@@ -53,7 +53,7 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 	return taxiCallRequest, nil
 }
 
-func (u userApp) CancelTaxiCallRequest(ctx context.Context, req request.CancelTaxiCallRequest) error {
+func (u userApp) CancelTaxiCallRequest(ctx context.Context, req request.UserCancelTaxiCallRequest) error {
 	userId := utils.GetUserId(ctx)
 	err := u.service.taxiCall.UserCancelTaxiCallRequest(ctx, userId, req)
 	if err != nil {

@@ -100,6 +100,7 @@ type DriverTaxiCancelPayload struct {
 	DriverLocation            value.Point
 	AcceptTime                time.Time
 	TaxiCallRequestCreateTime time.Time
+	IsUserFault               bool
 }
 
 func (d DriverTaxiCancelPayload) EventType() EventType {

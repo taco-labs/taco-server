@@ -48,7 +48,13 @@ type DoneTaxiCallRequest struct {
 	TollFee           int    `json:"tollFee"`
 }
 
-type CancelTaxiCallRequest struct {
+type DriverCancelTaxiCallRequest struct {
 	TaxiCallRequestId string `param:"taxiCallRequestId"`
-	ConfirmCancel     bool   `query:"confirmCancel"`
+	IsUserFault       bool   `query:"isUserFault" json:"isUserFault"`
+	ConfirmCancel     bool   `query:"confirmCancel" json:"confirmCancel"`
+}
+
+type UserCancelTaxiCallRequest struct {
+	TaxiCallRequestId string `param:"taxiCallRequestId"`
+	ConfirmCancel     bool   `query:"confirmCancel" json:"confirmCancel"`
 }

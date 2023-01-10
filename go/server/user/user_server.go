@@ -30,7 +30,7 @@ type UserApp interface {
 	ListTaxiCallRequest(context.Context, request.ListUserTaxiCallRequest) ([]entity.TaxiCallRequest, string, error)
 	GetLatestTaxiCallRequest(context.Context, string) (entity.UserLatestTaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
-	CancelTaxiCallRequest(context.Context, request.CancelTaxiCallRequest) error
+	CancelTaxiCallRequest(context.Context, request.UserCancelTaxiCallRequest) error
 
 	SearchLocation(context.Context, request.SearchLocationRequest) ([]value.LocationSummary, int, error)
 	GetAddress(context.Context, request.GetAddressRequest) (value.Address, error)
@@ -247,7 +247,7 @@ func (u userServer) ListTaxiCallRequest(e echo.Context) error {
 func (u userServer) CancelTaxiCallRequest(e echo.Context) error {
 	ctx := e.Request().Context()
 
-	req := request.CancelTaxiCallRequest{}
+	req := request.UserCancelTaxiCallRequest{}
 
 	if err := e.Bind(&req); err != nil {
 		return err
