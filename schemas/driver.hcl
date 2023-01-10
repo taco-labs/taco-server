@@ -273,6 +273,18 @@ table "driver_settlement_account" {
     comment = "계좌번호"
   }
 
+  column "account_holder_name" {
+    type = text
+    null = false
+    comment = "계좌주 이름"
+  }
+
+  column "account_holder_birthday" {
+    type = text
+    null = false
+    comment = "계좌주 생년월일"
+  }
+
   column "bank_transaction_id" {
     type = text
     null = false

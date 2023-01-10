@@ -61,18 +61,27 @@ func (d driverApp) RegisterDriverSettlementAccount(ctx context.Context,
 		return entity.DriverSettlementAccount{}, err
 	}
 
-	settlementAccount, err := d.checkDriverSettlementAccount(ctx, driver, req.Bank, req.AccountNumber)
+	accountHolderBirthday := req.AccountHolderBirthday
+	if accountHolderBirthday == "" {
+		// TODO (taekyeom) 하위호환을 위한 코드
+		// Deprecated. remove it later
+		accountHolderBirthday = driver.BirthDay
+	}
+
+	settlementAccount, err := d.checkDriverSettlementAccount(ctx, driver, accountHolderBirthday, req.Bank, req.AccountNumber)
 	if err != nil {
 		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: error while get settlement account: %w", err)
 	}
 
 	driverSettlementAccount := entity.DriverSettlementAccount{
-		DriverId:          driver.Id,
-		Bank:              settlementAccount.BankCode,
-		AccountNumber:     settlementAccount.AccountNumber,
-		BankTransactionId: settlementAccount.BankTransactionId,
-		CreateTime:        requestTime,
-		UpdateTime:        requestTime,
+		DriverId:              driver.Id,
+		Bank:                  settlementAccount.BankCode,
+		AccountNumber:         settlementAccount.AccountNumber,
+		AccountHolderName:     settlementAccount.AccountHolderName,
+		AccountHolderBirthday: accountHolderBirthday,
+		BankTransactionId:     settlementAccount.BankTransactionId,
+		CreateTime:            requestTime,
+		UpdateTime:            requestTime,
 	}
 
 	err = d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
@@ -90,7 +99,7 @@ func (d driverApp) RegisterDriverSettlementAccount(ctx context.Context,
 	return driverSettlementAccount, nil
 }
 
-func (d driverApp) checkDriverSettlementAccount(ctx context.Context, driver entity.Driver, bank string, accountNumber string) (value.SettlementAccount, error) {
+func (d driverApp) checkDriverSettlementAccount(ctx context.Context, driver entity.Driver, accountHolderBirthday string, bank string, accountNumber string) (value.SettlementAccount, error) {
 	if driver.MockAccount() {
 		return value.SettlementAccount{
 			BankCode:          bank,
@@ -100,15 +109,10 @@ func (d driverApp) checkDriverSettlementAccount(ctx context.Context, driver enti
 		}, nil
 	}
 
-	settlementAccount, err := d.service.settlementAccount.GetSettlementAccount(ctx, driver, bank, accountNumber)
+	settlementAccount, err := d.service.settlementAccount.GetSettlementAccount(ctx, driver.Id, accountHolderBirthday, bank, accountNumber)
 	if err != nil {
 		return value.SettlementAccount{}, fmt.Errorf("app.Driver.checkDriverSettlementAccount: error while get settlement account: %w", err)
 	}
-
-	// if settlementAccount.AccountHolderName != driver.FullName() {
-	// 	// TODO (taekyeom) 별도 error code 부여 필요
-	// 	return value.SettlementAccount{}, fmt.Errorf("app.Driver.checkDriverSettlementAccount: bank account name is different: %w", value.ErrInvalidOperation)
-	// }
 
 	return settlementAccount, nil
 }
@@ -141,7 +145,14 @@ func (d driverApp) UpdateDriverSettlementAccount(ctx context.Context,
 		return entity.DriverSettlementAccount{}, err
 	}
 
-	settlementAccount, err := d.service.settlementAccount.GetSettlementAccount(ctx, driver, req.Bank, req.AccountNumber)
+	accountHolderBirthday := req.AccountHolderBirthday
+	if accountHolderBirthday == "" {
+		// TODO (taekyeom) 하위호환을 위한 코드
+		// Deprecated. remove it later
+		accountHolderBirthday = driver.BirthDay
+	}
+
+	settlementAccount, err := d.service.settlementAccount.GetSettlementAccount(ctx, driver.Id, accountHolderBirthday, req.Bank, req.AccountNumber)
 	if err != nil {
 		return entity.DriverSettlementAccount{}, fmt.Errorf("app.Driver.RegisterDriverSettlementAccount: error while get settlement account: %w", err)
 	}
@@ -153,6 +164,8 @@ func (d driverApp) UpdateDriverSettlementAccount(ctx context.Context,
 
 	driverSettlementAccount.Bank = settlementAccount.BankCode
 	driverSettlementAccount.AccountNumber = settlementAccount.AccountNumber
+	driverSettlementAccount.AccountHolderName = settlementAccount.AccountHolderName
+	driverSettlementAccount.AccountHolderBirthday = accountHolderBirthday
 	driverSettlementAccount.BankTransactionId = settlementAccount.BankTransactionId
 	driverSettlementAccount.UpdateTime = requestTime
 

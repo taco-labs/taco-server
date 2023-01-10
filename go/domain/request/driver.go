@@ -49,15 +49,17 @@ type DriverLocationUpdateRequest struct {
 }
 
 type DriverSettlementAccountRegisterRequest struct {
-	DriverId      string `param:"driverId"`
-	Bank          string `json:"bank"`
-	AccountNumber string `json:"accountNumber"`
+	DriverId              string `param:"driverId"`
+	Bank                  string `json:"bank"`
+	AccountHolderBirthday string `json:"accountHolderBirthday"`
+	AccountNumber         string `json:"accountNumber"`
 }
 
 type DriverSettlementAccountUpdateRequest struct {
-	DriverId      string `param:"driverId"`
-	Bank          string `json:"bank"`
-	AccountNumber string `json:"accountNumber"`
+	DriverId              string `param:"driverId"`
+	Bank                  string `json:"bank"`
+	AccountHolderBirthday string `json:"accountHolderBirthday"`
+	AccountNumber         string `json:"accountNumber"`
 }
 
 type ListNonActivatedDriverRequest struct {

@@ -61,12 +61,14 @@ func (d DriverDto) ReferralCode() string {
 type DriverSettlementAccount struct {
 	bun.BaseModel `bun:"table:driver_settlement_account"`
 
-	DriverId          string    `bun:"driver_id,pk"`
-	Bank              string    `bun:"bank"`
-	AccountNumber     string    `bun:"account_number"`
-	BankTransactionId string    `bun:"bank_transaction_id"`
-	CreateTime        time.Time `bun:"create_time"`
-	UpdateTime        time.Time `bun:"update_time"`
+	DriverId              string    `bun:"driver_id,pk"`
+	Bank                  string    `bun:"bank"`
+	AccountNumber         string    `bun:"account_number"`
+	AccountHolderName     string    `bun:"account_holder_name"`
+	AccountHolderBirthday string    `bun:"account_holder_birthday"`
+	BankTransactionId     string    `bun:"bank_transaction_id"`
+	CreateTime            time.Time `bun:"create_time"`
+	UpdateTime            time.Time `bun:"update_time"`
 }
 
 func (d DriverSettlementAccount) RedactedAccountNumber() string {

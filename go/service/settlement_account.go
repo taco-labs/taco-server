@@ -5,12 +5,11 @@ import (
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
 )
 
 type SettlementAccountService interface {
-	GetSettlementAccount(context.Context, entity.Driver, string, string) (value.SettlementAccount, error)
+	GetSettlementAccount(context.Context, string, string, string, string) (value.SettlementAccount, error)
 	TransferRequest(context.Context, value.SettlementTransferRequest) (value.SettlementTransfer, error)
 	TransferExecution(context.Context, value.SettlementTransfer) error
 }
@@ -21,8 +20,8 @@ type paypleSettlementAccountService struct {
 	customerKey string
 }
 
-func (p paypleSettlementAccountService) GetSettlementAccount(ctx context.Context, driver entity.Driver,
-	bankCode, bankAccountNumber string) (value.SettlementAccount, error) {
+func (p paypleSettlementAccountService) GetSettlementAccount(ctx context.Context,
+	driverId string, accountHolderBirthday, bankCode, bankAccountNumber string) (value.SettlementAccount, error) {
 	authResp, err := p.partnerAuthnetication()
 
 	if err != nil {
@@ -32,11 +31,11 @@ func (p paypleSettlementAccountService) GetSettlementAccount(ctx context.Context
 	request := paypleSettlementAccountAuthorizeRequest{
 		CustomerId:            p.customerId,
 		CustomerKey:           p.customerKey,
-		SubId:                 driver.Id,
+		SubId:                 driverId,
 		BankCode:              bankCode,
 		AccountNum:            bankAccountNumber,
 		AccountHolderInfoType: "0", // TODO (taekyeom) 법인계좌 지원할 때 하드코드 제거 필요
-		AccountholderInfo:     driver.BirthDay,
+		AccountholderInfo:     accountHolderBirthday,
 	}
 
 	resp, err := p.client.R().
@@ -285,16 +284,9 @@ type mockSettlementAccountService struct {
 	webhookUrl string
 }
 
-func (m mockSettlementAccountService) GetSettlementAccount(ctx context.Context, driver entity.Driver,
-	bankCode, bankAccountNumber string) (value.SettlementAccount, error) {
-	settlementAccount, err := m.inner.GetSettlementAccount(ctx, driver, bankCode, bankAccountNumber)
-	if err != nil {
-		return value.SettlementAccount{}, err
-	}
-
-	settlementAccount.AccountHolderName = driver.FullName()
-
-	return settlementAccount, nil
+func (m mockSettlementAccountService) GetSettlementAccount(ctx context.Context,
+	driverId, accountHolderBirthday, bankCode, bankAccountNumber string) (value.SettlementAccount, error) {
+	return m.inner.GetSettlementAccount(ctx, driverId, accountHolderBirthday, bankCode, bankAccountNumber)
 }
 
 func (m mockSettlementAccountService) TransferRequest(ctx context.Context, req value.SettlementTransferRequest) (value.SettlementTransfer, error) {
