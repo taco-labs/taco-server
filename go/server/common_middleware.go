@@ -67,6 +67,14 @@ func NewLoggerMiddleware(logger *zap.Logger) loggerMiddleware {
 	}
 }
 
+// TODO (taekyeom) to be paramterized
+var apiLatencySkipSet = map[string]struct{}{
+	"/healthz":          {},
+	"/service_region":   {},
+	"/location/address": {},
+	"/location/search":  {},
+}
+
 // TODO (taekyeom) api error count
 type apiLatencyMetricMiddleware struct {
 	metricService service.MetricService
@@ -78,6 +86,11 @@ func NewApiLatencyMetricMiddleware(metricService service.MetricService) *apiLate
 
 func (a apiLatencyMetricMiddleware) Process(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) (err error) {
+		requestPath := c.Path()
+		if _, ok := apiLatencySkipSet[requestPath]; ok {
+			return next(c)
+		}
+
 		ctx := c.Request().Context()
 		requestTime := utils.GetRequestTimeOrNow(ctx)
 		if err = next(c); err != nil {
@@ -85,7 +98,7 @@ func (a apiLatencyMetricMiddleware) Process(next echo.HandlerFunc) echo.HandlerF
 		}
 		responseTime := time.Now()
 
-		path := strings.ReplaceAll(c.Path(), ":", "$")
+		path := strings.ReplaceAll(requestPath, ":", "$")
 
 		latency := responseTime.Sub(requestTime)
 		tags := []service.Tag{
