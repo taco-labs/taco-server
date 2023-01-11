@@ -38,5 +38,6 @@ type taxicallApp struct {
 		driverGetter             driverGetterInterface
 		payment                  paymentAppInterface
 		userServiceRegionChecker service.ServiceRegionChecker
+		metric                   service.MetricService
 	}
 }

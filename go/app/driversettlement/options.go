@@ -40,6 +40,12 @@ func WithSettlementAccountService(svc service.SettlementAccountService) driverse
 	}
 }
 
+func WithMetricService(svc service.MetricService) driversettlementAppOption {
+	return func(da *driversettlementApp) {
+		da.service.metric = svc
+	}
+}
+
 func (d driversettlementApp) validateApp() error {
 	if d.Transactor == nil {
 		return errors.New("driver settlement app need transactor")
@@ -59,6 +65,10 @@ func (d driversettlementApp) validateApp() error {
 
 	if d.service.settlementAccount == nil {
 		return errors.New("driver settlement app need settlement account service")
+	}
+
+	if d.service.metric == nil {
+		return errors.New("driver settlement app need metric service")
 	}
 
 	return nil

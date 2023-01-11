@@ -38,6 +38,7 @@ type paymentApp struct {
 	service struct {
 		payment    service.PaymentService
 		settlement driverSettlementAppInterface
+		metric     service.MetricService
 	}
 }
 

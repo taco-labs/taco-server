@@ -18,6 +18,7 @@ import (
 	"github.com/eko/gocache/v3/cache"
 	"github.com/eko/gocache/v3/store"
 	"github.com/panjf2000/ants/v2"
+	"github.com/smira/go-statsd"
 	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/app/driver"
 	"github.com/taco-labs/taco/go/app/driversession"
@@ -66,7 +67,6 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		serverConfig.Database.Schema,
 	)
 
-	// TODO (taekyeom) connection pool parameter?
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
 	sqldb.SetMaxOpenConns(maxOpenConns)
@@ -102,6 +102,18 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	analyticsRepository := repository.NewAnalyticsRepository()
 
 	pushTokenRepository := repository.NewPushTokenRepository()
+
+	var metricService service.MetricService
+	switch serverConfig.Metric.Type {
+	case "mock":
+		metricService = service.NewMockMetricService()
+	case "log":
+		metricService = service.NewLoggerMetricService(logger)
+	case "statsd":
+		statsdAddr := fmt.Sprintf("%s:%d", serverConfig.Metric.Host, serverConfig.Metric.Port)
+		statsdClient := statsd.NewClient(statsdAddr)
+		metricService = service.NewStatsDMetricService(statsdClient)
+	}
 
 	// Init services
 	var smsVerificationService service.SmsVerificationSenderService
@@ -249,6 +261,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		driversettlement.WithEventRepository(eventRepository),
 		driversettlement.WithSettlementAccountService(settlementAccountService),
 		driversettlement.WithAnalyticsRepository(analyticsRepository),
+		driversettlement.WithMetricService(metricService),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup driver settlement app: %w", err)
@@ -262,6 +275,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		payment.WithReferralRepository(referralRepository),
 		payment.WithAnalyticsRepository(analyticsRepository),
 		payment.WithDriverSettlementService(driverSettlementApp),
+		payment.WithMetricService(metricService),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup user payment app: %w", err)
@@ -278,6 +292,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		taxicall.WithPaymentAppService(paymentApp),
 		taxicall.WithAnalyticsRepository(analyticsRepository),
 		taxicall.WithUserServiceRegionChecker(userServiceRegionChecker),
+		taxicall.WithMetricService(metricService),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup taxi call app: %w", err)
@@ -360,6 +375,8 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 
 	backofficeSessionMiddleware := backofficeserver.NewSessionMiddleware(serverConfig.Backoffice.Secret)
 
+	apiLatencyMiddleware := server.NewApiLatencyMetricMiddleware(metricService)
+
 	// Init server extensions
 	userServerPaypleExtension, err := userpaypleextension.NewPaypleExtension(
 		userpaypleextension.WithPayplePaymentApp(userApp),
@@ -385,6 +402,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		userserver.WithMiddleware(loggerMiddleware.Process),
 		userserver.WithMiddleware(userSessionMiddleware.Get()),
 		userserver.WithMiddleware(userserver.UserIdChecker),
+		userserver.WithMiddleware(apiLatencyMiddleware.Process),
 		userserver.WithExtension(userServerPaypleExtension.Apply),
 	)
 	if err != nil {
@@ -398,6 +416,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		driverserver.WithMiddleware(loggerMiddleware.Process),
 		driverserver.WithMiddleware(driverSessionMiddleware.Get()),
 		driverserver.WithMiddleware(driverserver.DriverIdChecker),
+		driverserver.WithMiddleware(apiLatencyMiddleware.Process),
 		driverserver.WithExtension(driverServerPaypleExtension.Apply),
 	)
 	if err != nil {

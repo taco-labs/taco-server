@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/service"
 	"github.com/uptrace/bun"
 )
 
@@ -44,6 +46,18 @@ func (p paymentApp) makeTransactionFail(ctx context.Context, orderId string, fai
 }
 
 func (p paymentApp) Process(ctx context.Context, event entity.Event) error {
+	requestTime := time.Now()
+	defer func() {
+		tags := []service.Tag{
+			{
+				Key:   "eventUri",
+				Value: event.EventUri,
+			},
+		}
+		now := time.Now()
+		p.service.metric.Timing("WorkerProcessTime", now.Sub(requestTime), tags...)
+	}()
+
 	select {
 	case <-ctx.Done():
 		return nil

@@ -10,6 +10,7 @@ type ServerConfig struct {
 	Env                      string `env:"TACO_ENV,default=dev"`
 	Log                      LogConfig
 	Database                 DatabaseConfig
+	Metric                   MetricServiceConfig
 	SmsSender                SmsSenderConfig
 	PaymentService           PaymentServiceConfig
 	SettlementAccountService SettlementAccountServiceConfig

@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
+	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/uptrace/bun"
 )
@@ -32,6 +34,18 @@ func (d driversettlementApp) OnFailure(ctx context.Context, event entity.Event, 
 }
 
 func (d driversettlementApp) Process(ctx context.Context, event entity.Event) error {
+	requestTime := time.Now()
+	defer func() {
+		tags := []service.Tag{
+			{
+				Key:   "eventUri",
+				Value: event.EventUri,
+			},
+		}
+		now := time.Now()
+		d.service.metric.Timing("WorkerProcessTime", now.Sub(requestTime), tags...)
+	}()
+
 	select {
 	case <-ctx.Done():
 		return nil

@@ -52,6 +52,12 @@ func WithDriverSettlementService(svc driverSettlementAppInterface) paymentAppOpt
 	}
 }
 
+func WithMetricService(svc service.MetricService) paymentAppOption {
+	return func(pa *paymentApp) {
+		pa.service.metric = svc
+	}
+}
+
 func (p paymentApp) validateApp() error {
 	if p.Transactor == nil {
 		return errors.New("user payment app need transactor")
@@ -79,6 +85,10 @@ func (p paymentApp) validateApp() error {
 
 	if p.repository.analytics == nil {
 		return errors.New("user payment app need analytics repository")
+	}
+
+	if p.service.metric == nil {
+		return errors.New("user payment app need metric service")
 	}
 
 	return nil

@@ -17,6 +17,7 @@ require (
 	github.com/labstack/echo/v4 v4.8.0
 	github.com/panjf2000/ants/v2 v2.5.0
 	github.com/sethvargo/go-envconfig v0.8.2
+	github.com/smira/go-statsd v1.3.2
 	github.com/twpayne/go-geom v1.4.3
 	github.com/uptrace/bun v1.1.7
 	github.com/uptrace/bun/dialect/pgdialect v1.1.7

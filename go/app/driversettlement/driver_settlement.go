@@ -30,6 +30,7 @@ type driversettlementApp struct {
 
 	service struct {
 		settlementAccount service.SettlementAccountService
+		metric            service.MetricService
 	}
 }
 

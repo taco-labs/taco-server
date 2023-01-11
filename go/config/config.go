@@ -40,6 +40,12 @@ type SettlementAccountServiceConfig struct {
 	WebhookUrl string `env:"TACO_SETTLEMENT_ACCOUNT_SERVICE_WEBHOOK_URL"`
 }
 
+type MetricServiceConfig struct {
+	Type string `env:"TACO_METRIC_SERVICE_TYPE,default=mock"`
+	Host string `env:"TACO_METRIC_SERVICE_HOST"`
+	Port int    `env:"TACO_METRIC_SERVICE_PORT"`
+}
+
 type MapServiceConfig struct {
 	Type     string `env:"TACO_MAP_SERVICE_TYPE,default=mock"`
 	Endpoint string `env:"TACO_MAP_SERVICE_ENDPOINT,required"`

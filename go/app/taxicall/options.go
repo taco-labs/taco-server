@@ -70,6 +70,12 @@ func WithUserServiceRegionChecker(svc service.ServiceRegionChecker) taxicallAppO
 	}
 }
 
+func WithMetricService(svc service.MetricService) taxicallAppOption {
+	return func(ta *taxicallApp) {
+		ta.service.metric = svc
+	}
+}
+
 func (t taxicallApp) validateApp() error {
 	if t.Transactor == nil {
 		return errors.New("taxi call app needs transactor ")
@@ -109,6 +115,10 @@ func (t taxicallApp) validateApp() error {
 
 	if t.service.userServiceRegionChecker == nil {
 		return errors.New("taxi call app needs user service region checker")
+	}
+
+	if t.service.metric == nil {
+		return errors.New("taxi call app needs metric service")
 	}
 
 	return nil

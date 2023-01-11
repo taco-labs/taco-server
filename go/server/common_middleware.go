@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
 	"go.uber.org/zap"
 )
@@ -62,5 +63,40 @@ func (r loggerMiddleware) Process(next echo.HandlerFunc) echo.HandlerFunc {
 func NewLoggerMiddleware(logger *zap.Logger) loggerMiddleware {
 	return loggerMiddleware{
 		logger: logger,
+	}
+}
+
+// TODO (taekyeom) api error count
+type apiLatencyMetricMiddleware struct {
+	metricService service.MetricService
+}
+
+func NewApiLatencyMetricMiddleware(metricService service.MetricService) *apiLatencyMetricMiddleware {
+	return &apiLatencyMetricMiddleware{metricService: metricService}
+}
+
+func (a apiLatencyMetricMiddleware) Process(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) (err error) {
+		ctx := c.Request().Context()
+		requestTime := utils.GetRequestTimeOrNow(ctx)
+		if err = next(c); err != nil {
+			c.Error(err)
+		}
+		responseTime := time.Now()
+
+		latency := responseTime.Sub(requestTime)
+		tags := []service.Tag{
+			{
+				Key:   "route",
+				Value: c.Path(),
+			},
+			{
+				Key:   "method",
+				Value: c.Request().Method,
+			},
+		}
+		a.metricService.Timing("ApiLatency", latency, tags...)
+
+		return
 	}
 }

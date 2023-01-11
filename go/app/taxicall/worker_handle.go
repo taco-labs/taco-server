@@ -13,6 +13,7 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/analytics"
 	"github.com/taco-labs/taco/go/domain/value/enum"
+	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
@@ -24,6 +25,22 @@ func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error 
 	if err != nil {
 		return fmt.Errorf("app.taxicall.handleEvent: error while unmarshal json: %v", err)
 	}
+
+	requestTime := time.Now()
+	defer func() {
+		tags := []service.Tag{
+			{
+				Key:   "eventUri",
+				Value: event.EventUri,
+			},
+			{
+				Key:   "processType",
+				Value: taxiProgressCmd.TaxiCallState,
+			},
+		}
+		now := time.Now()
+		t.service.metric.Timing("WorkerProcessTime", now.Sub(requestTime), tags...)
+	}()
 
 	select {
 	case <-ctx.Done():
