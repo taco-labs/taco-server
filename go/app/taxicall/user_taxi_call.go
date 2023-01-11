@@ -251,7 +251,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User
 			UpdateTime:                requestTime,
 		}
 
-		if err := entity.CheckPaymentForTaxiCallRequest(taxiCallRequest, userPayment); err != nil {
+		if err := entity.CheckPaymentForTaxiCallRequest(&taxiCallRequest, userPayment); err != nil {
 			return fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while check payment: %w", err)
 		}
 
