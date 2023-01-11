@@ -545,8 +545,7 @@ func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpd
 }
 
 func (d driverApp) UpdateDriverLocation(ctx context.Context, req request.DriverLocationUpdateRequest) error {
-	requestTime := utils.GetRequestTimeOrNow(ctx)
-	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+	err := d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driver, err := d.repository.driver.FindById(ctx, i, req.DriverId)
 
 		if err != nil {
@@ -556,21 +555,14 @@ func (d driverApp) UpdateDriverLocation(ctx context.Context, req request.DriverL
 			return fmt.Errorf("app.Driver.UpdateDriverLocation: driver is not on duty: %w", value.ErrInvalidOperation)
 		}
 
+		return nil
+	})
+
+	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		err = d.service.taxiCall.UpdateDriverLocation(ctx, req)
 
 		if err != nil {
-			return err
-		}
-
-		driverLocationAnalytics := entity.NewAnalytics(requestTime, analytics.DriverLocationPayload{
-			DriverId: req.DriverId,
-			Point: value.Point{
-				Latitude:  req.Latitude,
-				Longitude: req.Longitude,
-			},
-		})
-		if err := d.repository.analytics.Create(ctx, i, driverLocationAnalytics); err != nil {
-			return fmt.Errorf("app.Driver.UpdateDriverLocation: error while add analytics event: %w", err)
+			return fmt.Errorf("app.Driver.UpdateDriverLocation: error while update driver location via taxicall app: %w", err)
 		}
 
 		return nil

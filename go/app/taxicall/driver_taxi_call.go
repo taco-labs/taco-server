@@ -84,6 +84,17 @@ func (t taxicallApp) UpdateDriverLocation(ctx context.Context, req request.Drive
 			return fmt.Errorf("app.taxiCall.UpdateDriverLocation: error while update driver location:\n%w", err)
 		}
 
+		driverLocationAnalytics := entity.NewAnalytics(requestTime, analytics.DriverLocationPayload{
+			DriverId: req.DriverId,
+			Point: value.Point{
+				Latitude:  req.Latitude,
+				Longitude: req.Longitude,
+			},
+		})
+		if err := t.repository.analytics.Create(ctx, i, driverLocationAnalytics); err != nil {
+			return fmt.Errorf("app.taxiCall.UpdateDriverLocation: error while add analytics event: %w", err)
+		}
+
 		return nil
 	})
 }
