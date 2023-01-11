@@ -79,9 +79,9 @@ func (d DriverSettlementAccount) RedactedAccountNumber() string {
 type DriverLocation struct {
 	bun.BaseModel `bun:"table:driver_location"`
 
-	Location   value.Point
-	DriverId   string
-	UpdateTime time.Time
+	DriverId   string      `bun:"driver_id,pk"`
+	Location   value.Point `bun:"location"`
+	UpdateTime time.Time   `bun:"update_time"`
 }
 
 type DriverResidentRegistrationNumber struct {
