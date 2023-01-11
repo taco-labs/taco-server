@@ -77,6 +77,8 @@ func (d DriverSettlementAccount) RedactedAccountNumber() string {
 }
 
 type DriverLocation struct {
+	bun.BaseModel `bun:"table:driver_location"`
+
 	Location   value.Point
 	DriverId   string
 	UpdateTime time.Time
