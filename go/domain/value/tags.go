@@ -16,8 +16,8 @@ var TagMap = map[int]string{
 	5: "경유지",
 	6: "큰짐",
 	7: "아이동반",
-	8: "와이파이",
-	9: "여성기사님",
+	// 8: "와이파이",
+	// 9: "여성기사님",
 }
 
 func GetTagById(tagId int) (string, error) {
