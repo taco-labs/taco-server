@@ -15,6 +15,7 @@ require (
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/uuid v1.3.0
 	github.com/labstack/echo/v4 v4.8.0
+	github.com/oklog/ulid/v2 v2.1.0
 	github.com/panjf2000/ants/v2 v2.5.0
 	github.com/sethvargo/go-envconfig v0.8.2
 	github.com/smira/go-statsd v1.3.2

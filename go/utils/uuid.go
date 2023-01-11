@@ -1,7 +1,11 @@
 package utils
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"github.com/oklog/ulid/v2"
+)
 
 func MustNewUUID() string {
-	return uuid.Must(uuid.NewUUID()).String()
+	ulid := ulid.Make()
+	return uuid.Must(uuid.FromBytes(ulid.Bytes())).String()
 }
