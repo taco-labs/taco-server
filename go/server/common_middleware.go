@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -84,11 +85,13 @@ func (a apiLatencyMetricMiddleware) Process(next echo.HandlerFunc) echo.HandlerF
 		}
 		responseTime := time.Now()
 
+		path := strings.ReplaceAll(c.Path(), ":", "$")
+
 		latency := responseTime.Sub(requestTime)
 		tags := []service.Tag{
 			{
 				Key:   "route",
-				Value: c.Path(),
+				Value: path,
 			},
 			{
 				Key:   "method",
