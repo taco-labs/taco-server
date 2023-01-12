@@ -7,9 +7,50 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 )
 
-type DriverTaxiCallRequestPageResponse struct {
-	PageToken string                          `json:"pageToken"`
-	Data      []DriverTaxiCallRequestResponse `json:"data"`
+type DriverTaxiCallRequestHistoryResponse struct {
+	Id                 string                 `json:"id"`
+	DriverId           string                 `json:"driverId"`
+	Departure          value.Location         `json:"departure"`
+	Arrival            value.Location         `json:"arrival"`
+	Tags               []string               `json:"tags"`
+	UserTag            string                 `json:"userTag"`
+	Payment            PaymentSummaryResponse `json:"payment"`
+	BasePrice          int                    `json:"basePrice"`
+	CancelPenaltyPrice int                    `json:"cancelPenaltyPrice"`
+	TollFee            int                    `json:"tollFee"`
+	AdditionalPrice    int                    `json:"additionalPrice"`
+	CurrentState       string                 `json:"currentState"`
+	CreateTime         time.Time              `json:"createTime"`
+	UpdateTime         time.Time              `json:"updateTime"`
+}
+
+func DriverTaxiCallRequestToHistoryResponse(taxiCallRequest entity.TaxiCallRequest) DriverTaxiCallRequestHistoryResponse {
+	return DriverTaxiCallRequestHistoryResponse{
+		Id: taxiCallRequest.Id,
+		DriverId: func() string {
+			if taxiCallRequest.DriverId.Valid {
+				return taxiCallRequest.DriverId.String
+			}
+			return ""
+		}(),
+		Departure:          taxiCallRequest.Departure,
+		Arrival:            taxiCallRequest.Arrival,
+		Tags:               append([]string{}, taxiCallRequest.Tags...),
+		UserTag:            taxiCallRequest.UserTag,
+		Payment:            PaymentSummaryToResponse(taxiCallRequest.PaymentSummary),
+		BasePrice:          taxiCallRequest.BasePrice,
+		TollFee:            taxiCallRequest.TollFee,
+		AdditionalPrice:    taxiCallRequest.UserAdditionalPrice(),
+		CancelPenaltyPrice: taxiCallRequest.CancelPenaltyPrice,
+		CurrentState:       string(taxiCallRequest.CurrentState),
+		CreateTime:         taxiCallRequest.CreateTime,
+		UpdateTime:         taxiCallRequest.UpdateTime,
+	}
+}
+
+type DriverTaxiCallRequestHistoryPageResponse struct {
+	PageToken string                                 `json:"pageToken"`
+	Data      []DriverTaxiCallRequestHistoryResponse `json:"data"`
 }
 
 func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummaryResponse {

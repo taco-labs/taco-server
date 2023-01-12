@@ -7,6 +7,54 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 )
 
+type UserTaxiCallRequestHistoryResponse struct {
+	Id                 string                 `json:"id"`
+	DriverId           string                 `json:"driverId"`
+	Departure          value.Location         `json:"departure"`
+	Arrival            value.Location         `json:"arrival"`
+	Tags               []string               `json:"tags"`
+	UserTag            string                 `json:"userTag"`
+	Payment            PaymentSummaryResponse `json:"payment"`
+	BasePrice          int                    `json:"basePrice"`
+	CancelPenaltyPrice int                    `json:"cancelPenaltyPrice"`
+	TollFee            int                    `json:"tollFee"`
+	AdditionalPrice    int                    `json:"additionalPrice"`
+	UsedPoint          int                    `json:"used_point"`
+	CurrentState       string                 `json:"currentState"`
+	CreateTime         time.Time              `json:"createTime"`
+	UpdateTime         time.Time              `json:"updateTime"`
+}
+
+func UserTaxiCallRequestToHistoryResponse(taxiCallRequest entity.TaxiCallRequest) UserTaxiCallRequestHistoryResponse {
+	return UserTaxiCallRequestHistoryResponse{
+		Id: taxiCallRequest.Id,
+		DriverId: func() string {
+			if taxiCallRequest.DriverId.Valid {
+				return taxiCallRequest.DriverId.String
+			}
+			return ""
+		}(),
+		Departure:          taxiCallRequest.Departure,
+		Arrival:            taxiCallRequest.Arrival,
+		Tags:               append([]string{}, taxiCallRequest.Tags...),
+		UserTag:            taxiCallRequest.UserTag,
+		Payment:            PaymentSummaryToResponse(taxiCallRequest.PaymentSummary),
+		BasePrice:          taxiCallRequest.BasePrice,
+		TollFee:            taxiCallRequest.TollFee,
+		AdditionalPrice:    taxiCallRequest.UserAdditionalPrice(),
+		UsedPoint:          taxiCallRequest.UserUsedPoint,
+		CancelPenaltyPrice: taxiCallRequest.CancelPenaltyPrice,
+		CurrentState:       string(taxiCallRequest.CurrentState),
+		CreateTime:         taxiCallRequest.CreateTime,
+		UpdateTime:         taxiCallRequest.UpdateTime,
+	}
+}
+
+type UserTaxiCallRequestHistoryPageResponse struct {
+	PageToken string                               `json:"pageToken"`
+	Data      []UserTaxiCallRequestHistoryResponse `json:"data"`
+}
+
 type UserTaxiCallRequestResponse struct {
 	Dryrun                    bool                   `json:"dryrun"`
 	ToArrivalDistance         int                    `json:"toArrivalDistance"`
@@ -66,11 +114,6 @@ func UserTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) UserT
 	}
 
 	return resp
-}
-
-type UserTaxiCallRequestPageResponse struct {
-	PageToken string                        `json:"pageToken"`
-	Data      []UserTaxiCallRequestResponse `json:"data"`
 }
 
 type UserLatestTaxiCallRequestResponse struct {

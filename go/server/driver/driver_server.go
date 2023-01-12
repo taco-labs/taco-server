@@ -306,9 +306,9 @@ func (d driverServer) ListTaxiCallRequest(e echo.Context) error {
 		return server.ToResponse(e, err)
 	}
 
-	resp := slices.Map(taxiCallRequests, response.DriverTaxiCallRequestToResponse)
+	resp := slices.Map(taxiCallRequests, response.DriverTaxiCallRequestToHistoryResponse)
 
-	return e.JSON(http.StatusOK, response.DriverTaxiCallRequestPageResponse{
+	return e.JSON(http.StatusOK, response.DriverTaxiCallRequestHistoryPageResponse{
 		PageToken: pageToken,
 		Data:      resp,
 	})
