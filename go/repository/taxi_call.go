@@ -16,6 +16,7 @@ import (
 )
 
 type TaxiCallRepository interface {
+	// TaxiCallRequest
 	GetById(context.Context, bun.IDB, string) (entity.TaxiCallRequest, error)
 	GetLatestByUserId(context.Context, bun.IDB, string) (entity.TaxiCallRequest, error)
 	GetLatestByDriverId(context.Context, bun.IDB, string) (entity.TaxiCallRequest, error)
@@ -24,11 +25,13 @@ type TaxiCallRepository interface {
 	Create(context.Context, bun.IDB, entity.TaxiCallRequest) error
 	Update(context.Context, bun.IDB, entity.TaxiCallRequest) error
 
+	// Route
 	CreateToDepartureRoute(context.Context, bun.IDB, entity.TaxiCallToDepartureRoute) error
 	CreateToArrivalRoute(context.Context, bun.IDB, entity.TaxiCallToArrivalRoute) error
 
 	GetActiveRequestIds(context.Context, bun.IDB) ([]string, error)
 
+	// Ticket
 	GetTicketById(context.Context, bun.IDB, string) (entity.TaxiCallTicket, error)
 	GetLatestTicketByRequestId(context.Context, bun.IDB, string) (entity.TaxiCallTicket, error)
 	CreateTicket(context.Context, bun.IDB, entity.TaxiCallTicket) error
@@ -36,6 +39,7 @@ type TaxiCallRepository interface {
 	DeleteTicketByRequestId(context.Context, bun.IDB, string) error
 	GetDistributedCountByTicketId(context.Context, bun.IDB, string) (int, error)
 
+	// DriverContext
 	GetDriverTaxiCallContext(context.Context, bun.IDB, string) (entity.DriverTaxiCallContext, error)
 	UpsertDriverTaxiCallContext(context.Context, bun.IDB, entity.DriverTaxiCallContext) error
 	BulkUpsertDriverTaxiCallContext(context.Context, bun.IDB, []entity.DriverTaxiCallContext) error
@@ -46,12 +50,212 @@ type TaxiCallRepository interface {
 
 	ListDriverTaxiCallContextInRadius(context.Context, bun.IDB, value.Point, string, int) ([]entity.DriverTaxiCallContext, error)
 
+	// Tag
 	ListDriverDenyTaxiCallTag(context.Context, bun.IDB, string) ([]entity.DriverDenyTaxiCallTag, error)
 	CreateDriverDenyTaxiCallTag(context.Context, bun.IDB, entity.DriverDenyTaxiCallTag) error
 	DeleteDriverDenyTaxiCallTag(context.Context, bun.IDB, entity.DriverDenyTaxiCallTag) error
 }
 
 type taxiCallRepository struct{}
+
+func (t taxiCallRepository) GetById(ctx context.Context, db bun.IDB, taxiCallRequestId string) (entity.TaxiCallRequest, error) {
+	resp := entity.TaxiCallRequest{
+		Id: taxiCallRequestId,
+	}
+
+	err := db.NewSelect().
+		Model(&resp).
+		WherePK().
+		Relation("ToDepartureRoute").
+		Relation("ToArrivalRoute").
+		Scan(ctx)
+
+	if errors.Is(sql.ErrNoRows, err) {
+		return resp, value.ErrNotFound
+	}
+	if err != nil {
+		return resp, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (t taxiCallRepository) GetLatestByUserId(ctx context.Context, db bun.IDB, userId string) (entity.TaxiCallRequest, error) {
+	resp := entity.TaxiCallRequest{}
+
+	err := db.NewSelect().
+		Model(&resp).
+		Where("user_id = ?", userId).
+		Relation("ToDepartureRoute").
+		Relation("ToArrivalRoute").
+		OrderExpr("create_time DESC").Limit(1).Scan(ctx)
+
+	if errors.Is(sql.ErrNoRows, err) {
+		return resp, value.ErrNotFound
+	}
+	if err != nil {
+		return resp, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (t taxiCallRepository) GetLatestByDriverId(ctx context.Context, db bun.IDB, driverId string) (entity.TaxiCallRequest, error) {
+	resp := entity.TaxiCallRequest{}
+
+	err := db.NewSelect().
+		Model(&resp).
+		Where("driver_id = ?", driverId).
+		Relation("ToDepartureRoute").
+		Relation("ToArrivalRoute").
+		OrderExpr("create_time DESC").Limit(1).Scan(ctx)
+
+	if errors.Is(sql.ErrNoRows, err) {
+		return resp, value.ErrNotFound
+	}
+	if err != nil {
+		return resp, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
+
+func (t taxiCallRepository) ListByUserId(ctx context.Context, db bun.IDB, userId string, pageToken string, count int) ([]entity.TaxiCallRequest, string, error) {
+	var resp []entity.TaxiCallRequest
+
+	selectExpr := db.NewSelect().
+		Model(&resp).
+		Where("user_id = ?", userId).
+		Relation("ToDepartureRoute").
+		Relation("ToArrivalRoute").
+		Order("create_time DESC").
+		Limit(count)
+
+	if pageToken != "" {
+		subQ := db.NewSelect().Model((*entity.TaxiCallRequest)(nil)).Column("create_time").Where("id = ?", pageToken)
+		selectExpr = selectExpr.Where("create_time < (?)", subQ)
+	}
+
+	err := selectExpr.Scan(ctx)
+	if err != nil {
+		return resp, "", fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	resultCount := len(resp)
+	if resultCount == 0 {
+		return resp, pageToken, nil
+	}
+	return resp, resp[resultCount-1].Id, nil
+}
+
+func (t taxiCallRepository) ListByDriverId(ctx context.Context, db bun.IDB, driverId string, pageToken string, count int) ([]entity.TaxiCallRequest, string, error) {
+	var resp []entity.TaxiCallRequest
+
+	selectExpr := db.NewSelect().
+		Model(&resp).
+		Where("driver_id = ?", driverId).
+		Relation("ToDepartureRoute").
+		Relation("ToArrivalRoute").
+		Order("create_time DESC").
+		Limit(count)
+
+	if pageToken != "" {
+		subQ := db.NewSelect().Model((*entity.TaxiCallRequest)(nil)).Column("create_time").Where("id = ?", pageToken)
+		selectExpr = selectExpr.Where("create_time < (?)", subQ)
+	}
+
+	err := selectExpr.Scan(ctx)
+	if err != nil {
+		return resp, "", fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	resultCount := len(resp)
+	if resultCount == 0 {
+		return resp, pageToken, nil
+	}
+	return resp, resp[resultCount-1].Id, nil
+}
+
+func (t taxiCallRepository) Create(ctx context.Context, db bun.IDB, taxiCallRequest entity.TaxiCallRequest) error {
+	_, err := db.NewInsert().Model(&taxiCallRequest).Exec(ctx)
+
+	// TODO (taekyeom) handle already exists
+	if err != nil {
+		return fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return nil
+}
+
+func (t taxiCallRepository) Update(ctx context.Context, db bun.IDB, taxiCallRequest entity.TaxiCallRequest) error {
+	res, err := db.NewUpdate().Model(&taxiCallRequest).WherePK().Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (t taxiCallRepository) CreateToDepartureRoute(ctx context.Context, db bun.IDB, toDepartureRoute entity.TaxiCallToDepartureRoute) error {
+	res, err := db.NewInsert().Model(&toDepartureRoute).Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (t taxiCallRepository) CreateToArrivalRoute(ctx context.Context, db bun.IDB, toArrivalRoute entity.TaxiCallToArrivalRoute) error {
+	res, err := db.NewInsert().Model(&toArrivalRoute).Exec(ctx)
+
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
+	}
+	if rowsAffected != 1 {
+		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
+	}
+
+	return nil
+}
+
+func (t taxiCallRepository) GetActiveRequestIds(ctx context.Context, db bun.IDB) ([]string, error) {
+	resp := []string{}
+
+	err := db.NewSelect().Model((*entity.TaxiCallRequest)(nil)).
+		Column("id").
+		Where("taxi_call_state IN (?)", bun.In([]enum.TaxiCallState{
+			enum.TaxiCallState_Requested,
+			enum.TaxiCallState_DRIVER_TO_DEPARTURE,
+			enum.TaxiCallState_DRIVER_TO_ARRIVAL,
+		})).Scan(ctx, &resp)
+	if err != nil {
+		return []string{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+	}
+
+	return resp, nil
+}
 
 func (t taxiCallRepository) BulkUpsertDriverTaxiCallContext(ctx context.Context, db bun.IDB,
 	callContexts []entity.DriverTaxiCallContext) error {
@@ -177,200 +381,6 @@ func (t taxiCallRepository) GetDistributedCountByTicketId(ctx context.Context, d
 	}
 
 	return distributedCount, nil
-}
-
-func (t taxiCallRepository) GetById(ctx context.Context, db bun.IDB, taxiCallRequestId string) (entity.TaxiCallRequest, error) {
-	resp := entity.TaxiCallRequest{
-		Id: taxiCallRequestId,
-	}
-
-	err := db.NewSelect().Model(&resp).WherePK().Scan(ctx)
-
-	if errors.Is(sql.ErrNoRows, err) {
-		return resp, value.ErrNotFound
-	}
-	if err != nil {
-		return resp, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	return resp, nil
-}
-
-func (t taxiCallRepository) GetLatestByUserId(ctx context.Context, db bun.IDB, userId string) (entity.TaxiCallRequest, error) {
-	resp := entity.TaxiCallRequest{}
-
-	err := db.NewSelect().
-		Model(&resp).
-		Where("user_id = ?", userId).
-		Relation("ToDepartureRoute").
-		Relation("ToArrivalRoute").
-		OrderExpr("create_time DESC").Limit(1).Scan(ctx)
-
-	if errors.Is(sql.ErrNoRows, err) {
-		return resp, value.ErrNotFound
-	}
-	if err != nil {
-		return resp, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	return resp, nil
-}
-
-func (t taxiCallRepository) GetLatestByDriverId(ctx context.Context, db bun.IDB, driverId string) (entity.TaxiCallRequest, error) {
-	resp := entity.TaxiCallRequest{}
-
-	err := db.NewSelect().
-		Model(&resp).
-		Where("driver_id = ?", driverId).
-		Relation("ToDepartureRoute").
-		Relation("ToArrivalRoute").
-		OrderExpr("create_time DESC").Limit(1).Scan(ctx)
-
-	if errors.Is(sql.ErrNoRows, err) {
-		return resp, value.ErrNotFound
-	}
-	if err != nil {
-		return resp, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	return resp, nil
-}
-
-func (t taxiCallRepository) ListByUserId(ctx context.Context, db bun.IDB, userId string, pageToken string, count int) ([]entity.TaxiCallRequest, string, error) {
-	var resp []entity.TaxiCallRequest
-
-	selectExpr := db.NewSelect().
-		Model(&resp).
-		Where("user_id = ?", userId).
-		Relation("ToDepartureRoute").
-		Relation("ToArrivalRoute").
-		Order("create_time DESC").
-		Limit(count)
-
-	if pageToken != "" {
-		subQ := db.NewSelect().Model((*entity.TaxiCallRequest)(nil)).Column("create_time").Where("id = ?", pageToken)
-		selectExpr = selectExpr.Where("create_time < (?)", subQ)
-	}
-
-	err := selectExpr.Scan(ctx)
-	if err != nil {
-		return resp, "", fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	resultCount := len(resp)
-	if resultCount == 0 {
-		return resp, pageToken, nil
-	}
-	return resp, resp[resultCount-1].Id, nil
-}
-
-func (t taxiCallRepository) GetActiveRequestIds(ctx context.Context, db bun.IDB) ([]string, error) {
-	resp := []string{}
-
-	err := db.NewSelect().Model((*entity.TaxiCallRequest)(nil)).
-		Column("id").
-		Where("taxi_call_state IN (?)", bun.In([]enum.TaxiCallState{
-			enum.TaxiCallState_Requested,
-			enum.TaxiCallState_DRIVER_TO_DEPARTURE,
-			enum.TaxiCallState_DRIVER_TO_ARRIVAL,
-		})).Scan(ctx, &resp)
-	if err != nil {
-		return []string{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	return resp, nil
-}
-
-func (t taxiCallRepository) ListByDriverId(ctx context.Context, db bun.IDB, driverId string, pageToken string, count int) ([]entity.TaxiCallRequest, string, error) {
-	var resp []entity.TaxiCallRequest
-
-	selectExpr := db.NewSelect().
-		Model(&resp).
-		Where("driver_id = ?", driverId).
-		Relation("ToDepartureRoute").
-		Relation("ToArrivalRoute").
-		Order("create_time DESC").
-		Limit(count)
-
-	if pageToken != "" {
-		subQ := db.NewSelect().Model((*entity.TaxiCallRequest)(nil)).Column("create_time").Where("id = ?", pageToken)
-		selectExpr = selectExpr.Where("create_time < (?)", subQ)
-	}
-
-	err := selectExpr.Scan(ctx)
-	if err != nil {
-		return resp, "", fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	resultCount := len(resp)
-	if resultCount == 0 {
-		return resp, pageToken, nil
-	}
-	return resp, resp[resultCount-1].Id, nil
-}
-
-func (t taxiCallRepository) Create(ctx context.Context, db bun.IDB, taxiCallRequest entity.TaxiCallRequest) error {
-	_, err := db.NewInsert().Model(&taxiCallRequest).Exec(ctx)
-
-	// TODO (taekyeom) handle already exists
-	if err != nil {
-		return fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
-	}
-
-	return nil
-}
-
-func (t taxiCallRepository) Update(ctx context.Context, db bun.IDB, taxiCallRequest entity.TaxiCallRequest) error {
-	res, err := db.NewUpdate().Model(&taxiCallRequest).WherePK().Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
-	}
-
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
-	}
-	if rowsAffected != 1 {
-		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
-	}
-
-	return nil
-}
-
-func (t taxiCallRepository) CreateToDepartureRoute(ctx context.Context, db bun.IDB, toDepartureRoute entity.TaxiCallToDepartureRoute) error {
-	res, err := db.NewInsert().Model(&toDepartureRoute).Exec(ctx)
-
-	if err != nil {
-		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
-	}
-
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
-	}
-	if rowsAffected != 1 {
-		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
-	}
-
-	return nil
-}
-
-func (t taxiCallRepository) CreateToArrivalRoute(ctx context.Context, db bun.IDB, toArrivalRoute entity.TaxiCallToArrivalRoute) error {
-	res, err := db.NewInsert().Model(&toArrivalRoute).Exec(ctx)
-
-	if err != nil {
-		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
-	}
-
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
-	}
-	if rowsAffected != 1 {
-		return fmt.Errorf("%w: invalid rows affected %d", value.ErrDBInternal, rowsAffected)
-	}
-
-	return nil
 }
 
 func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Context, db bun.IDB,

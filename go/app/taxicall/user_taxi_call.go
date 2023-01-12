@@ -55,7 +55,7 @@ func (t taxicallApp) ListUserTaxiCallRequest(ctx context.Context, req request.Li
 	})
 
 	if err != nil {
-		return []entity.TaxiCallRequest{}, "", nil
+		return []entity.TaxiCallRequest{}, "", err
 	}
 
 	return taxiCallRequests, pageToken, nil

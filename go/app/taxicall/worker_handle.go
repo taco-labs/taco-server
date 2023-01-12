@@ -166,7 +166,6 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 		if err != nil {
 			return fmt.Errorf("app.taxicall.handleTaxiCallRequested: [%s] error while get driver contexts within radius: %w", taxiCallRequest.Id, err)
 		}
-		driverTaxiCallContexts = selectTaxiCallContextsToDistribute(driverTaxiCallContexts)
 
 		if len(driverTaxiCallContexts) == 0 && taxiCallTicket.AttemptLimit() {
 			totalDistributedCount, err := t.repository.taxiCallRequest.GetDistributedCountByTicketId(ctx, i, taxiCallTicket.TicketId)
@@ -199,6 +198,7 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 		}
 
 		if len(driverTaxiCallContexts) > 0 {
+			driverTaxiCallContexts = selectTaxiCallContextsToDistribute(driverTaxiCallContexts)
 			// TODO (taekyeom) Tit-for-tat paramter 도 나중엔 configurable 하게 바꿔야 함
 			// - Total entites: query로 부터 최대 몇 개의 entity를 가져 올 것인지
 			// - Result entites: Total entites 중 몇 개의 entity에게 call ticket을 뿌릴 것인가
