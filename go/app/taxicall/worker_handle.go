@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/taco-labs/taco/go/domain/entity"
@@ -261,9 +260,10 @@ func selectTaxiCallContextsToDistribute(taxiCallContexts []entity.DriverTaxiCall
 	if len(taxiCallContexts) <= 5 {
 		return taxiCallContexts
 	} else {
-		rand.Shuffle(len(taxiCallContexts)-2, func(i, j int) {
-			taxiCallContexts[3+i], taxiCallContexts[3+j] = taxiCallContexts[3+j], taxiCallContexts[3+i]
-		})
+		// TODO (taekyeom) tit-for-tat 개선해야 함
+		// rand.Shuffle(len(taxiCallContexts)-2, func(i, j int) {
+		// 	taxiCallContexts[3+i], taxiCallContexts[3+j] = taxiCallContexts[3+j], taxiCallContexts[3+i]
+		// })
 		return taxiCallContexts[:5]
 	}
 }
