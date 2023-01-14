@@ -61,6 +61,7 @@ OUTBOX:
 	for {
 		select {
 		case <-ctx.Done():
+			<-o.shutdownCh
 			break OUTBOX
 		case <-o.shutdownCh:
 			break OUTBOX
@@ -74,7 +75,6 @@ OUTBOX:
 			}
 		}
 	}
-	fmt.Println("shutting down Outbox...")
 	o.waitCh <- struct{}{}
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 
 	"firebase.google.com/go/messaging"
 	"github.com/taco-labs/taco/go/domain/value"
+	"go.uber.org/zap"
 	"gocloud.dev/pubsub"
 )
 
@@ -70,4 +71,17 @@ func notificationToFcmMessage(notification value.Notification) *messaging.Messag
 	}
 
 	return &message
+}
+
+type loggerNotificationService struct {
+	logger *zap.Logger
+}
+
+func (f loggerNotificationService) SendNotification(_ context.Context, notification value.Notification) error {
+	f.logger.Info("Notification", zap.Any("notification", notification))
+	return nil
+}
+
+func NewLoggerNotificatioNConfig(logger *zap.Logger) *loggerNotificationService {
+	return &loggerNotificationService{logger: logger}
 }

@@ -81,8 +81,12 @@ func RunOutbox(ctx context.Context, outboxConfig config.OutboxConfig, logger *za
 		return fmt.Errorf("failed to start outbox app: %w", err)
 	}
 
-	<-quit
-	fmt.Printf("shutting down outbox...")
+	select {
+	case <-ctx.Done():
+	case <-quit:
+		break
+	}
+	fmt.Printf("shutting down outbox...\n")
 
 	outboxApp.Shuwdown()
 

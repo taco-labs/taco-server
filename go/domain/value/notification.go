@@ -1,10 +1,11 @@
 package value
 
 const (
-	NotificationCategory_Taxicall   = "Taxicall"
-	NotificationCategory_Payment    = "Payment"
-	NotificationCategory_Driver     = "Driver"
-	NotificationCategory_Settlement = "Settlement"
+	NotificationCategory_Taxicall         = "Taxicall"
+	NotificationCategory_TaxicallLocation = "TaxicallLocation"
+	NotificationCategory_Payment          = "Payment"
+	NotificationCategory_Driver           = "Driver"
+	NotificationCategory_Settlement       = "Settlement"
 )
 
 type Notification struct {

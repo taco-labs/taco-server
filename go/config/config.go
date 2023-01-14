@@ -52,6 +52,10 @@ type MapServiceConfig struct {
 	ApiKey   string `env:"TACO_MAP_SERVICE_API_KEY,required"`
 }
 
+type NotificationConfig struct {
+	Type string `env:"TACO_NOTIFICATION_SERVICE_TYPE,default=log"`
+}
+
 type EncryptionServiceConfig struct {
 	KeyId string `env:"TACO_ENCRYPTION_SERVICE_KEY_ID,required"`
 }

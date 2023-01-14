@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	EventUri_TaxiCallPrefix  = "TaxiCall/"
-	EventUri_TaxiCallProcess = fmt.Sprintf("%sProcess", EventUri_TaxiCallPrefix)
+	EventUri_TaxiCallPrefix            = "TaxiCall/"
+	EventUri_TaxiCallProcess           = fmt.Sprintf("%sProcess", EventUri_TaxiCallPrefix)
+	EventUri_TaxiCallInDirivngLocation = fmt.Sprintf("%sInDrivingLocation", EventUri_TaxiCallPrefix)
 )
 
 type TaxiCallProcessMessage struct {
@@ -46,6 +47,36 @@ func (t TaxiCallProcessMessage) ToEvent() entity.Event {
 	}
 }
 
+type TaxiCallInDrivingLocationMessage struct {
+	TaxiCallRequestId   string    `json:"taxiCallRequestId"`
+	DesiredScheduleTime time.Time `json:"desiredScheduleTime"`
+	EventTime           time.Time `json:"eventTIme"`
+}
+
+func (t TaxiCallInDrivingLocationMessage) ToEvent() entity.Event {
+	payload, _ := json.Marshal(t)
+	var delaySeconds int32
+	if t.DesiredScheduleTime == t.EventTime {
+		delaySeconds = 0
+	} else {
+		delayDuration := minTimeDuration(
+			t.DesiredScheduleTime.Sub(t.EventTime),
+			time.Until(t.DesiredScheduleTime),
+		)
+		if delayDuration < 0 {
+			delayDuration = 0
+		}
+		delaySeconds = int32(delayDuration.Seconds())
+	}
+	return entity.Event{
+		MessageId:    utils.MustNewUUID(),
+		EventUri:     EventUri_TaxiCallInDirivngLocation,
+		DelaySeconds: delaySeconds,
+		Payload:      payload,
+		CreateTime:   t.EventTime,
+	}
+}
+
 func NewTaxiCallProgressCommand(taxiCallRequestId string, taxiCallState enum.TaxiCallState,
 	eventTime time.Time, desiredProcessTime time.Time) entity.Event {
 	command := TaxiCallProcessMessage{
@@ -53,6 +84,17 @@ func NewTaxiCallProgressCommand(taxiCallRequestId string, taxiCallState enum.Tax
 		TaxiCallState:       string(taxiCallState),
 		EventTime:           eventTime.Truncate(time.Microsecond),          // (taekyeom) postgresql이 microsecond까지만 지원
 		DesiredScheduleTime: desiredProcessTime.Truncate(time.Microsecond), // (taekyeom) postgresql이 microsecond까지만 지원
+	}
+
+	return command.ToEvent()
+}
+
+func NewTaxiCallInDrivingLocationMessage(taxiCallRequestId string,
+	eventTime time.Time, desiredScheduleTime time.Time) entity.Event {
+	command := TaxiCallInDrivingLocationMessage{
+		TaxiCallRequestId:   taxiCallRequestId,
+		EventTime:           eventTime,
+		DesiredScheduleTime: desiredScheduleTime.Truncate(time.Microsecond),
 	}
 
 	return command.ToEvent()

@@ -30,7 +30,15 @@ func (t taxicallApp) Process(ctx context.Context, event entity.Event) error {
 	case <-ctx.Done():
 		return nil
 	default:
-		return t.handleEvent(ctx, event)
+		var err error
+		switch event.EventUri {
+		case command.EventUri_TaxiCallProcess:
+			err = t.handleProgress(ctx, event)
+		case command.EventUri_TaxiCallInDirivngLocation:
+			err = t.handleLocation(ctx, event)
+		}
+
+		return err
 	}
 }
 

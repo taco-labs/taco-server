@@ -15,6 +15,7 @@ type ServerConfig struct {
 	PaymentService           PaymentServiceConfig
 	SettlementAccountService SettlementAccountServiceConfig
 	MapService               MapServiceConfig
+	Notification             NotificationConfig
 	EncryptionService        EncryptionServiceConfig
 	Backoffice               BackofficeConfig
 	Firebase                 FirebaseConfig

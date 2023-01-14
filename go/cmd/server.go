@@ -164,7 +164,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 			serverConfig.SettlementAccountService.ApiSecret,
 		)
 	default:
-		return fmt.Errorf(fmt.Sprintf("invalid settlement account service type '%s'", serverConfig.SettlementAccountService.Type))
+		return fmt.Errorf("invalid settlement account service type '%s'", serverConfig.SettlementAccountService.Type)
 	}
 
 	eventStreamAntWorkerPool, err := ants.NewPool(serverConfig.EventStream.EventStreamWorkerPool.PoolSize,
@@ -187,7 +187,15 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	firebasepub := firebasepubsub.OpenFCMTopic(ctx, messagingClient, &firebasepubsub.TopicOptions{
 		DryRun: serverConfig.Firebase.DryRun,
 	})
-	notificationService := service.NewFirebaseNotificationService(firebasepub)
+	var notificationService service.NotificationService
+	switch serverConfig.Notification.Type {
+	case "log":
+		notificationService = service.NewLoggerNotificatioNConfig(logger)
+	case "firebase":
+		notificationService = service.NewFirebaseNotificationService(firebasepub)
+	default:
+		return fmt.Errorf("invalid notification service type: %s", serverConfig.Notification.Type)
+	}
 
 	sqsClient := sqs.NewFromConfig(awsconf)
 	eventSubscriber := awssnssqs.OpenSubscriptionV2(ctx, sqsClient, serverConfig.EventStream.EventTopic.Uri, &awssnssqs.SubscriptionOptions{
@@ -454,8 +462,12 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		}
 	}()
 
-	<-quit
-	fmt.Printf("shutting down taco backend...")
+	select {
+	case <-ctx.Done():
+	case <-quit:
+		break
+	}
+	fmt.Printf("shutting down taco backend...\n")
 
 	eventSubscriber.Shutdown(ctx)
 	eventSubsriberStreamService.Shutdown(ctx)

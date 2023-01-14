@@ -19,7 +19,84 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func (t taxicallApp) handleEvent(ctx context.Context, event entity.Event) error {
+func (t taxicallApp) handleLocation(ctx context.Context, event entity.Event) error {
+	cmd := command.TaxiCallInDrivingLocationMessage{}
+	err := json.Unmarshal(event.Payload, &cmd)
+	if err != nil {
+		return fmt.Errorf("app.taxicall.handleLocation: error while unmarshal json: %v", err)
+	}
+	requestTime := time.Now()
+	defer func() {
+		tags := []service.Tag{
+			{
+				Key:   "eventUri",
+				Value: event.EventUri,
+			},
+		}
+		now := time.Now()
+		t.service.metric.Timing("WorkerProcessTime", now.Sub(requestTime), tags...)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case receiveTime := <-time.After(time.Until(cmd.DesiredScheduleTime)):
+		return t.sendLocation(ctx, receiveTime, cmd.TaxiCallRequestId)
+	}
+}
+
+func (t taxicallApp) sendLocation(ctx context.Context, receiveTime time.Time, taxiCallRequestId string) error {
+	return t.Run(ctx, func(ctx context.Context, i bun.IDB) (err error) {
+		events := []entity.Event{}
+		defer func() {
+			if err != nil {
+				return
+			}
+
+			if err = t.repository.event.BatchCreate(ctx, i, events); err != nil {
+				err = fmt.Errorf("app.taxicall.sendLocation: [%s]: failed to insert event: %w", taxiCallRequestId, err)
+			}
+		}()
+
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, taxiCallRequestId)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.handleLocation [%s]: error while get call request: %w", taxiCallRequestId, err)
+		}
+
+		if !taxiCallRequest.CurrentState.InDriving() {
+			return nil
+		}
+
+		if !taxiCallRequest.DriverId.Valid {
+			return nil
+		}
+
+		driverLocation, err := t.repository.driverLocation.GetByDriverId(ctx, i, taxiCallRequest.DriverId.String)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.handleLocation [%s]: error while get driver location: %w", taxiCallRequestId, err)
+		}
+
+		// TODO (taekyeom) 별도 notification 관련 패키지로 관리 필요
+		events = append(events, command.NewRawMessageCommand(
+			taxiCallRequest.UserId,
+			value.NotificationCategory_TaxicallLocation,
+			"",
+			"",
+			map[string]string{
+				"taxiCallRequestId":  taxiCallRequestId,
+				"taxiCallState":      string(taxiCallRequest.CurrentState),
+				"departureLatitude":  fmt.Sprint(driverLocation.Location.Latitude),
+				"departureLongitude": fmt.Sprint(driverLocation.Location.Longitude),
+			},
+		))
+		events = append(events, command.NewTaxiCallInDrivingLocationMessage(taxiCallRequest.Id,
+			receiveTime, receiveTime.Add(time.Second*10)))
+
+		return nil
+	})
+}
+
+func (t taxicallApp) handleProgress(ctx context.Context, event entity.Event) error {
 	taxiProgressCmd := command.TaxiCallProcessMessage{}
 	err := json.Unmarshal(event.Payload, &taxiProgressCmd)
 	if err != nil {
@@ -336,6 +413,12 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 			receiveTime,
 		))
 
+		events = append(events, command.NewTaxiCallInDrivingLocationMessage(
+			taxiCallRequest.Id,
+			receiveTime,
+			receiveTime.Add(time.Second*10),
+		))
+
 		return nil
 	})
 }
@@ -519,6 +602,19 @@ func (t taxicallApp) handleDriverNotAvailable(ctx context.Context, eventTime tim
 		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
 			return fmt.Errorf("app.taxicall.handleDriverNotAvailable [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
 		}
+
+		if taxiCallRequest.PaymentSummary.PaymentType == enum.PaymentType_SignupPromition {
+			userPayment, err := t.service.payment.GetUserPayment(ctx, taxiCallRequest.UserId, taxiCallRequest.PaymentSummary.PaymentId)
+			if err != nil {
+				return fmt.Errorf("app.taxicall.handleDriverNotAvailable [%s]: error while get user payment: %w", taxiCallRequest.Id, err)
+			}
+			userPayment.Invalid = false
+			userPayment.InvalidErrorMessage = ""
+			if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
+				return fmt.Errorf("app.taxicall.handleDriverNotAvailable [%s]: error while update user payment: %w", taxiCallRequest.Id, err)
+			}
+		}
+
 		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
