@@ -76,6 +76,11 @@ func (d *driverServer) initController() error {
 
 	d.echo.GET("/service_region", d.ListAvailableServiceRegion)
 
+	// TODO (taekyeom) 별도로 추상화 된 구현으로 빼야 함
+	d.echo.GET("/download", func(c echo.Context) error {
+		return c.Redirect(http.StatusSeeOther, "https://play.google.com/store/apps/details?id=com.tacolabs.taco.driver")
+	})
+
 	return nil
 }
 

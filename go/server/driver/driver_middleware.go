@@ -20,6 +20,7 @@ var skipSet = map[string]struct{}{
 	"/driver/signup":             {},
 	"/healthz":                   {},
 	"/service_region":            {},
+	"/download":                  {},
 
 	// TODO (taekyeom) move to extension
 	"/payment/payple/settlement_callback": {},

@@ -19,6 +19,7 @@ var skipSet = map[string]struct{}{
 	"/user/signin/sms/verify":  {},
 	"/user/signup":             {},
 	"/healthz":                 {},
+	"/download":                {},
 
 	// TODO (taekyeom) skip set도 외부 extension이 제어 가능하도록 개선 필요
 	"/payment/payple/result_callback":      {},

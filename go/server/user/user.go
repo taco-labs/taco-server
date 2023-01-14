@@ -59,6 +59,12 @@ func (u *userServer) initController() error {
 
 	u.echo.GET("/service_region", u.ListAvailableServiceRegion)
 
+	// TODO (taekyeom) 별도로 추상화 된 구현으로 빼야 함
+	u.echo.GET("/download", func(c echo.Context) error {
+		c.Response().Header().Add("Access-Control-Allow-Origin", "*")
+		return c.Redirect(http.StatusSeeOther, "https://www.taco-labs.com")
+	})
+
 	return nil
 }
 
