@@ -102,11 +102,8 @@ func (d driverApp) SmsVerificationRequest(ctx context.Context, req request.SmsVe
 	if value.IsMockPhoneNumber(req.Phone) {
 		smsVerification = entity.NewMockSmsVerification(req.StateKey, requestTime, req.Phone)
 	} else {
-		verificationCode, err := d.service.smsSender.SendSmsVerification(ctx, req.Phone)
-		if err != nil {
-			return entity.SmsVerification{}, fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
-		}
-		smsVerification = entity.NewSmsVerification(req.StateKey, verificationCode, requestTime, req.Phone)
+		code := d.service.smsSender.GenerateCode(6)
+		smsVerification = entity.NewSmsVerification(req.StateKey, code, requestTime, req.Phone)
 	}
 
 	err := d.Run(ctx, func(ctx context.Context, db bun.IDB) error {
@@ -116,6 +113,10 @@ func (d driverApp) SmsVerificationRequest(ctx context.Context, req request.SmsVe
 
 		return nil
 	})
+
+	if err := d.service.smsSender.SendSmsVerification(ctx, smsVerification); err != nil {
+		return entity.SmsVerification{}, fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
+	}
 
 	if err != nil {
 		return entity.SmsVerification{}, err

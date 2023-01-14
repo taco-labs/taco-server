@@ -80,16 +80,13 @@ func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVeri
 	if value.IsMockPhoneNumber(req.Phone) {
 		smsVerification = entity.NewMockSmsVerification(req.StateKey, requestTime, req.Phone)
 	} else {
-		verificationCode, err := u.service.smsSender.SendSmsVerification(ctx, req.Phone)
-		if err != nil {
-			return entity.SmsVerification{}, fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
-		}
-		smsVerification = entity.NewSmsVerification(req.StateKey, verificationCode, requestTime, req.Phone)
+		code := u.service.smsSender.GenerateCode(6)
+		smsVerification = entity.NewSmsVerification(req.StateKey, code, requestTime, req.Phone)
 	}
 
 	err := u.Run(ctx, func(ctx context.Context, db bun.IDB) error {
 		if err := u.repository.smsVerification.Create(ctx, db, smsVerification); err != nil {
-			return fmt.Errorf("app.User.SmsVerificationRequest: error while create sms verification:\n%w", err)
+			return fmt.Errorf("app.User.SmsVerificationRequest: error while create sms verification: %w", err)
 		}
 
 		return nil
@@ -97,6 +94,10 @@ func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVeri
 
 	if err != nil {
 		return entity.SmsVerification{}, err
+	}
+
+	if err := u.service.smsSender.SendSmsVerification(ctx, smsVerification); err != nil {
+		return entity.SmsVerification{}, fmt.Errorf("app.User.SmsVerificationRequest: error while send sms: %w", err)
 	}
 
 	return smsVerification, nil

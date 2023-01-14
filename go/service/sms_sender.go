@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-
 	"math/rand"
 	"strings"
 
 	"github.com/coolsms/coolsms-go"
+	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
 )
 
@@ -16,13 +16,22 @@ var (
 )
 
 type SmsVerificationSenderService interface {
-	SendSmsVerification(context.Context, string) (string, error)
+	GenerateCode(int) string
+	SendSmsVerification(context.Context, entity.SmsVerification) error
 }
 
 type mockSmsSenderService struct{}
 
-func (m mockSmsSenderService) SendSmsVerification(ctx context.Context, phone string) (string, error) {
-	return "111111", nil
+func (m mockSmsSenderService) GenerateCode(length int) string {
+	b := make([]string, length)
+	for i := range b {
+		b[i] = "1"
+	}
+	return strings.Join(b, "")
+}
+
+func (m mockSmsSenderService) SendSmsVerification(ctx context.Context, smsVerification entity.SmsVerification) error {
+	return nil
 }
 
 func NewMockSmsSenderService() mockSmsSenderService {
@@ -34,24 +43,31 @@ type coolSmsSenderService struct {
 	client    *coolsms.Client
 }
 
-func (s coolSmsSenderService) SendSmsVerification(ctx context.Context, phone string) (string, error) {
-	verificationCode := generateRandomCode(6)
+func (s coolSmsSenderService) GenerateCode(length int) string {
+	b := make([]string, length)
+	for i := range b {
+		b[i] = codes[rand.Intn(len(codes))]
+	}
+	return strings.Join(b, "")
 
+}
+
+func (s coolSmsSenderService) SendSmsVerification(ctx context.Context, smsVerification entity.SmsVerification) error {
 	msg := make(map[string]interface{})
 
-	msg["to"] = phone
+	msg["to"] = smsVerification.Phone
 	msg["from"] = s.phoneFrom
 	msg["type"] = "SMS"
-	msg["text"] = fmt.Sprintf("[타코] 인증 코드 [%s]를 입력해주세요.", verificationCode)
+	msg["text"] = fmt.Sprintf("[타코] 인증 코드 [%s]를 입력해주세요.", smsVerification.VerificationCode)
 
 	params := make(map[string]interface{})
 	params["message"] = msg
 
 	_, err := s.client.Messages.SendSimpleMessage(params)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", value.ErrExternal, err)
+		return fmt.Errorf("%w: %v", value.ErrExternal, err)
 	}
-	return verificationCode, nil
+	return nil
 }
 
 func NewCoolSmsSenderService(endpoint string, phoneFrom string, apiKey string, apiSecret string) *coolSmsSenderService {
@@ -67,12 +83,4 @@ func NewCoolSmsSenderService(endpoint string, phoneFrom string, apiKey string, a
 		client:    client,
 		phoneFrom: phoneFrom,
 	}
-}
-
-func generateRandomCode(length int) string {
-	b := make([]string, length)
-	for i := range b {
-		b[i] = codes[rand.Intn(len(codes))]
-	}
-	return strings.Join(b, "")
 }

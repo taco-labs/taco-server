@@ -21,10 +21,10 @@ func (s SmsVerification) MockAccountPhone() bool {
 	return value.IsMockPhoneNumber(s.Phone)
 }
 
-func NewSmsVerification(id string, verificationCode string, currentTime time.Time, phone string) SmsVerification {
+func NewSmsVerification(id, code string, currentTime time.Time, phone string) SmsVerification {
 	return SmsVerification{
 		Id:               id,
-		VerificationCode: verificationCode,
+		VerificationCode: code,
 		Verified:         false,
 		ExpireTime:       currentTime.Add(time.Minute * 3),
 		Phone:            phone,
