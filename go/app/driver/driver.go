@@ -114,8 +114,10 @@ func (d driverApp) SmsVerificationRequest(ctx context.Context, req request.SmsVe
 		return nil
 	})
 
-	if err := d.service.smsSender.SendSmsVerification(ctx, smsVerification); err != nil {
-		return entity.SmsVerification{}, fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
+	if !value.IsMockPhoneNumber(req.Phone) {
+		if err := d.service.smsSender.SendSmsVerification(ctx, smsVerification); err != nil {
+			return entity.SmsVerification{}, fmt.Errorf("app.Driver.SmsVerificationRequest: error while send sms message:\n%w", err)
+		}
 	}
 
 	if err != nil {

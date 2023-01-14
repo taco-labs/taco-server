@@ -96,8 +96,10 @@ func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVeri
 		return entity.SmsVerification{}, err
 	}
 
-	if err := u.service.smsSender.SendSmsVerification(ctx, smsVerification); err != nil {
-		return entity.SmsVerification{}, fmt.Errorf("app.User.SmsVerificationRequest: error while send sms: %w", err)
+	if !value.IsMockPhoneNumber(req.Phone) {
+		if err := u.service.smsSender.SendSmsVerification(ctx, smsVerification); err != nil {
+			return entity.SmsVerification{}, fmt.Errorf("app.User.SmsVerificationRequest: error while send sms: %w", err)
+		}
 	}
 
 	return smsVerification, nil
