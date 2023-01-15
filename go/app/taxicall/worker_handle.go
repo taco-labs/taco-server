@@ -576,6 +576,19 @@ func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, rece
 		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
 			return fmt.Errorf("app.taxicall.handleFailed [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
 		}
+
+		if taxiCallRequest.PaymentSummary.PaymentType == enum.PaymentType_SignupPromition {
+			userPayment, err := t.service.payment.GetUserPayment(ctx, taxiCallRequest.UserId, taxiCallRequest.PaymentSummary.PaymentId)
+			if err != nil {
+				return fmt.Errorf("app.taxicall.handleFaile [%s]: error while get user payment: %w", taxiCallRequest.Id, err)
+			}
+			userPayment.Invalid = false
+			userPayment.InvalidErrorMessage = ""
+			if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
+				return fmt.Errorf("app.taxicall.handleFaile [%s]: error while update user payment: %w", taxiCallRequest.Id, err)
+			}
+		}
+
 		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
 			entity.TaxiCallTicket{},
