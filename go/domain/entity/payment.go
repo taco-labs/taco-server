@@ -57,7 +57,7 @@ func NewUserPayment(id, userId, cardCompany, cardNumber, billingKey string, requ
 		UserId:             userId,
 		PaymentType:        enum.PaymentType_Card,
 		CardCompany:        cardCompany,
-		RedactedCardNumber: cardCompany,
+		RedactedCardNumber: cardNumber,
 		BillingKey:         billingKey,
 		Invalid:            false,
 		CreateTime:         requestTime,
