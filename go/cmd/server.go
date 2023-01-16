@@ -258,6 +258,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		push.WithPushTokenRepository(pushTokenRepository),
 		push.WithUserGetterService(userAppDelegator),
 		push.WithDriverGetterService(driverAppDelegator),
+		push.WithMetricService(metricService),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup push app: %w", err)

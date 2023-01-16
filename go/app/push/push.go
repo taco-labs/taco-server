@@ -32,6 +32,7 @@ type taxiCallPushApp struct {
 		notification service.NotificationService
 		userGetter   userGetterInterface
 		driverGetter driverGetterInterface
+		metric       service.MetricService
 	}
 }
 

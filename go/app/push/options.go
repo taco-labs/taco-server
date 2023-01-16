@@ -40,6 +40,12 @@ func WithDriverGetterService(svc driverGetterInterface) pushAppOption {
 	}
 }
 
+func WithMetricService(svc service.MetricService) pushAppOption {
+	return func(tcpa *taxiCallPushApp) {
+		tcpa.service.metric = svc
+	}
+}
+
 func (t taxiCallPushApp) validate() error {
 	if t.Transactor == nil {
 		return errors.New("taxi call push app need transactor")
@@ -59,6 +65,10 @@ func (t taxiCallPushApp) validate() error {
 
 	if t.service.driverGetter == nil {
 		return errors.New("taxi call push app need driver getter")
+	}
+
+	if t.service.metric == nil {
+		return errors.New("taxi call push app need metric service")
 	}
 
 	return nil
