@@ -28,15 +28,6 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		return value.Notification{}, err
 	}
 
-	var messageTitle string
-
-	if cmd.ToDepartureDistance < 1000 {
-		messageTitle = fmt.Sprintf("배차 요청 %d타코 (탑승지 까지 약 %d m)", cmd.AdditionalPrice, int(cmd.ToDepartureDistance))
-	} else {
-		messageTitle = fmt.Sprintf("배차 요청 %d타코 (탑승지 까지 약 %.2f km)", cmd.AdditionalPrice, float64(cmd.ToDepartureDistance)/float64(1000))
-	}
-	messageBody := fmt.Sprintf("목적지: %s", cmd.Departure.Address.AddressName)
-
 	data := map[string]string{
 		"taxiCallRequestId":            cmd.TaxiCallRequestId,
 		"taxiCallState":                cmd.TaxiCallState,
@@ -70,7 +61,7 @@ func (t taxiCallPushApp) handleDriverTaxiCallRequestTicketDistribution(ctx conte
 		"updateTime":                   cmd.UpdateTime.Format(time.RFC3339),
 	}
 
-	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "taxicallRequestDistribution", data), nil
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, "", "", "taxicallRequestDistribution", data), nil
 }
 
 func (t taxiCallPushApp) handleUserTaxiCallRequestCanceled(ctx context.Context, fcmToken string,
