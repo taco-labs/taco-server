@@ -63,7 +63,6 @@ func PaymentSummaryToResponse(paymentSummary value.PaymentSummary) PaymentSummar
 }
 
 type DriverTaxiCallRequestResponse struct {
-	Dryrun            bool          `json:"dryrun"`
 	ToArrivalDistance int           `json:"toArrivalDistance"`
 	ToArrivalETA      time.Duration `json:"toArrivalEta"`
 	// Deprecated. not used in client, delete it later.
@@ -91,7 +90,6 @@ type DriverTaxiCallRequestResponse struct {
 
 func DriverTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) DriverTaxiCallRequestResponse {
 	resp := DriverTaxiCallRequestResponse{
-		Dryrun:            taxiCallRequest.Dryrun,
 		ToArrivalDistance: taxiCallRequest.ToArrivalRoute.Route.Distance,
 		ToArrivalETA:      taxiCallRequest.ToArrivalRoute.Route.ETA,
 		ToArrivalPath:     []value.Point{},
