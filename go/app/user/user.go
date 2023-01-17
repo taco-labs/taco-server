@@ -240,10 +240,10 @@ func (u userApp) Signup(ctx context.Context, req request.UserSignupRequest) (ent
 			if err := u.service.userPayment.CreateUserPayment(ctx, mockPayment); err != nil {
 				return fmt.Errorf("app.User.Signup: error while create mock payment: %w", err)
 			}
-		} else {
-			if err := u.service.userPayment.ApplyPaymentPromotion(ctx, newUser.Id, enum.PaymentType_SignupPromition); err != nil {
-				return fmt.Errorf("app.User.Signup: error while apply user promotion payment: %w", err)
-			}
+			// } else {
+			// 	if err := u.service.userPayment.ApplyPaymentPromotion(ctx, newUser.Id, enum.PaymentType_SignupPromition); err != nil {
+			// 		return fmt.Errorf("app.User.Signup: error while apply user promotion payment: %w", err)
+			// 	}
 		}
 
 		// Create push token
