@@ -71,6 +71,10 @@ type userApp struct {
 		userPayment          userPaymentInterface
 		serviceRegionChecker service.ServiceRegionChecker
 	}
+
+	config struct {
+		taxiCallEnabled bool
+	}
 }
 
 func (u userApp) SmsVerificationRequest(ctx context.Context, req request.SmsVerificationRequest) (entity.SmsVerification, error) {

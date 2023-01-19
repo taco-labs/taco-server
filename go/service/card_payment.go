@@ -6,8 +6,13 @@ import (
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
+	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/repository"
+	"github.com/taco-labs/taco/go/utils"
+	"github.com/uptrace/bun"
 )
 
 type PaymentService interface {
@@ -267,6 +272,65 @@ func NewPayplePaymentService(serviceEndpoint, refererHost, customerId, customerK
 		client:      client,
 		customerId:  customerId,
 		customerKey: customerKey,
+	}
+}
+
+type paypleMockTransactionService struct {
+	payplePaymentService *payplePaymentService
+	eventRepository      repository.EventRepository
+	// TODO (taekyeom) transactor to be refactored into seperate module
+	app.Transactor
+}
+
+func (p paypleMockTransactionService) GetCardRegistrationRequestParam(ctx context.Context, requestId int, user entity.User) (value.PaymentRegistrationRequestParam, error) {
+	return p.payplePaymentService.GetCardRegistrationRequestParam(ctx, requestId, user)
+}
+
+func (p paypleMockTransactionService) DeleteCard(ctx context.Context, paymentId string) error {
+	return p.payplePaymentService.DeleteCard(ctx, paymentId)
+}
+
+func (p paypleMockTransactionService) Transaction(ctx context.Context, userPayment entity.UserPayment, payment value.Payment) (value.PaymentResult, error) {
+	var paymentResult value.PaymentResult
+	requestTime := utils.GetRequestTimeOrNow(ctx)
+	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		paymentResult = value.PaymentResult{
+			OrderId:    payment.OrderId,
+			PaymentKey: "",
+			Amount:     payment.Amount,
+			OrderName:  payment.OrderName,
+			ReceiptUrl: "",
+		}
+
+		if err := p.eventRepository.BatchCreate(ctx, i, []entity.Event{
+			command.NewUserPaymentTransactionSuccessCommand(
+				payment.OrderId,
+				"",
+				"",
+				requestTime,
+			)}); err != nil {
+			return fmt.Errorf("payple mock transation service: error while create mock event: %w", err)
+		}
+
+		return nil
+	})
+
+	return paymentResult, err
+}
+
+func (p paypleMockTransactionService) CancelTransaction(ctx context.Context, paymentCancel value.PaymentCancel) error {
+	return nil
+}
+
+func (p paypleMockTransactionService) GetTransactionResult(ctx context.Context, orderId string) (value.PaymentResult, error) {
+	return value.PaymentResult{}, nil
+}
+
+func NewPaypleMockTransactionService(serviceEndpoint, refererHost, customerId, customerKey string, eventRepository repository.EventRepository, transactor app.Transactor) *paypleMockTransactionService {
+	return &paypleMockTransactionService{
+		payplePaymentService: NewPayplePaymentService(serviceEndpoint, refererHost, customerId, customerKey),
+		eventRepository:      eventRepository,
+		Transactor:           transactor,
 	}
 }
 

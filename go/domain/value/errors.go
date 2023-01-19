@@ -37,6 +37,8 @@ const (
 	ERR_PAYMENT_INVALID_CARD_NUMBER     ErrCode = "ERR_PAYMENT_INVALID_CARD_NUMBER"
 	ERR_PAYMENT_INVALID_STOPPED_CARD    ErrCode = "ERR_PAYMENT_INVALID_STOPPED_CARD"
 	ERR_PAYMENT_REJECT_ACCOUNT_PAYMENT  ErrCode = "ERR_PAYMENT_REJECT_ACCOUNT_PAYMENT"
+
+	ERR_TEMPORARILY_UNSUPPORTED ErrCode = "ERR_TEMPORARILY_UNSUPPORTED"
 )
 
 type TacoError struct {
@@ -123,6 +125,8 @@ var (
 	ErrInvalidAdditionalPriceRange = TacoError{ERR_INVALID_ADDITIONAL_PRICE_RANGE, "invalid payment promotion range"}
 
 	ErrInvalidPromotionPaymentUsage = TacoError{ERR_INVALID_PROMOTION_PAYMENT_USAGE, "invalid payment promotion range"}
+
+	ErrTemporarilyUnsupported = TacoError{ERR_TEMPORARILY_UNSUPPORTED, "temporarily unavailable"}
 )
 
 func NewTacoError(errCode ErrCode, message string) TacoError {

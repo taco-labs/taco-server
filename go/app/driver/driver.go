@@ -92,6 +92,10 @@ type driverApp struct {
 		encryption           service.EncryptionService
 		serviceRegionChecker service.ServiceRegionChecker
 	}
+
+	config struct {
+		taxiCallEnabled bool
+	}
 }
 
 // TODO (taekyeom) mock account logic seperation
@@ -487,6 +491,10 @@ func (d driverApp) GetDriverImageUrls(ctx context.Context, driverId string) (val
 
 func (d driverApp) UpdateOnDuty(ctx context.Context, req request.DriverOnDutyUpdateRequest) error {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	if req.OnDuty && !d.config.taxiCallEnabled {
+		return fmt.Errorf("app.Driver.UpdateOnDuty: temporarily unavailable: %w", value.ErrTemporarilyUnsupported)
+	}
 
 	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driver, err := d.repository.driver.FindById(ctx, i, req.DriverId)

@@ -8,6 +8,7 @@ import (
 
 type ServerConfig struct {
 	Env                      string `env:"TACO_ENV,default=dev"`
+	TaxiCallEnabled          bool   `env:"TACO_SERVICE_TAXI_CALL_ENABLED,default=true"`
 	Log                      LogConfig
 	Database                 DatabaseConfig
 	Metric                   MetricServiceConfig

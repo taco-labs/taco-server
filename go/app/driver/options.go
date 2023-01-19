@@ -112,6 +112,12 @@ func WithServiceRegionChecker(svc service.ServiceRegionChecker) driverAppOption 
 	}
 }
 
+func WithTaxiCallEnabledConfig(taxiCallEnabled bool) driverAppOption {
+	return func(da *driverApp) {
+		da.config.taxiCallEnabled = taxiCallEnabled
+	}
+}
+
 func NewDriverApp(opts ...driverAppOption) (*driverApp, error) {
 	da := &driverApp{}
 

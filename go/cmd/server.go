@@ -141,12 +141,25 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	}
 
 	// TODO(taekyeom) Replace mock to real one
-	payplePaymentService := service.NewPayplePaymentService(
-		serverConfig.PaymentService.Endpoint,
-		serverConfig.PaymentService.RefererDomain,
-		serverConfig.PaymentService.ApiKey,
-		serverConfig.PaymentService.ApiSecret,
-	)
+	var paymentService service.PaymentService
+	switch serverConfig.PaymentService.Type {
+	case "payple":
+		paymentService = service.NewPayplePaymentService(
+			serverConfig.PaymentService.Endpoint,
+			serverConfig.PaymentService.RefererDomain,
+			serverConfig.PaymentService.ApiKey,
+			serverConfig.PaymentService.ApiSecret,
+		)
+	case "payple_mock_transaction":
+		paymentService = service.NewPaypleMockTransactionService(
+			serverConfig.PaymentService.Endpoint,
+			serverConfig.PaymentService.RefererDomain,
+			serverConfig.PaymentService.ApiKey,
+			serverConfig.PaymentService.ApiSecret,
+			eventRepository,
+			transactor,
+		)
+	}
 
 	var settlementAccountService service.SettlementAccountService
 	switch serverConfig.SettlementAccountService.Type {
@@ -280,7 +293,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		payment.WithTransactor(transactor),
 		payment.WithPaymentRepository(userPaymentRepository),
 		payment.WithEventRepository(eventRepository),
-		payment.WithPaymentService(payplePaymentService),
+		payment.WithPaymentService(paymentService),
 		payment.WithReferralRepository(referralRepository),
 		payment.WithAnalyticsRepository(analyticsRepository),
 		payment.WithDriverSettlementService(driverSettlementApp),
@@ -335,6 +348,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		user.WithUserPaymentService(paymentApp),
 		user.WithAnalyticsRepository(analyticsRepository),
 		user.WithServiceRegionChecker(userServiceRegionChecker),
+		user.WithTaxiCallEnabledConfig(serverConfig.TaxiCallEnabled),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup user app: %w", err)
@@ -358,6 +372,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		driver.WithEncryptionService(kmsEncryptionService),
 		driver.WithAnalyticsRepository(analyticsRepository),
 		driver.WithServiceRegionChecker(driverServiceRegionChecker),
+		driver.WithTaxiCallEnabledConfig(serverConfig.TaxiCallEnabled),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup driver app: %w", err)

@@ -29,6 +29,10 @@ func (u userApp) CreateTaxiCallRequest(ctx context.Context, req request.CreateTa
 		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: error while validation: %w", err)
 	}
 
+	if !u.config.taxiCallEnabled {
+		return entity.TaxiCallRequest{}, fmt.Errorf("app.user.CreateTaxiCallRequest: temprarily shutdown: %w", value.ErrTemporarilyUnsupported)
+	}
+
 	userId := utils.GetUserId(ctx)
 	var user entity.User
 

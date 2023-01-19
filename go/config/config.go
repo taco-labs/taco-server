@@ -26,6 +26,7 @@ type SmsSenderConfig struct {
 }
 
 type PaymentServiceConfig struct {
+	Type          string `env:"TACO_PAYMENT_SERVICE_TYPE,required"`
 	Endpoint      string `env:"TACO_PAYMENT_SERVICE_ENDPOINT,required"`
 	ApiKey        string `env:"TACO_PAYMENT_SERVICE_API_KEY,required"`
 	ApiSecret     string `env:"TACO_PAYMENT_SERVICE_API_SECRET,required"`

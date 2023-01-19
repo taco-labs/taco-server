@@ -77,6 +77,11 @@ func WithServiceRegionChecker(svc service.ServiceRegionChecker) userAppOption {
 	}
 }
 
+func WithTaxiCallEnabledConfig(taxiCallEnabled bool) userAppOption {
+	return func(ua *userApp) {
+		ua.config.taxiCallEnabled = taxiCallEnabled
+	}
+}
 func NewUserApp(opts ...userAppOption) (*userApp, error) {
 	ua := &userApp{}
 
