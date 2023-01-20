@@ -444,7 +444,7 @@ func (d driverApp) UpdateDriver(ctx context.Context, req request.DriverUpdateReq
 		}
 
 		// TODO (taekyeom) 하위 호환성을 위해 car number update로직을 남겨둠, 나중에 car profile로 migratrion한 후에 삭제 필요
-		if driverDto.CarProfile.CarNumber != req.CarNumber {
+		if req.CarNumber != "" {
 			driverDto.CarProfile.CarNumber = req.CarNumber
 			driverDto.CarProfile.UpdateTime = requestTime
 			if err := d.repository.driver.UpdateDriverCarProfile(ctx, i, driverDto.CarProfile); err != nil {
