@@ -206,13 +206,13 @@ func (t TaxiCallTicket) Step(maxPrice int, updateTime time.Time) (TaxiCallTicket
 func (t TaxiCallTicket) GetRadius() int {
 	switch t.Attempt {
 	case 1:
-		return 3000
+		return 7000
 	case 2:
-		return 5000
+		return 7000
 	case 3:
 		return 7000
 	default:
-		return 3000
+		return 7000
 	}
 }
 
