@@ -50,7 +50,7 @@ func (p paypleSettlementAccountService) GetSettlementAccount(ctx context.Context
 
 	authorizeResp := resp.Result().(*paypleSettlementAccountAuthorizeResponse)
 	if authorizeResp.UnAuthorized() {
-		return value.SettlementAccount{}, fmt.Errorf("%w: Invalid settlement account", value.ErrInvalidOperation)
+		return value.SettlementAccount{}, fmt.Errorf("%w: Invalid settlement account %s", value.ErrInvalidOperation, authorizeResp.Message)
 	}
 	if !authorizeResp.Success() {
 		return value.SettlementAccount{}, fmt.Errorf("%w: error from payple transaction: messge: [%s]%s", value.ErrExternal, authorizeResp.Result, authorizeResp.Message)
