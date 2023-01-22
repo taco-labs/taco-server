@@ -641,6 +641,40 @@ func (t taxicallApp) handleDriverNotAvailable(ctx context.Context, eventTime tim
 }
 
 func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) error {
+	var taxiCallTicket entity.TaxiCallTicket
+	var driverTaxiCallContext entity.DriverTaxiCallContext
+
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		ticket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		driverContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, taxiCallRequest.DriverId.String)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		taxiCallTicket = ticket
+		driverTaxiCallContext = driverContext
+
+		return nil
+	})
+
+	if err != nil {
+		return nil
+	}
+
+	routeBetweenDeparture, err := t.service.mapService.GetRoute(ctx, driverTaxiCallContext.Location, taxiCallRequest.Departure.Point)
+	if err != nil {
+		return fmt.Errorf("app.taxicall.handleMockRequestAccepted: [%s]: failed to get route between departure: %w", taxiCallRequest.Id, err)
+	}
+	toDepartureRoute := entity.TaxiCallToDepartureRoute{
+		TaxiCallRequestId: taxiCallRequest.Id,
+		Route:             routeBetweenDeparture,
+	}
+	taxiCallRequest.ToDepartureRoute = toDepartureRoute
+
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) (err error) {
 		var events []entity.Event
 
@@ -654,14 +688,8 @@ func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime ti
 			}
 		}()
 
-		taxiCallTicket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
-		if err != nil && !errors.Is(err, value.ErrNotFound) {
-			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
-		}
-
-		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, taxiCallRequest.DriverId.String)
-		if err != nil && !errors.Is(err, value.ErrNotFound) {
-			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
+		if err = t.repository.taxiCallRequest.CreateToDepartureRoute(ctx, i, toDepartureRoute); err != nil {
+			err = fmt.Errorf("app.taxicall.handleMockRequestAccepted: [%s]: failed to create to departure route: %w", taxiCallRequest.Id, err)
 		}
 
 		if err = t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, taxiCallRequest.DriverId.String, taxiCallTicket.TicketId); err != nil {
@@ -671,9 +699,6 @@ func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime ti
 		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
 			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while delete ticket: %w", taxiCallRequest.Id, err)
 		}
-
-		// TODO (taekyeom) 임시로 context에 있는 거리를 쓴다.
-		taxiCallRequest.ToDepartureRoute.Route.Distance = driverTaxiCallContext.ToDepartureDistance
 
 		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
