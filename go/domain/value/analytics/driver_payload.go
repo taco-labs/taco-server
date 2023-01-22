@@ -69,6 +69,7 @@ type DriverTaxiCallTicketAcceptPayload struct {
 	DriverLocation                  value.Point
 	ReceiveTime                     time.Time
 	TaxiCallRequestCreateTime       time.Time
+	Mock                            bool
 }
 
 func (d DriverTaxiCallTicketAcceptPayload) EventType() EventType {

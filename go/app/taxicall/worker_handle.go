@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
@@ -644,6 +643,7 @@ func (t taxicallApp) handleDriverNotAvailable(ctx context.Context, eventTime tim
 func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) error {
 	return t.Run(ctx, func(ctx context.Context, i bun.IDB) (err error) {
 		var events []entity.Event
+
 		defer func() {
 			if err != nil {
 				return
@@ -654,23 +654,31 @@ func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime ti
 			}
 		}()
 
-		ticket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
+		taxiCallTicket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
 		}
 
-		if err = t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, uuid.Nil.String(), ticket.TicketId); err != nil {
-			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while activate driver contexts: %w", taxiCallRequest.Id, err)
+		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, taxiCallRequest.DriverId.String)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		if err = t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, taxiCallRequest.DriverId.String, taxiCallTicket.TicketId); err != nil {
+			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
 		}
 
 		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
-			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while delete tickets: %w", taxiCallRequest.Id, err)
+			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while delete ticket: %w", taxiCallRequest.Id, err)
 		}
+
+		// TODO (taekyeom) 임시로 context에 있는 거리를 쓴다.
+		taxiCallRequest.ToDepartureRoute.Route.Distance = driverTaxiCallContext.ToDepartureDistance
 
 		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
-			entity.TaxiCallTicket{},
-			entity.DriverTaxiCallContext{},
+			taxiCallTicket,
+			driverTaxiCallContext,
 			receiveTime,
 		))
 

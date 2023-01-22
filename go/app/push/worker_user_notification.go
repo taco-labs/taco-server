@@ -49,6 +49,7 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 		"taxiCallRequestId":   cmd.TaxiCallRequestId,
 		"taxiCallState":       cmd.TaxiCallState,
 		"driverId":            cmd.DriverId,
+		"driverName":          driver.FullName(),
 		"driverPhone":         driver.Phone,
 		"driverTaxiCategory":  driver.CarProfile.TaxiCategory,
 		"driverCarNumber":     driver.CarProfile.CarNumber,
@@ -156,9 +157,42 @@ func (t taxiCallPushApp) handleDriverMockRequestAccepted(ctx context.Context, fc
 	messageTitle := "Mock Account 배차 요청 수락됨"
 	messageBody := "수락됨"
 
+	var driver entity.Driver
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		dr, err := t.service.driverGetter.GetDriver(ctx, cmd.DriverId)
+		if err != nil {
+			return fmt.Errorf("app.push.handleUserTaxiCallRequestAccepted: error while get driver: %w", err)
+		}
+		driver = dr
+		return nil
+	})
+	if err != nil {
+		return value.Notification{}, err
+	}
+
 	data := map[string]string{
-		"taxiCallRequestId": cmd.TaxiCallRequestId,
-		"taxiCallState":     cmd.TaxiCallState,
+		"taxiCallRequestId":   cmd.TaxiCallRequestId,
+		"taxiCallState":       cmd.TaxiCallState,
+		"driverName":          driver.FullName(),
+		"driverId":            cmd.DriverId,
+		"driverPhone":         driver.Phone,
+		"driverTaxiCategory":  driver.CarProfile.TaxiCategory,
+		"driverCarNumber":     driver.CarProfile.CarNumber,
+		"driverCarModel":      driver.CarProfile.CarModel,
+		"requestBasePrice":    fmt.Sprint(cmd.RequestBasePrice),
+		"additionalPrice":     fmt.Sprint(cmd.AdditionalPrice),
+		"usedPoint":           fmt.Sprint(cmd.UsedPoint),
+		"driverLatitude":      fmt.Sprint(cmd.DriverLocation.Latitude),
+		"driverLongitude":     fmt.Sprint(cmd.DriverLocation.Longitude),
+		"departureLatitude":   fmt.Sprint(cmd.Departure.Point.Latitude),
+		"departureLongitude":  fmt.Sprint(cmd.Departure.Point.Longitude),
+		"arrivalLatitude":     fmt.Sprint(cmd.Arrival.Point.Latitude),
+		"arrivalLongitude":    fmt.Sprint(cmd.Arrival.Point.Longitude),
+		"toDepartureDistance": fmt.Sprint(cmd.ToDepartureDistance),
+		"toDepartureETA":      fmt.Sprint(cmd.ToDepartureETA.Nanoseconds()),
+		"toArrivalDistance":   fmt.Sprint(cmd.ToArrivalDistance),
+		"toArrivalETA":        fmt.Sprint(cmd.ToArrivalETA.Nanoseconds()),
+		"updateTime":          cmd.UpdateTime.Format(time.RFC3339),
 	}
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil

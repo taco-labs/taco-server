@@ -269,9 +269,7 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 	var driverLatestTaxiCallRequest entity.DriverLatestTaxiCallRequest
 
-	errMockRequestAccepted := errors.New("mock account accepted")
-
-	err := t.RunWithNonRollbackError(ctx, errMockRequestAccepted, func(ctx context.Context, i bun.IDB) error {
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		// TODO(taeykeom) Do we need check on duty & last call request?
 		driverTaxiCallContext, err := t.repository.taxiCallRequest.GetDriverTaxiCallContext(ctx, i, driverId)
 		if err != nil {
@@ -305,24 +303,6 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get user: %w", err)
 		}
 
-		if user.MockAccount() {
-			if err := taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_MOCK_CALL_ACCEPTED); err != nil {
-				return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: invalid state change:%w", err)
-			}
-			if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
-				return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while update taxi call request :%w", err)
-			}
-			command := command.NewTaxiCallProgressCommand(
-				taxiCallRequest.Id,
-				taxiCallRequest.CurrentState,
-				taxiCallRequest.UpdateTime,
-				taxiCallRequest.UpdateTime)
-			if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{command}); err != nil {
-				return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while create taxi call process event: %w", err)
-			}
-			return errMockRequestAccepted
-		}
-
 		tags, err := slices.MapErr(taxiCallRequest.TagIds, value.GetTagById)
 		if err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while get tags by id: %w", err)
@@ -330,13 +310,26 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 		taxiCallRequest.Tags = tags
 
 		// Mutation phase
-		driverTaxiCallContext.CanReceive = false
-		if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
-			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while upsert taxi call context: %w", value.ErrInvalidOperation)
+		if user.MockAccount() {
+			driverTaxiCallContext.RejectedLastRequestTicket = true
+			if err := taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_MOCK_CALL_ACCEPTED); err != nil {
+				return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: invalid state change:%w", err)
+			}
+		} else {
+			driverTaxiCallContext.CanReceive = false
+			if err := taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_DRIVER_TO_DEPARTURE); err != nil {
+				return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: invalid state change:%w", err)
+			}
+
+			userPoint, err := t.service.payment.UseUserPaymentPoint(ctx, taxiCallRequest.UserId, taxiCallRequest.AdditionalPrice)
+			if err != nil {
+				return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while use user payment point :%w", err)
+			}
+			taxiCallRequest.UserUsedPoint = userPoint
 		}
 
-		if err := taxiCallRequest.UpdateState(requestTime, enum.TaxiCallState_DRIVER_TO_DEPARTURE); err != nil {
-			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: invalid state change:%w", err)
+		if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
+			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while upsert taxi call context: %w", value.ErrInvalidOperation)
 		}
 
 		taxiCallRequest.AdditionalPrice = actualTicket.AdditionalPrice
@@ -345,14 +338,13 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			String: driverId,
 		}
 
-		userPoint, err := t.service.payment.UseUserPaymentPoint(ctx, taxiCallRequest.UserId, taxiCallRequest.AdditionalPrice)
-		if err != nil {
-			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while use user payment point :%w", err)
-		}
-		taxiCallRequest.UserUsedPoint = userPoint
-
 		if err := t.repository.taxiCallRequest.Update(ctx, i, taxiCallRequest); err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while update taxi call request :%w", err)
+		}
+
+		driverLatestTaxiCallRequest = entity.DriverLatestTaxiCallRequest{
+			TaxiCallRequest: taxiCallRequest,
+			UserPhone:       user.Phone,
 		}
 
 		processMessage := command.NewTaxiCallProgressCommand(
@@ -364,11 +356,6 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 
 		if err := t.repository.event.BatchCreate(ctx, i, []entity.Event{processMessage}); err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while create taxi call process event: %w", err)
-		}
-
-		driverLatestTaxiCallRequest = entity.DriverLatestTaxiCallRequest{
-			TaxiCallRequest: taxiCallRequest,
-			UserPhone:       user.Phone,
 		}
 
 		driverAcceptAnalytics := entity.NewAnalytics(requestTime, analytics.DriverTaxiCallTicketAcceptPayload{
@@ -386,6 +373,7 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 			DriverLocation:                  driverTaxiCallContext.Location,
 			ReceiveTime:                     driverTaxiCallContext.LastReceiveTime,
 			TaxiCallRequestCreateTime:       taxiCallRequest.CreateTime,
+			Mock:                            user.MockAccount(),
 		})
 		if err := t.repository.analytics.Create(ctx, i, driverAcceptAnalytics); err != nil {
 			return fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: error while create analytics event: %w", err)
@@ -394,8 +382,8 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 		return nil
 	})
 
-	if errors.Is(err, errMockRequestAccepted) {
-		return entity.DriverLatestTaxiCallRequest{}, value.ErrAlreadyExpiredCallRequest
+	if driverLatestTaxiCallRequest.CurrentState == enum.TaxiCallState_MOCK_CALL_ACCEPTED {
+		return entity.DriverLatestTaxiCallRequest{}, fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: mock request: %w", value.ErrAlreadyExpiredCallRequest)
 	}
 
 	if err != nil {
