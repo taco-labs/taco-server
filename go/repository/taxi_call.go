@@ -106,7 +106,7 @@ func (t taxiCallRepository) GetLatestByDriverId(ctx context.Context, db bun.IDB,
 	err := db.NewSelect().
 		Model(&resp).
 		Where("driver_id = ?", driverId).
-		Where("current_state <> ?", enum.TaxiCallState_MOCK_CALL_ACCEPTED).
+		Where("taxi_call_state <> ?", enum.TaxiCallState_MOCK_CALL_ACCEPTED).
 		Relation("ToDepartureRoute").
 		Relation("ToArrivalRoute").
 		OrderExpr("create_time DESC").Limit(1).Scan(ctx)
@@ -158,7 +158,7 @@ func (t taxiCallRepository) ListByDriverId(ctx context.Context, db bun.IDB, driv
 		Relation("ToDepartureRoute").
 		Relation("ToArrivalRoute").
 		Order("create_time DESC").
-		Where("current_state <> ?", enum.TaxiCallState_MOCK_CALL_ACCEPTED).
+		Where("taxi_call_state <> ?", enum.TaxiCallState_MOCK_CALL_ACCEPTED).
 		Limit(count)
 
 	if pageToken != "" {
