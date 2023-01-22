@@ -178,7 +178,7 @@ func (t taxicallApp) DriverLatestTaxiCallTicket(ctx context.Context, driverId st
 			return fmt.Errorf("app.driver.LatestTaxiCallTicket: error while get driver taxi call context: %w", err)
 		}
 
-		if driverTaxiCallContext.RejectedLastRequestTicket {
+		if !driverTaxiCallContext.CanReceive || driverTaxiCallContext.RejectedLastRequestTicket {
 			return fmt.Errorf("app.driver.LatestTaxiCallTicket: rejected ticket: %w", value.ErrNotFound)
 		}
 
@@ -625,6 +625,7 @@ func (t taxicallApp) DoneTaxiCallRequest(ctx context.Context, driverId string, r
 		}
 
 		driverTaxiCallContext.CanReceive = true
+		driverTaxiCallContext.RejectedLastRequestTicket = true
 		if err := t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
 			return fmt.Errorf("app.taxiCall.DoneTaxiCallRequest: error while upsert taxi call context: %w", err)
 		}
