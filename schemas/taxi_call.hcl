@@ -10,6 +10,7 @@ enum "taxi_call_state" {
     "DRIVER_CANCELLED",
     "TAXI_CALL_FAILED",
     "DRIVER_NOT_AVAILABLE",
+    "MOCK_CALL_ACCEPTED",
   ]
 }
 

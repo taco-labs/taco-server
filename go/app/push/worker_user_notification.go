@@ -149,3 +149,17 @@ func (t taxiCallPushApp) handleDriverNotAvailable(ctx context.Context, fcmToken 
 
 	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil
 }
+
+func (t taxiCallPushApp) handleDriverMockRequestAccepted(ctx context.Context, fcmToken string,
+	eventTime time.Time, cmd command.PushUserTaxiCallCommand) (value.Notification, error) {
+
+	messageTitle := "Mock Account 배차 요청 수락됨"
+	messageBody := "수락됨"
+
+	data := map[string]string{
+		"taxiCallRequestId": cmd.TaxiCallRequestId,
+		"taxiCallState":     cmd.TaxiCallState,
+	}
+
+	return value.NewNotification(fcmToken, value.NotificationCategory_Taxicall, messageTitle, messageBody, "", data), nil
+}

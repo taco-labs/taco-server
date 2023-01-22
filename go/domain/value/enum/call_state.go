@@ -19,6 +19,8 @@ var (
 
 	TaxiCallState_DRIVER_NOT_AVAILABLE TaxiCallState = "DRIVER_NOT_AVAILABLE"
 
+	TaxiCallState_MOCK_CALL_ACCEPTED TaxiCallState = "MOCK_CALL_ACCEPTED"
+
 	TaxiCallState_INVALID TaxiCallState = "INVALID"
 
 	// DO not persist
@@ -51,7 +53,8 @@ func (t TaxiCallState) TryChangeState(nextState TaxiCallState) bool {
 		return nextState == TaxiCallState_DRIVER_TO_DEPARTURE ||
 			nextState == TaxiCallState_USER_CANCELLED ||
 			nextState == TaxiCallState_FAILED ||
-			nextState == TaxiCallState_DRIVER_NOT_AVAILABLE
+			nextState == TaxiCallState_DRIVER_NOT_AVAILABLE ||
+			nextState == TaxiCallState_MOCK_CALL_ACCEPTED
 	case TaxiCallState_DRIVER_TO_DEPARTURE:
 		return nextState == TaxiCallState_DRIVER_TO_ARRIVAL ||
 			nextState == TaxiCallState_DRIVER_CANCELLED ||
@@ -82,6 +85,8 @@ func FromTaxiCallStateString(taxiCallStateString string) TaxiCallState {
 		return TaxiCallState_DRYRUN
 	case string(TaxiCallState_DRIVER_NOT_AVAILABLE):
 		return TaxiCallState_DRIVER_NOT_AVAILABLE
+	case string(TaxiCallState_MOCK_CALL_ACCEPTED):
+		return TaxiCallState_MOCK_CALL_ACCEPTED
 	default:
 		return TaxiCallState_INVALID
 	}

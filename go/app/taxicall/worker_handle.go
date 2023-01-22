@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
@@ -177,6 +178,8 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 		err = t.handleFailed(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
 	case enum.TaxiCallState_DRIVER_NOT_AVAILABLE:
 		err = t.handleDriverNotAvailable(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
+	case enum.TaxiCallState_MOCK_CALL_ACCEPTED:
+		err = t.handleMockRequestAccepted(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
 	}
 
 	if err != nil {
@@ -634,6 +637,43 @@ func (t taxicallApp) handleDriverNotAvailable(ctx context.Context, eventTime tim
 			entity.DriverTaxiCallContext{},
 			receiveTime,
 		))
+		return nil
+	})
+}
+
+func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime time.Time, receiveTime time.Time, taxiCallRequest entity.TaxiCallRequest) error {
+	return t.Run(ctx, func(ctx context.Context, i bun.IDB) (err error) {
+		var events []entity.Event
+		defer func() {
+			if err != nil {
+				return
+			}
+
+			if err = t.repository.event.BatchCreate(ctx, i, events); err != nil {
+				err = fmt.Errorf("app.taxicall.handleMockRequestAccepted: [%s]: failed to insert event: %w", taxiCallRequest.Id, err)
+			}
+		}()
+
+		ticket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequest.Id)
+		if err != nil && !errors.Is(err, value.ErrNotFound) {
+			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while get call request ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		if err = t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, uuid.Nil.String(), ticket.TicketId); err != nil {
+			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while activate driver contexts: %w", taxiCallRequest.Id, err)
+		}
+
+		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
+			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while delete tickets: %w", taxiCallRequest.Id, err)
+		}
+
+		events = append(events, command.NewPushUserTaxiCallCommand(
+			taxiCallRequest,
+			entity.TaxiCallTicket{},
+			entity.DriverTaxiCallContext{},
+			receiveTime,
+		))
+
 		return nil
 	})
 }
