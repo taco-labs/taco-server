@@ -383,7 +383,7 @@ func (t taxicallApp) AcceptTaxiCallRequest(ctx context.Context, driverId string,
 	})
 
 	if driverLatestTaxiCallRequest.CurrentState == enum.TaxiCallState_MOCK_CALL_ACCEPTED {
-		return entity.DriverLatestTaxiCallRequest{}, fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: mock request: %w", value.ErrAlreadyExpiredCallRequest)
+		return entity.DriverLatestTaxiCallRequest{}, fmt.Errorf("app.taxiCall.AcceptTaxiCallRequest: mock request: %w", value.ErrNotFound)
 	}
 
 	if err != nil {
