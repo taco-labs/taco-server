@@ -3,6 +3,7 @@ package entity
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -227,6 +228,17 @@ func (t TaxiCallTicket) GetRadiusMinutes() int {
 	default:
 		return 3
 	}
+}
+
+type DriverTaxiCallContextWithInfo struct {
+	DriverTaxiCallContext `bun:",extend"`
+	FirstName             string `bun:"first_name"`
+	LastName              string `bun:"last_name"`
+	AppVersion            string `bun:"app_version"`
+}
+
+func (d DriverTaxiCallContextWithInfo) FullName() string {
+	return fmt.Sprintf("%s%s", d.LastName, d.FirstName)
 }
 
 type DriverTaxiCallContext struct {

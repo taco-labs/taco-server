@@ -11,7 +11,6 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
-	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
 )
 
@@ -48,7 +47,7 @@ type TaxiCallRepository interface {
 	GetDriverTaxiCallContextWithinRadius(context.Context, bun.IDB,
 		value.Location, value.Location, int, []int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
 
-	ListDriverTaxiCallContextInRadius(context.Context, bun.IDB, value.Point, string, int) ([]entity.DriverTaxiCallContext, error)
+	ListDriverTaxiCallContextInRadius(context.Context, bun.IDB, value.Point, string, int) ([]entity.DriverTaxiCallContextWithInfo, error)
 
 	// Tag
 	ListDriverDenyTaxiCallTag(context.Context, bun.IDB, string) ([]entity.DriverDenyTaxiCallTag, error)
@@ -443,17 +442,10 @@ func (t taxiCallRepository) GetDriverTaxiCallContextWithinRadius(ctx context.Con
 	return resp, nil
 }
 
-func (t taxiCallRepository) ListDriverTaxiCallContextInRadius(ctx context.Context, db bun.IDB, point value.Point, serviceRegion string, radius int) ([]entity.DriverTaxiCallContext, error) {
+func (t taxiCallRepository) ListDriverTaxiCallContextInRadius(ctx context.Context, db bun.IDB, point value.Point, serviceRegion string, radius int) ([]entity.DriverTaxiCallContextWithInfo, error) {
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
-	type tempModel struct {
-		entity.DriverTaxiCallContext `bun:",extend"`
-
-		Distance int    `bun:"distance"`
-		EwkbHex  string `bun:"location"`
-	}
-
-	var resp []tempModel
+	var resp []entity.DriverTaxiCallContextWithInfo
 
 	locationWithDistance := db.NewSelect().
 		TableExpr("driver_location").
@@ -473,6 +465,9 @@ func (t taxiCallRepository) ListDriverTaxiCallContextInRadius(ctx context.Contex
 	driverServiceRegion := db.NewSelect().
 		TableExpr("driver").
 		Column("id").
+		ColumnExpr("first_name").
+		ColumnExpr("last_name").
+		ColumnExpr("app_version").
 		ColumnExpr("service_region").
 		Where("service_region = ?", serviceRegion).
 		WhereOr("service_region = ?", serviceRegion)
@@ -484,7 +479,10 @@ func (t taxiCallRepository) ListDriverTaxiCallContextInRadius(ctx context.Contex
 		Model(&resp).
 		ColumnExpr("driver_taxi_call_context.*").
 		ColumnExpr("location").
-		ColumnExpr("CAST(distance AS int) as distance").
+		ColumnExpr("CAST(distance AS int) as to_departure_distance").
+		ColumnExpr("first_name").
+		ColumnExpr("last_name").
+		ColumnExpr("app_version").
 		Join("JOIN driver_distance_filtered AS t2 ON t2.driver_id = ?TableName.driver_id").
 		Join("JOIN driver_service_region AS t3 ON t3.id = ?TableName.driver_id").
 		Where("block_until is NULL or block_until < ?", requestTime).
@@ -495,17 +493,10 @@ func (t taxiCallRepository) ListDriverTaxiCallContextInRadius(ctx context.Contex
 	err := driverTaxiCallContexts.Scan(ctx)
 
 	if err != nil {
-		return []entity.DriverTaxiCallContext{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
+		return []entity.DriverTaxiCallContextWithInfo{}, fmt.Errorf("%w: error from db: %v", value.ErrDBInternal, err)
 	}
 
-	return slices.MapErr(resp, func(i tempModel) (entity.DriverTaxiCallContext, error) {
-		if err := i.Location.FromEwkbHex(i.EwkbHex); err != nil {
-			return entity.DriverTaxiCallContext{}, err
-		}
-		i.DriverTaxiCallContext.ToDepartureDistance = i.Distance
-
-		return i.DriverTaxiCallContext, nil
-	})
+	return resp, nil
 }
 
 func (t taxiCallRepository) GetDriverTaxiCallContext(ctx context.Context, db bun.IDB, driverId string) (entity.DriverTaxiCallContext, error) {

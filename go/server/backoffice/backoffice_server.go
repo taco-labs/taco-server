@@ -180,7 +180,7 @@ func (b backofficeServer) ListDriverTaxiCallContextInRadius(e echo.Context) erro
 		return server.ToResponse(e, err)
 	}
 
-	resp := slices.Map(driverContexts, response.DriverTaxiCallContextToResponse)
+	resp := slices.Map(driverContexts, response.DriverTaxiCallContextWithInfoToResponse)
 
 	return e.JSON(http.StatusOK, resp)
 }

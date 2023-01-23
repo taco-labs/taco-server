@@ -27,7 +27,7 @@ type driverApp interface {
 }
 
 type taxicallApp interface {
-	ListDriverTaxiCallContextInRadius(ctx context.Context, req request.ListDriverTaxiCallContextInRadiusRequest) ([]entity.DriverTaxiCallContext, error)
+	ListDriverTaxiCallContextInRadius(ctx context.Context, req request.ListDriverTaxiCallContextInRadiusRequest) ([]entity.DriverTaxiCallContextWithInfo, error)
 }
 
 type userApp interface {
