@@ -58,7 +58,7 @@ func (s coolSmsSenderService) SendSmsVerification(ctx context.Context, smsVerifi
 	msg["to"] = smsVerification.Phone
 	msg["from"] = s.phoneFrom
 	msg["type"] = "SMS"
-	msg["text"] = fmt.Sprintf("[타코] 인증 코드 [%s]를 입력해주세요.", smsVerification.VerificationCode)
+	msg["text"] = fmt.Sprintf("[타코택시] 인증 코드 [%s]를 입력해주세요.", smsVerification.VerificationCode)
 
 	params := make(map[string]interface{})
 	params["message"] = msg
