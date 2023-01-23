@@ -403,10 +403,22 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 		}
 
 		// TODO(taekyeom) 티켓 수신한 다른 기사분들을 다시 수신 가능한 상태로 만들어야 함
-		err = t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, taxiCallRequest.DriverId.String, taxiCallTicket.TicketId)
+		driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, taxiCallRequest.DriverId.String, taxiCallRequest.Id)
 		if err != nil {
 			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
 		}
+
+		driverCallAcceptedCommands := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+			return command.NewPushDriverTaxiCallCommand(
+				i.DriverId,
+				taxiCallRequest,
+				taxiCallTicket,
+				i,
+				receiveTime,
+			)
+		})
+
+		events = append(events, driverCallAcceptedCommands...)
 
 		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
@@ -692,13 +704,26 @@ func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime ti
 			err = fmt.Errorf("app.taxicall.handleMockRequestAccepted: [%s]: failed to create to departure route: %w", taxiCallRequest.Id, err)
 		}
 
-		if err = t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, taxiCallRequest.DriverId.String, taxiCallTicket.TicketId); err != nil {
-			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
-		}
-
 		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
 			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while delete ticket: %w", taxiCallRequest.Id, err)
 		}
+
+		driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, taxiCallRequest.DriverId.String, taxiCallRequest.Id)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		driverCallAcceptedCommands := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+			return command.NewPushDriverTaxiCallCommand(
+				i.DriverId,
+				taxiCallRequest,
+				taxiCallTicket,
+				i,
+				receiveTime,
+			)
+		})
+
+		events = append(events, driverCallAcceptedCommands...)
 
 		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,

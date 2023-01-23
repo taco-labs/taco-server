@@ -170,6 +170,8 @@ func (t taxiCallPushApp) handleDriverNotification(ctx context.Context, event ent
 		notification, err = t.handleDriverTaxiCallRequestTicketDistribution(ctx, fcmToken, event.CreateTime, driverNotificationCommand)
 	case enum.TaxiCallState_USER_CANCELLED:
 		notification, err = t.handleUserTaxiCallRequestCanceled(ctx, fcmToken, event.CreateTime, driverNotificationCommand)
+	case enum.TaxiCallState_DRIVER_TO_DEPARTURE:
+		notification, err = t.handleAnotherDriverAcceptedTicket(ctx, fcmToken, event.CreateTime, driverNotificationCommand)
 	default:
 		return fmt.Errorf("app.taxiCallPushApp.handleDriverNotification: unsupported event: %s: %w", driverNotificationCommand.TaxiCallState, value.ErrInvalidOperation)
 	}

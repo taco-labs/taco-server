@@ -21,10 +21,9 @@ var (
 
 	TaxiCallState_MOCK_CALL_ACCEPTED TaxiCallState = "MOCK_CALL_ACCEPTED"
 
-	TaxiCallState_INVALID TaxiCallState = "INVALID"
-
 	// DO not persist
-	TaxiCallState_DRYRUN TaxiCallState = "DRYRUN"
+	TaxiCallState_INVALID TaxiCallState = "INVALID"
+	TaxiCallState_DRYRUN  TaxiCallState = "DRYRUN"
 )
 
 func (t TaxiCallState) Active() bool {

@@ -42,7 +42,7 @@ type TaxiCallRepository interface {
 	GetDriverTaxiCallContext(context.Context, bun.IDB, string) (entity.DriverTaxiCallContext, error)
 	UpsertDriverTaxiCallContext(context.Context, bun.IDB, entity.DriverTaxiCallContext) error
 	BulkUpsertDriverTaxiCallContext(context.Context, bun.IDB, []entity.DriverTaxiCallContext) error
-	ActivateTicketNonAcceptedDriverContext(context.Context, bun.IDB, string, string) error
+	ActivateTicketNonAcceptedDriverContext(context.Context, bun.IDB, string, string) ([]entity.DriverTaxiCallContext, error)
 
 	GetDriverTaxiCallContextWithinRadius(context.Context, bun.IDB,
 		value.Location, value.Location, int, []int, string, time.Time) ([]entity.DriverTaxiCallContext, error)
@@ -279,17 +279,21 @@ func (t taxiCallRepository) BulkUpsertDriverTaxiCallContext(ctx context.Context,
 	return nil
 }
 
-func (t taxiCallRepository) ActivateTicketNonAcceptedDriverContext(ctx context.Context, db bun.IDB, receivedDriverId string, ticketId string) error {
-	_, err := db.NewUpdate().Model((*entity.DriverTaxiCallContext)(nil)).
+func (t taxiCallRepository) ActivateTicketNonAcceptedDriverContext(ctx context.Context, db bun.IDB, receivedDriverId, taxiCallRequestId string) ([]entity.DriverTaxiCallContext, error) {
+	var resp []entity.DriverTaxiCallContext
+
+	_, err := db.NewUpdate().Model(&resp).
 		Where("driver_id <> ?", receivedDriverId).
-		Where("last_received_request_ticket = ?", ticketId).
-		Set("rejected_last_request_ticket = ?", true).Exec(ctx)
+		Where("EXISTS(SELECT 1 FROM taxi_call_ticket WHERE taxi_call_request_id = ? AND ticket_id = last_received_request_ticket)", taxiCallRequestId).
+		Set("rejected_last_request_ticket = ?", true).
+		Returning("*").
+		Exec(ctx)
 
 	if err != nil {
-		return fmt.Errorf("%w: error from db %v", value.ErrDBInternal, err)
+		return resp, fmt.Errorf("%w: error from db %v", value.ErrDBInternal, err)
 	}
 
-	return nil
+	return resp, nil
 }
 
 func (t taxiCallRepository) GetTicketById(ctx context.Context, db bun.IDB, ticketId string) (entity.TaxiCallTicket, error) {
