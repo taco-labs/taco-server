@@ -501,9 +501,6 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 				err = fmt.Errorf("app.taxicall.handleUserCancelled: [%s]: failed to insert event: %w", taxiCallRequest.Id, err)
 			}
 		}()
-		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
-			return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
-		}
 
 		if taxiCallRequest.DriverId.Valid {
 			events = append(events, command.NewPushDriverTaxiCallCommand(
@@ -536,7 +533,7 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 
 			events = append(events, driverCallAcceptedCommands...)
 		} else {
-			// TODO (taekyeom) 수락한 기사가 없기애
+			// XXX (taekyeom) 수락한 기사가 없기애 nil uuid 를 임시로 사용
 			driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, uuid.Nil.String(), taxiCallRequest.Id)
 			if err != nil {
 				return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
@@ -547,6 +544,10 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 			})
 
 			events = append(events, driverCallAcceptedCommands...)
+		}
+
+		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
+			return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
 		}
 
 		return nil
@@ -721,10 +722,6 @@ func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime ti
 			err = fmt.Errorf("app.taxicall.handleMockRequestAccepted: [%s]: failed to create to departure route: %w", taxiCallRequest.Id, err)
 		}
 
-		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
-			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while delete ticket: %w", taxiCallRequest.Id, err)
-		}
-
 		driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, taxiCallRequest.DriverId.String, taxiCallRequest.Id)
 		if err != nil {
 			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
@@ -742,6 +739,10 @@ func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime ti
 			driverTaxiCallContext,
 			receiveTime,
 		))
+
+		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
+			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while delete ticket: %w", taxiCallRequest.Id, err)
+		}
 
 		return nil
 	})
