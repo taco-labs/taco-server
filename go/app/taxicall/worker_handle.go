@@ -329,8 +329,13 @@ func (t taxicallApp) handleTaxiCallRequested(ctx context.Context, eventTime time
 
 		userCmd := command.NewPushUserTaxiCallCommand(taxiCallRequest, taxiCallTicket, entity.DriverTaxiCallContext{}, receiveTime)
 
+		nextScheduleTime := receiveTime
+		if len(driverTaxiCallContexts) > 0 {
+			nextScheduleTime = receiveTime.Add(time.Second * 10)
+		}
+
 		taxiCallCmd := command.NewTaxiCallProgressCommand(taxiCallRequest.Id, taxiCallRequest.CurrentState,
-			receiveTime, receiveTime.Add(time.Second*10))
+			receiveTime, nextScheduleTime)
 		events = append(events, taxiCallCmd, userCmd)
 
 		return nil
