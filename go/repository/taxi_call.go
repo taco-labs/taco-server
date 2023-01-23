@@ -247,7 +247,7 @@ func (t taxiCallRepository) GetActiveRequestIds(ctx context.Context, db bun.IDB)
 	err := db.NewSelect().Model((*entity.TaxiCallRequest)(nil)).
 		Column("id").
 		Where("taxi_call_state IN (?)", bun.In([]enum.TaxiCallState{
-			enum.TaxiCallState_Requested,
+			enum.TaxiCallState_REQUESTED,
 			enum.TaxiCallState_DRIVER_TO_DEPARTURE,
 			enum.TaxiCallState_DRIVER_TO_ARRIVAL,
 		})).Scan(ctx, &resp)

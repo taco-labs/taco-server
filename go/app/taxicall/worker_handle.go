@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
 	"github.com/taco-labs/taco/go/domain/value"
@@ -161,7 +162,7 @@ func (t taxicallApp) process(ctx context.Context, receiveTime time.Time, retryCo
 	}
 
 	switch taxiCallRequest.CurrentState {
-	case enum.TaxiCallState_Requested:
+	case enum.TaxiCallState_REQUESTED:
 		err = t.handleTaxiCallRequested(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
 	case enum.TaxiCallState_DRIVER_TO_DEPARTURE:
 		err = t.handleDriverToDeparture(ctx, cmd.EventTime, receiveTime, taxiCallRequest)
@@ -402,20 +403,13 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 			err = fmt.Errorf("app.taxicall.handleDriverToDeparture: [%s]: failed to create to departure route: %w", taxiCallRequest.Id, err)
 		}
 
-		// TODO(taekyeom) 티켓 수신한 다른 기사분들을 다시 수신 가능한 상태로 만들어야 함
 		driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, taxiCallRequest.DriverId.String, taxiCallRequest.Id)
 		if err != nil {
 			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
 		}
 
 		driverCallAcceptedCommands := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
-			return command.NewPushDriverTaxiCallCommand(
-				i.DriverId,
-				taxiCallRequest,
-				taxiCallTicket,
-				i,
-				receiveTime,
-			)
+			return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
 		})
 
 		events = append(events, driverCallAcceptedCommands...)
@@ -530,6 +524,29 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 			if err = t.repository.taxiCallRequest.UpsertDriverTaxiCallContext(ctx, i, driverTaxiCallContext); err != nil {
 				return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: error while upsert taxi call context: %w", taxiCallRequest.Id, err)
 			}
+
+			driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, taxiCallRequest.DriverId.String, taxiCallRequest.Id)
+			if err != nil {
+				return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
+			}
+
+			driverCallAcceptedCommands := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+				return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
+			})
+
+			events = append(events, driverCallAcceptedCommands...)
+		} else {
+			// TODO (taekyeom) 수락한 기사가 없기애
+			driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, uuid.Nil.String(), taxiCallRequest.Id)
+			if err != nil {
+				return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
+			}
+
+			driverCallAcceptedCommands := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+				return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
+			})
+
+			events = append(events, driverCallAcceptedCommands...)
 		}
 
 		return nil
@@ -714,13 +731,7 @@ func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime ti
 		}
 
 		driverCallAcceptedCommands := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
-			return command.NewPushDriverTaxiCallCommand(
-				i.DriverId,
-				taxiCallRequest,
-				taxiCallTicket,
-				i,
-				receiveTime,
-			)
+			return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
 		})
 
 		events = append(events, driverCallAcceptedCommands...)

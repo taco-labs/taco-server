@@ -3,7 +3,7 @@ package enum
 type TaxiCallState string
 
 var (
-	TaxiCallState_Requested TaxiCallState = "TAXI_CALL_REQUESTED"
+	TaxiCallState_REQUESTED TaxiCallState = "TAXI_CALL_REQUESTED"
 
 	TaxiCallState_DRIVER_TO_DEPARTURE TaxiCallState = "DRIVER_TO_DEPARTURE"
 
@@ -22,18 +22,19 @@ var (
 	TaxiCallState_MOCK_CALL_ACCEPTED TaxiCallState = "MOCK_CALL_ACCEPTED"
 
 	// DO not persist
-	TaxiCallState_INVALID TaxiCallState = "INVALID"
-	TaxiCallState_DRYRUN  TaxiCallState = "DRYRUN"
+	TaxiCallState_REQUEST_INVALIDATED TaxiCallState = "REQUEST_INVALIDATED"
+	TaxiCallState_INVALID             TaxiCallState = "INVALID"
+	TaxiCallState_DRYRUN              TaxiCallState = "DRYRUN"
 )
 
 func (t TaxiCallState) Active() bool {
-	return t == TaxiCallState_Requested ||
+	return t == TaxiCallState_REQUESTED ||
 		t == TaxiCallState_DRIVER_TO_DEPARTURE ||
 		t == TaxiCallState_DRIVER_TO_ARRIVAL
 }
 
 func (t TaxiCallState) Requested() bool {
-	return t == TaxiCallState_Requested
+	return t == TaxiCallState_REQUESTED
 }
 
 func (t TaxiCallState) InDriving() bool {
@@ -48,7 +49,7 @@ func (t TaxiCallState) Complete() bool {
 // TODO(taekyeom) handle user / driver cancel
 func (t TaxiCallState) TryChangeState(nextState TaxiCallState) bool {
 	switch t {
-	case TaxiCallState_Requested:
+	case TaxiCallState_REQUESTED:
 		return nextState == TaxiCallState_DRIVER_TO_DEPARTURE ||
 			nextState == TaxiCallState_USER_CANCELLED ||
 			nextState == TaxiCallState_FAILED ||
@@ -66,8 +67,8 @@ func (t TaxiCallState) TryChangeState(nextState TaxiCallState) bool {
 
 func FromTaxiCallStateString(taxiCallStateString string) TaxiCallState {
 	switch taxiCallStateString {
-	case string(TaxiCallState_Requested):
-		return TaxiCallState_Requested
+	case string(TaxiCallState_REQUESTED):
+		return TaxiCallState_REQUESTED
 	case string(TaxiCallState_DRIVER_TO_DEPARTURE):
 		return TaxiCallState_DRIVER_TO_DEPARTURE
 	case string(TaxiCallState_DRIVER_TO_ARRIVAL):

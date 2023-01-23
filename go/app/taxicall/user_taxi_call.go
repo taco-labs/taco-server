@@ -247,7 +247,7 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User
 			RequestBasePrice:          route.Price,
 			RequestMinAdditionalPrice: req.MinAdditionalPrice,
 			RequestMaxAdditionalPrice: req.MaxAdditionalPrice,
-			CurrentState:              enum.TaxiCallState_Requested,
+			CurrentState:              enum.TaxiCallState_REQUESTED,
 			CreateTime:                requestTime,
 			UpdateTime:                requestTime,
 		}
