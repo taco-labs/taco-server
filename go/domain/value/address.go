@@ -54,6 +54,7 @@ var SupportedServiceRegionList = []string{
 	"경기 양평군",
 	"경기 가평군",
 	"경기 연천군",
+	"인천",
 }
 
 var SupportedServiceRegionMap = slices.ToMapWithValue(SupportedServiceRegionList, func(i string) (string, struct{}) {
