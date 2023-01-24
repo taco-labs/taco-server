@@ -50,7 +50,7 @@ type UserPaymentResponse struct {
 	CardCompany         string    `json:"cardCompany"`
 	RedactedCardNumber  string    `json:"redactedCardNumber"`
 	Invalid             bool      `json:"invalid"`
-	InvalidErrorMessage string    `json:"InvalidErrorMessage"`
+	InvalidErrorMessage string    `json:"invalidErrorMessage"`
 	LastUseTime         time.Time `json:"lastUseTime"`
 	CreateTime          time.Time `json:"createTime"`
 }
