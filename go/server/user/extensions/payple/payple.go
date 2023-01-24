@@ -69,6 +69,10 @@ func (p paypleResultRequest) Success() bool {
 	return p.Result == "success" && p.Code == "0000"
 }
 
+func (p paypleResultRequest) Cancel() bool {
+	return p.Message == "결제를 종료하였습니다."
+}
+
 type paypleTransactionResultCallbackRequest struct {
 	Result     string           `json:"PCD_PAY_RST"`
 	Code       string           `json:"PCD_PAY_CODE"`
@@ -117,6 +121,9 @@ func (p paypleExtension) RegisterCardPaymentResultCallback(e echo.Context) error
 		logger.Error("server.user.extension.payple: Error while parse payple result request", zap.Error(err))
 		return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_failure", p.domain))
 	}
+	if body.Cancel() {
+		return e.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/payment/payple/register_cancel", p.domain))
+	}
 	if !body.Success() {
 		logger.Error("server.user.extension.payple: Error from payple card registration result",
 			zap.String("errCode", body.Code),
@@ -148,6 +155,10 @@ func (p paypleExtension) RegisterCardPaymentSuccess(e echo.Context) error {
 
 func (p paypleExtension) RegisterCardPaymentFailure(e echo.Context) error {
 	return e.Render(http.StatusOK, "payple_register_failure.html", map[string]interface{}{})
+}
+
+func (p paypleExtension) RegisterCardPaymentCancel(e echo.Context) error {
+	return e.Render(http.StatusOK, "payple_register_cancel.html", map[string]interface{}{})
 }
 
 func (p paypleExtension) TransactionResultCallback(e echo.Context) error {
@@ -190,6 +201,7 @@ func (p paypleExtension) Apply(e *echo.Echo) {
 	e.POST("/payment/payple/result_callback", p.RegisterCardPaymentResultCallback)
 	e.GET("/payment/payple/register_success", p.RegisterCardPaymentSuccess)
 	e.GET("/payment/payple/register_failure", p.RegisterCardPaymentFailure)
+	e.GET("/payment/payple/register_cancel", p.RegisterCardPaymentCancel)
 	e.POST("/payment/payple/transaction_callback", p.TransactionResultCallback)
 	e.Renderer = p.renderer
 }

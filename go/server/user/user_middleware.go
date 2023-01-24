@@ -25,6 +25,7 @@ var skipSet = map[string]struct{}{
 	"/payment/payple/result_callback":      {},
 	"/payment/payple/register_success":     {},
 	"/payment/payple/register_failure":     {},
+	"/payment/payple/register_cancel":      {},
 	"/payment/payple/transaction_callback": {},
 }
 
