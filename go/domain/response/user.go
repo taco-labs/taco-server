@@ -51,6 +51,7 @@ type UserPaymentResponse struct {
 	RedactedCardNumber  string    `json:"redactedCardNumber"`
 	Invalid             bool      `json:"invalid"`
 	InvalidErrorMessage string    `json:"InvalidErrorMessage"`
+	LastUseTime         time.Time `json:"lastUseTime"`
 	CreateTime          time.Time `json:"createTime"`
 }
 
@@ -62,6 +63,7 @@ func UserPaymentToResponse(userPayment entity.UserPayment) UserPaymentResponse {
 		RedactedCardNumber:  userPayment.RedactedCardNumber,
 		Invalid:             userPayment.Invalid,
 		InvalidErrorMessage: userPayment.InvalidErrorMessage,
+		LastUseTime:         userPayment.LastUseTime,
 		CreateTime:          userPayment.CreateTime,
 	}
 }
