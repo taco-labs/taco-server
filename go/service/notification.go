@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"firebase.google.com/go/messaging"
+	"firebase.google.com/go/v4/messaging"
 	"github.com/taco-labs/taco/go/domain/value"
 	"go.uber.org/zap"
 	"gocloud.dev/pubsub"

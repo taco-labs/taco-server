@@ -101,16 +101,7 @@ func (a apiLatencyMetricMiddleware) Process(next echo.HandlerFunc) echo.HandlerF
 		path := strings.ReplaceAll(requestPath, ":", "$")
 
 		latency := responseTime.Sub(requestTime)
-		tags := []service.Tag{
-			{
-				Key:   "route",
-				Value: path,
-			},
-			{
-				Key:   "method",
-				Value: c.Request().Method,
-			},
-		}
+		tags := []string{"route", path, "method", c.Request().Method}
 		a.metricService.Timing("ApiLatency", latency, tags...)
 
 		return

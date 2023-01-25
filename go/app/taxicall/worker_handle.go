@@ -14,7 +14,6 @@ import (
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/analytics"
 	"github.com/taco-labs/taco/go/domain/value/enum"
-	"github.com/taco-labs/taco/go/service"
 	"github.com/taco-labs/taco/go/utils"
 	"github.com/taco-labs/taco/go/utils/slices"
 	"github.com/uptrace/bun"
@@ -28,12 +27,7 @@ func (t taxicallApp) handleLocation(ctx context.Context, event entity.Event) err
 	}
 	requestTime := time.Now()
 	defer func() {
-		tags := []service.Tag{
-			{
-				Key:   "eventUri",
-				Value: event.EventUri,
-			},
-		}
+		tags := []string{"eventUri", event.EventUri}
 		now := time.Now()
 		t.service.metric.Timing("WorkerProcessTime", now.Sub(requestTime), tags...)
 	}()
@@ -106,16 +100,7 @@ func (t taxicallApp) handleProgress(ctx context.Context, event entity.Event) err
 
 	requestTime := time.Now()
 	defer func() {
-		tags := []service.Tag{
-			{
-				Key:   "eventUri",
-				Value: event.EventUri,
-			},
-			{
-				Key:   "processType",
-				Value: taxiProgressCmd.TaxiCallState,
-			},
-		}
+		tags := []string{"eventUri", event.EventUri, "processType", taxiProgressCmd.TaxiCallState}
 		now := time.Now()
 		t.service.metric.Timing("WorkerProcessTime", now.Sub(requestTime), tags...)
 	}()

@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"time"
 
-	firebase "firebase.google.com/go"
+	firebase "firebase.google.com/go/v4"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -198,7 +198,8 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		return fmt.Errorf("failed to instantiate firebase cloud messaging client: %w", err)
 	}
 	firebasepub := firebasepubsub.OpenFCMTopic(ctx, messagingClient, &firebasepubsub.TopicOptions{
-		DryRun: serverConfig.Firebase.DryRun,
+		DryRun:        serverConfig.Firebase.DryRun,
+		MetricService: metricService,
 	})
 	var notificationService service.NotificationService
 	switch serverConfig.Notification.Type {
