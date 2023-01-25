@@ -200,6 +200,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 	firebasepub := firebasepubsub.OpenFCMTopic(ctx, messagingClient, &firebasepubsub.TopicOptions{
 		DryRun:        serverConfig.Firebase.DryRun,
 		MetricService: metricService,
+		Logger:        logger,
 	})
 	var notificationService service.NotificationService
 	switch serverConfig.Notification.Type {
