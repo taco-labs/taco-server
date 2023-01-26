@@ -396,3 +396,27 @@ func (t taxicallApp) UserCancelTaxiCallRequest(ctx context.Context, userId strin
 		return nil
 	})
 }
+
+func (t taxicallApp) GetUserLatestTaxiCallTicket(ctx context.Context, userId string, taxiCallRequestId string) (entity.TaxiCallTicket, error) {
+	var taxiCallTicket entity.TaxiCallTicket
+	err := t.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		taxiCallRequest, err := t.repository.taxiCallRequest.GetById(ctx, i, taxiCallRequestId)
+		if err != nil {
+			return fmt.Errorf("app.taxicallApp.GetUserLatestTaxiCallTicket: error while get taxi call request: %w", err)
+		}
+
+		if taxiCallRequest.UserId != userId {
+			return fmt.Errorf("app.taxicallApp.GetUserLatestTaxiCallTicket: unauthorized: %w", value.ErrUnAuthorized)
+		}
+
+		ticket, err := t.repository.taxiCallRequest.GetLatestTicketByRequestId(ctx, i, taxiCallRequestId)
+		if err != nil {
+			return fmt.Errorf("app.taxicallApp.GetUserLatestTaxiCallTicket: error while get taxi call request ticket: %w", err)
+		}
+		taxiCallTicket = ticket
+
+		return nil
+	})
+
+	return taxiCallTicket, err
+}

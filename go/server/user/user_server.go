@@ -31,6 +31,7 @@ type UserApp interface {
 	GetLatestTaxiCallRequest(context.Context, string) (entity.UserLatestTaxiCallRequest, error)
 	CreateTaxiCallRequest(context.Context, request.CreateTaxiCallRequest) (entity.TaxiCallRequest, error)
 	CancelTaxiCallRequest(context.Context, request.UserCancelTaxiCallRequest) error
+	GetUserLatestTaxiCallTicket(ctx context.Context, taxiCallRequestId string) (entity.TaxiCallTicket, error)
 
 	SearchLocation(context.Context, request.SearchLocationRequest) ([]value.LocationSummary, int, error)
 	GetAddress(context.Context, request.GetAddressRequest) (value.Address, error)
@@ -318,4 +319,16 @@ func (u userServer) ListAvailableServiceRegion(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusOK, resp)
+}
+
+func (u userServer) GetUserLatestTaxiCallTicket(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	taxiCallRequestId := e.Param("taxiCallRequestId")
+	ticket, err := u.app.user.GetUserLatestTaxiCallTicket(ctx, taxiCallRequestId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, response.TaxiCallTicketToResponse(ticket))
 }

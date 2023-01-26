@@ -66,3 +66,8 @@ func (u userApp) CancelTaxiCallRequest(ctx context.Context, req request.UserCanc
 
 	return nil
 }
+
+func (u userApp) GetUserLatestTaxiCallTicket(ctx context.Context, taxiCallRequestId string) (entity.TaxiCallTicket, error) {
+	userId := utils.GetUserId(ctx)
+	return u.service.taxiCall.GetUserLatestTaxiCallTicket(ctx, userId, taxiCallRequestId)
+}

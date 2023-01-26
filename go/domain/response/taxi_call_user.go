@@ -135,3 +135,23 @@ func UserLatestTaxiCallRequestToResponse(userLatestTaxiCallRequest entity.UserLa
 		ToDeparturePath:             append([]value.Point{}, userLatestTaxiCallRequest.ToDepartureRoute.Route.Path...),
 	}
 }
+
+type UserLatestTaxiCallRequestTicketResponse struct {
+	TaxiCallRequestId    string    `json:"taxiCallRequestId"`
+	AdditionalPrice      int       `json:"additionalPrice"`
+	Attempt              int       `json:"attempt"`
+	SearchRangeInMinutes int       `json:"SearchRangeInMinutes"`
+	SearchRangeInMeters  int       `json:"SearchRangeInMeters"`
+	UpdateTime           time.Time `json:"updateTime"`
+}
+
+func TaxiCallTicketToResponse(ticket entity.TaxiCallTicket) UserLatestTaxiCallRequestTicketResponse {
+	return UserLatestTaxiCallRequestTicketResponse{
+		TaxiCallRequestId:    ticket.TaxiCallRequestId,
+		AdditionalPrice:      ticket.UserAdditionalPrice(),
+		Attempt:              ticket.AdditionalPrice,
+		SearchRangeInMinutes: ticket.GetRadiusMinutes(),
+		SearchRangeInMeters:  ticket.GetRadius(),
+		UpdateTime:           ticket.CreateTime,
+	}
+}

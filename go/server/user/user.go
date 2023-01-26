@@ -52,6 +52,7 @@ func (u *userServer) initController() error {
 	taxiCallGroup.GET("/tags", u.ListTags)
 	taxiCallGroup.POST("", u.CreateTaxiCallRequest)
 	taxiCallGroup.DELETE("/:taxiCallRequestId", u.CancelTaxiCallRequest)
+	taxiCallGroup.GET("/:taxiCallRequestId/ticket_latest", u.GetUserLatestTaxiCallTicket)
 
 	locationGroup := u.echo.Group("/location")
 	locationGroup.GET("/address", u.GetAddress)
