@@ -181,18 +181,25 @@ type nhnMapsLocationResponse struct {
 	Latitude  string `json:"dpy"`
 	PlaceName string `json:"name1"`
 	Address   string `json:"address"`
+	AddressNo string `json:"jibun"`
 }
 
 func nhnMapsLocationResponseToLocationSummary(n nhnMapsLocationResponse) value.LocationSummary {
 	longitude, _ := strconv.ParseFloat(n.Longitude, 64)
 	latitude, _ := strconv.ParseFloat(n.Latitude, 64)
+	var address string
+	if n.AddressNo != "" {
+		address = fmt.Sprintf("%s %s", n.Address, n.AddressNo)
+	} else {
+		address = n.Address
+	}
 	return value.LocationSummary{
 		Point: value.Point{
 			Longitude: longitude,
 			Latitude:  latitude,
 		},
 		AddressSummary: value.AddressSummary{
-			AddressName: n.Address,
+			AddressName: address,
 			PlaceName:   n.PlaceName,
 		},
 	}
