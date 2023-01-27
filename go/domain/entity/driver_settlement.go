@@ -12,10 +12,6 @@ const (
 	DriverSettlementTaxRateNumerator   = 33
 	DriverSettlementTaxRateDenominator = 1000
 
-	DriverSettlementPromotionRateWithNoReferral  = 15
-	DriverSettlementPromotionRateWithOneReferral = 10
-	DriverSettlementPromotionRateWithAllReferral = 5
-
 	DriverRewardReceiveAmount     = 1000
 	DriverRewardReceiveCountLimit = 30
 )
@@ -23,7 +19,7 @@ const (
 var (
 	Kst, _                         = time.LoadLocation("Asia/Seoul")
 	DriverRewardPromotionTimeStart = time.Date(2023, 1, 1, 0, 0, 0, 0, Kst)
-	DriverRewardPromotionTimeEnd   = time.Date(2023, 2, 1, 0, 0, 0, 0, Kst)
+	DriverRewardPromotionTimeEnd   = time.Date(2023, 3, 1, 0, 0, 0, 0, Kst)
 )
 
 func ExpectedSettlementAmountWithoutTax(amount int) int {
@@ -100,13 +96,8 @@ type DriverPromotionSettlementReward struct {
 	TotalAmount int    `bun:"total_amount"`
 }
 
-func (d *DriverPromotionSettlementReward) Apply(amount int, rate int) int {
-	rewardAmount := amount * rate / 100
-
-	if d.TotalAmount < rewardAmount {
-		rewardAmount = d.TotalAmount
-	}
-
+func (d *DriverPromotionSettlementReward) Apply(amount int) int {
+	rewardAmount := d.TotalAmount
 	d.TotalAmount -= rewardAmount
 
 	return rewardAmount

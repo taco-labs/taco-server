@@ -420,6 +420,11 @@ func (p paymentApp) CreateUserReferral(ctx context.Context, fromUserId string, t
 func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId, orderId string, price int) (int, error) {
 	var referralReward int
 	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	if price == 0 {
+		return 0, nil
+	}
+
 	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		userReferralReward, err := p.repository.referral.GetUserReferral(ctx, i, userId)
 		if errors.Is(err, value.ErrNotFound) {
@@ -490,6 +495,11 @@ func (p paymentApp) CreateDriverReferral(ctx context.Context, fromDriverId, toDr
 func (p paymentApp) ApplyDriverReferralReward(ctx context.Context, driverId, orderId string, price int) (int, error) {
 	var referralReward int
 	requestTime := utils.GetRequestTimeOrNow(ctx)
+
+	if price == 0 {
+		return 0, nil
+	}
+
 	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driverReferralReward, err := p.repository.referral.GetDriverReferral(ctx, i, driverId)
 		if errors.Is(err, value.ErrNotFound) {

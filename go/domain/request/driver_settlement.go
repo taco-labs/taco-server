@@ -55,8 +55,7 @@ type DriverSettlementTransferFailureCallbackRequest struct {
 }
 
 type ApplyDriverSettlementPromotionRewardRequest struct {
-	DriverId   string
-	OrderId    string
-	Amount     int
-	RewardRate int
+	DriverId string
+	OrderId  string
+	Amount   int
 }

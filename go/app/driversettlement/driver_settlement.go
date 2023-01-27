@@ -233,7 +233,19 @@ func (d driversettlementApp) ApplyDriverSettlementPromotionReward(ctx context.Co
 			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementPromotionReward: error while get driver promotion reward: %w", err)
 		}
 
-		rewardAmount = promotionReward.Apply(req.Amount, req.RewardRate)
+		promotionRewardLimit, err := d.repository.settlement.GetDriverPromotionRewardLimit(ctx, i, req.DriverId)
+		if errors.Is(err, value.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementPromotionReward: error while get driver promotion reward limit: %w", err)
+		}
+
+		if promotionRewardLimit.ReceiveCount < promotionRewardLimit.ReceiveCountLimit {
+			return nil
+		}
+
+		rewardAmount = promotionReward.Apply(req.Amount)
 
 		if err := d.repository.settlement.UpdateDriverPromotionSettlementReward(ctx, i, promotionReward); err != nil {
 			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementPromotionReward: error while update driver promotion reward: %w", err)
@@ -242,7 +254,6 @@ func (d driversettlementApp) ApplyDriverSettlementPromotionReward(ctx context.Co
 		rewardApplyAnalytics := entity.NewAnalytics(requestTime, analytics.DriverPromotionReward{
 			DriverId:             req.DriverId,
 			TaxiCallRequestId:    req.OrderId,
-			RewardRate:           req.RewardRate,
 			AfterPromotionAmount: promotionReward.TotalAmount,
 			RewardAmount:         rewardAmount,
 		})
@@ -262,6 +273,8 @@ func (d driversettlementApp) ApplyDriverSettlementPromotionReward(ctx context.Co
 
 func (d driversettlementApp) ReceiveDriverPromotionReward(ctx context.Context, driverId string, receiveTime time.Time) error {
 	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+		// TODO (taekyeom) 나중에는 인원 제한 필요
+
 		driverPromotionReward, err := d.repository.settlement.GetDriverPromotionSettlementReward(ctx, i, driverId)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.driversettlementApp.GiveDriverPromotionReward: error while get driver promotion settlement reward: %w", err)

@@ -31,6 +31,10 @@ type PaymentUserTransactionRequestCommand struct {
 	Recovery           bool   `json:"recovery"`
 }
 
+func (p PaymentUserTransactionRequestCommand) TransactionAmount() int {
+	return p.Amount - p.UsedPoint
+}
+
 type PaymentUserTransactionSuccessCommand struct {
 	OrderId    string    `json:"orderId"`
 	PaymentKey string    `json:"paymentKey"`

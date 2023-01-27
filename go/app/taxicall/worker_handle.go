@@ -457,19 +457,17 @@ func (t taxicallApp) handleDone(ctx context.Context, eventTime time.Time, receiv
 			entity.DriverTaxiCallContext{},
 			receiveTime,
 		))
-		if taxiCallRequest.UserAdditionalPrice() > 0 {
-			events = append(events, command.NewUserPaymentTransactionRequestCommand(
-				taxiCallRequest.UserId,
-				taxiCallRequest.PaymentSummary.PaymentId,
-				taxiCallRequest.Id,
-				"타코 이용 요금", // TODO (taekyeom) order name generation?
-				taxiCallRequest.DriverId.String,
-				taxiCallRequest.UserAdditionalPrice(),
-				taxiCallRequest.UserUsedPoint,
-				taxiCallRequest.DriverSettlementAdditonalPrice(),
-				false,
-			))
-		}
+		events = append(events, command.NewUserPaymentTransactionRequestCommand(
+			taxiCallRequest.UserId,
+			taxiCallRequest.PaymentSummary.PaymentId,
+			taxiCallRequest.Id,
+			"타코 이용 요금", // TODO (taekyeom) order name generation?
+			taxiCallRequest.DriverId.String,
+			taxiCallRequest.UserAdditionalPrice(),
+			taxiCallRequest.UserUsedPoint,
+			taxiCallRequest.DriverSettlementAdditonalPrice(),
+			false,
+		))
 		return nil
 	})
 }
