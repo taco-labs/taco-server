@@ -298,7 +298,6 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		payment.WithPaymentService(paymentService),
 		payment.WithReferralRepository(referralRepository),
 		payment.WithAnalyticsRepository(analyticsRepository),
-		payment.WithDriverSettlementService(driverSettlementApp),
 		payment.WithMetricService(metricService),
 	)
 	if err != nil {

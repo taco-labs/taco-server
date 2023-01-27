@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/event/command"
-	"github.com/taco-labs/taco/go/domain/request"
 	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/taco-labs/taco/go/utils"
@@ -173,28 +172,12 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 		}
 
 		if transactionRequest.SettlementTargetId != uuid.Nil.String() {
-			promotionReward, err := p.service.settlement.ApplyDriverSettlementPromotionReward(
-				ctx,
-				request.ApplyDriverSettlementPromotionRewardRequest{
-					DriverId: transactionRequest.SettlementTargetId,
-					OrderId:  transactionRequest.OrderId,
-					Amount:   transactionRequest.Amount,
-				},
-			)
-			if err != nil {
-				return fmt.Errorf("app.payment.handleTransactionSuccess: failed to apply driver settlement promotion: %w", err)
-			}
-
-			driverSettlementAmount := transactionRequest.GetSettlementAmount(promotionReward)
-
-			if driverSettlementAmount > 0 {
-				events = append(events, command.NewDriverSettlementRequestCommand(
-					transactionRequest.SettlementTargetId,
-					transactionRequest.OrderId,
-					transactionRequest.GetSettlementAmount(promotionReward),
-					cmd.CreateTime,
-				))
-			}
+			events = append(events, command.NewDriverSettlementRequestCommand(
+				transactionRequest.SettlementTargetId,
+				transactionRequest.OrderId,
+				transactionRequest.GetSettlementAmount(),
+				cmd.CreateTime,
+			))
 		}
 
 		if transactionRequest.Recovery {

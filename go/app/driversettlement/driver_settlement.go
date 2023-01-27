@@ -34,10 +34,14 @@ type driversettlementApp struct {
 	}
 }
 
-func (d driversettlementApp) ApplyDriverSettlementRequest(ctx context.Context, req request.ApplyDriverSettlementPromotionRewardRequest) error {
+func (d driversettlementApp) ApplyDriverSettlementRequest(ctx context.Context, driverId, orderId string, amount int) error {
+	if amount == 0 {
+		return nil
+	}
+
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
-		settlementRequest, err := d.repository.settlement.GetDriverSettlementRequest(ctx, i, req.DriverId, req.OrderId)
+		settlementRequest, err := d.repository.settlement.GetDriverSettlementRequest(ctx, i, driverId, orderId)
 		if err != nil && !errors.Is(err, value.ErrNotFound) {
 			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementRequest: error while get settlement request: %w", err)
 		}
@@ -47,15 +51,15 @@ func (d driversettlementApp) ApplyDriverSettlementRequest(ctx context.Context, r
 		}
 
 		settlementRequest = entity.DriverSettlementRequest{
-			TaxiCallRequestId: req.OrderId,
-			DriverId:          req.DriverId,
-			Amount:            req.Amount,
+			TaxiCallRequestId: orderId,
+			DriverId:          driverId,
+			Amount:            amount,
 			CreateTime:        requestTime,
 		}
 		if err := d.repository.settlement.CreateDriverSettlementRequest(ctx, i, settlementRequest); err != nil {
 			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementRequest: error while create settlement request: %w", err)
 		}
-		if err := d.repository.settlement.UpdateTotalDriverSettlement(ctx, i, req.DriverId, req.Amount); err != nil {
+		if err := d.repository.settlement.UpdateTotalDriverSettlement(ctx, i, driverId, amount); err != nil {
 			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementRequest: error while update total settlement amount: %w", err)
 		}
 
@@ -233,6 +237,10 @@ func (d driversettlementApp) ApplyDriverSettlementPromotionReward(ctx context.Co
 			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementPromotionReward: error while get driver promotion reward: %w", err)
 		}
 
+		if promotionReward.TotalAmount == 0 {
+			return nil
+		}
+
 		promotionRewardLimit, err := d.repository.settlement.GetDriverPromotionRewardLimit(ctx, i, req.DriverId)
 		if errors.Is(err, value.ErrNotFound) {
 			return nil
@@ -245,7 +253,7 @@ func (d driversettlementApp) ApplyDriverSettlementPromotionReward(ctx context.Co
 			return nil
 		}
 
-		rewardAmount = promotionReward.Apply(req.Amount)
+		rewardAmount = promotionReward.Apply()
 
 		if err := d.repository.settlement.UpdateDriverPromotionSettlementReward(ctx, i, promotionReward); err != nil {
 			return fmt.Errorf("app.driversettlementApp.ApplyDriverSettlementPromotionReward: error while update driver promotion reward: %w", err)

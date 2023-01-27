@@ -96,7 +96,7 @@ type DriverPromotionSettlementReward struct {
 	TotalAmount int    `bun:"total_amount"`
 }
 
-func (d *DriverPromotionSettlementReward) Apply(amount int) int {
+func (d *DriverPromotionSettlementReward) Apply() int {
 	rewardAmount := d.TotalAmount
 	d.TotalAmount -= rewardAmount
 

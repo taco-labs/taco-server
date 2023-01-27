@@ -20,11 +20,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type driverSettlementAppInterface interface {
-	ApplyDriverSettlementRequest(ctx context.Context, req request.ApplyDriverSettlementPromotionRewardRequest) error
-	ApplyDriverSettlementPromotionReward(ctx context.Context, req request.ApplyDriverSettlementPromotionRewardRequest) (int, error)
-}
-
 type paymentApp struct {
 	app.Transactor
 
@@ -36,9 +31,8 @@ type paymentApp struct {
 	}
 
 	service struct {
-		payment    service.PaymentService
-		settlement driverSettlementAppInterface
-		metric     service.MetricService
+		payment service.PaymentService
+		metric  service.MetricService
 	}
 }
 
@@ -421,10 +415,6 @@ func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId, orderId
 	var referralReward int
 	requestTime := utils.GetRequestTimeOrNow(ctx)
 
-	if price == 0 {
-		return 0, nil
-	}
-
 	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		userReferralReward, err := p.repository.referral.GetUserReferral(ctx, i, userId)
 		if errors.Is(err, value.ErrNotFound) {
@@ -434,6 +424,10 @@ func (p paymentApp) ApplyUserReferralReward(ctx context.Context, userId, orderId
 			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while get user referral reward: %w", err)
 		}
 		referralReward = userReferralReward.UseReward(price)
+		if referralReward == 0 {
+			return nil
+		}
+
 		if err := p.repository.referral.UpdateUserReferral(ctx, i, userReferralReward); err != nil {
 			return fmt.Errorf("app.paymentApp.UseUserReferralReward: error while update user referral reward: %w", err)
 		}
@@ -492,13 +486,10 @@ func (p paymentApp) CreateDriverReferral(ctx context.Context, fromDriverId, toDr
 	})
 }
 
+// TODO (taekyeom) 이걸 payment가 아니라 driversettlement로 옮겨야 할지도
 func (p paymentApp) ApplyDriverReferralReward(ctx context.Context, driverId, orderId string, price int) (int, error) {
 	var referralReward int
 	requestTime := utils.GetRequestTimeOrNow(ctx)
-
-	if price == 0 {
-		return 0, nil
-	}
 
 	err := p.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		driverReferralReward, err := p.repository.referral.GetDriverReferral(ctx, i, driverId)
@@ -509,20 +500,17 @@ func (p paymentApp) ApplyDriverReferralReward(ctx context.Context, driverId, ord
 			return fmt.Errorf("app.paymentApp.ApplyDriverReferralReward: error while get user referral reward: %w", err)
 		}
 		referralReward = driverReferralReward.UseReward(price)
+		if referralReward == 0 {
+			return nil
+		}
+
 		if err := p.repository.referral.UpdateDriverReferral(ctx, i, driverReferralReward); err != nil {
 			return fmt.Errorf("app.paymentApp.ApplyDriverReferralReward: error while update user referral reward: %w", err)
 		}
 
-		if err := p.service.settlement.ApplyDriverSettlementRequest(ctx, request.ApplyDriverSettlementPromotionRewardRequest{
-			DriverId: driverReferralReward.ToDriverId,
-			OrderId:  orderId,
-			Amount:   referralReward,
-		}); err != nil {
-			return fmt.Errorf("app.paymentApp.ApplyDriverReferralReward: error while apply driver referral: %w", err)
-		}
-
+		settlementRequest := command.NewDriverSettlementRequestCommand(driverReferralReward.ToDriverId, orderId, referralReward, requestTime)
 		referralRewardNotification := NewDriverReferralRewardNotification(driverReferralReward.ToDriverId, referralReward)
-		if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{referralRewardNotification}); err != nil {
+		if err := p.repository.event.BatchCreate(ctx, i, []entity.Event{settlementRequest, referralRewardNotification}); err != nil {
 			return fmt.Errorf("app.paymentApp.ApplyDriverReferralReward: error while add notification event: %w", err)
 		}
 

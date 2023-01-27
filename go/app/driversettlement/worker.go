@@ -71,11 +71,21 @@ func (d driversettlementApp) handleSettlementRequest(ctx context.Context, event 
 	}
 
 	ctx = utils.SetRequestTime(ctx, cmd.RequestTime)
-	err = d.ApplyDriverSettlementRequest(ctx, request.ApplyDriverSettlementPromotionRewardRequest{
-		DriverId: cmd.DriverId,
-		OrderId:  cmd.TaxiCallRequestId,
-		Amount:   cmd.Amount,
-	})
+
+	promotionReward, err := d.ApplyDriverSettlementPromotionReward(
+		ctx,
+		request.ApplyDriverSettlementPromotionRewardRequest{
+			DriverId: cmd.DriverId,
+			OrderId:  cmd.TaxiCallRequestId,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while applying promotion reward: %w", err)
+	}
+
+	settlementAmount := cmd.Amount + promotionReward
+
+	err = d.ApplyDriverSettlementRequest(ctx, cmd.DriverId, cmd.TaxiCallRequestId, settlementAmount)
 	if err != nil {
 		return fmt.Errorf("app.driversettlementApp.handleSettlementRequest: error while apply driver settlement: %w", err)
 	}
