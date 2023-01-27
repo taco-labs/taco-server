@@ -393,11 +393,11 @@ func (t taxicallApp) handleDriverToDeparture(ctx context.Context, eventTime time
 			return fmt.Errorf("app.taxicall.handleDriverToDeparture [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
 		}
 
-		driverCallAcceptedCommands := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+		requestInvalidatedCommand := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
 			return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
 		})
 
-		events = append(events, driverCallAcceptedCommands...)
+		events = append(events, requestInvalidatedCommand...)
 
 		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
@@ -510,11 +510,11 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 				return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
 			}
 
-			driverCallAcceptedCommands := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+			requestInvalidatedCommand := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
 				return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
 			})
 
-			events = append(events, driverCallAcceptedCommands...)
+			events = append(events, requestInvalidatedCommand...)
 		} else {
 			// XXX (taekyeom) 수락한 기사가 없기애 nil uuid 를 임시로 사용
 			driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, uuid.Nil.String(), taxiCallRequest.Id)
@@ -522,11 +522,11 @@ func (t taxicallApp) handleUserCancelled(ctx context.Context, eventTime time.Tim
 				return fmt.Errorf("app.taxicall.handleUserCancelled [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
 			}
 
-			driverCallAcceptedCommands := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+			requestInvalidatedCommand := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
 				return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
 			})
 
-			events = append(events, driverCallAcceptedCommands...)
+			events = append(events, requestInvalidatedCommand...)
 		}
 
 		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
@@ -595,14 +595,25 @@ func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, rece
 		if taxiCallRequest.PaymentSummary.PaymentType == enum.PaymentType_SignupPromition {
 			userPayment, err := t.service.payment.GetUserPayment(ctx, taxiCallRequest.UserId, taxiCallRequest.PaymentSummary.PaymentId)
 			if err != nil {
-				return fmt.Errorf("app.taxicall.handleFaile [%s]: error while get user payment: %w", taxiCallRequest.Id, err)
+				return fmt.Errorf("app.taxicall.handleFailed [%s]: error while get user payment: %w", taxiCallRequest.Id, err)
 			}
 			userPayment.Invalid = false
 			userPayment.InvalidErrorMessage = ""
 			if err := t.service.payment.UpdateUserPayment(ctx, userPayment); err != nil {
-				return fmt.Errorf("app.taxicall.handleFaile [%s]: error while update user payment: %w", taxiCallRequest.Id, err)
+				return fmt.Errorf("app.taxicall.handleFailed [%s]: error while update user payment: %w", taxiCallRequest.Id, err)
 			}
 		}
+
+		driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, uuid.Nil.String(), taxiCallRequest.Id)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.handleFailed [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		requestInvalidatedCommand := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+			return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
+		})
+
+		events = append(events, requestInvalidatedCommand...)
 
 		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
@@ -642,6 +653,17 @@ func (t taxicallApp) handleDriverNotAvailable(ctx context.Context, eventTime tim
 				return fmt.Errorf("app.taxicall.handleDriverNotAvailable [%s]: error while update user payment: %w", taxiCallRequest.Id, err)
 			}
 		}
+
+		driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, uuid.Nil.String(), taxiCallRequest.Id)
+		if err != nil {
+			return fmt.Errorf("app.taxicall.handleDriverNotAvailable [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		requestInvalidatedCommand := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+			return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
+		})
+
+		events = append(events, requestInvalidatedCommand...)
 
 		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
@@ -710,11 +732,11 @@ func (t taxicallApp) handleMockRequestAccepted(ctx context.Context, eventTime ti
 			return fmt.Errorf("app.taxicall.handleMockRequestAccepted [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
 		}
 
-		driverCallAcceptedCommands := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
+		requestInvalidatedCommand := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
 			return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
 		})
 
-		events = append(events, driverCallAcceptedCommands...)
+		events = append(events, requestInvalidatedCommand...)
 
 		events = append(events, command.NewPushUserTaxiCallCommand(
 			taxiCallRequest,
