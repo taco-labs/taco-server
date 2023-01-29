@@ -586,10 +586,6 @@ func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, rece
 			}
 		}()
 
-		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
-			return fmt.Errorf("app.taxicall.handleFailed [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
-		}
-
 		if taxiCallRequest.PaymentSummary.PaymentType == enum.PaymentType_SignupPromition {
 			userPayment, err := t.service.payment.GetUserPayment(ctx, taxiCallRequest.UserId, taxiCallRequest.PaymentSummary.PaymentId)
 			if err != nil {
@@ -610,6 +606,10 @@ func (t taxicallApp) handleFailed(ctx context.Context, eventTime time.Time, rece
 		requestInvalidatedCommand := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
 			return newTaxiCallRequestInvalidateCommand(i.DriverId, taxiCallRequest.Id, receiveTime)
 		})
+
+		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
+			return fmt.Errorf("app.taxicall.handleFailed [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
+		}
 
 		events = append(events, requestInvalidatedCommand...)
 
@@ -636,10 +636,6 @@ func (t taxicallApp) handleDriverNotAvailable(ctx context.Context, eventTime tim
 			}
 		}()
 
-		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
-			return fmt.Errorf("app.taxicall.handleDriverNotAvailable [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
-		}
-
 		if taxiCallRequest.PaymentSummary.PaymentType == enum.PaymentType_SignupPromition {
 			userPayment, err := t.service.payment.GetUserPayment(ctx, taxiCallRequest.UserId, taxiCallRequest.PaymentSummary.PaymentId)
 			if err != nil {
@@ -655,6 +651,10 @@ func (t taxicallApp) handleDriverNotAvailable(ctx context.Context, eventTime tim
 		driverContexts, err := t.repository.taxiCallRequest.ActivateTicketNonAcceptedDriverContext(ctx, i, uuid.Nil.String(), taxiCallRequest.Id)
 		if err != nil {
 			return fmt.Errorf("app.taxicall.handleDriverNotAvailable [%s]: error while activate taxi call contexts who not accepted ticket: %w", taxiCallRequest.Id, err)
+		}
+
+		if err = t.repository.taxiCallRequest.DeleteTicketByRequestId(ctx, i, taxiCallRequest.Id); err != nil {
+			return fmt.Errorf("app.taxicall.handleDriverNotAvailable [%s]: failed to delete ticket: %w", taxiCallRequest.Id, err)
 		}
 
 		requestInvalidatedCommand := slices.Map(driverContexts, func(i entity.DriverTaxiCallContext) entity.Event {
