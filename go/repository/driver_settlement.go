@@ -126,6 +126,7 @@ func (d driverSettlementRepository) ListDriverSettlementHistory(ctx context.Cont
 	resp := []entity.DriverSettlementHistory{}
 
 	query := db.NewSelect().Model(&resp).
+		Where("driver_id = ?", driverId).
 		Order("create_time DESC").
 		Limit(count)
 
