@@ -81,3 +81,13 @@ type UserReferralPointReceivedPayload struct {
 func (u UserReferralPointReceivedPayload) EventType() EventType {
 	return EventType_UserReferralPointReceived
 }
+
+type UserAccessPayload struct {
+	UserId string
+	Method string
+	Path   string
+}
+
+func (u UserAccessPayload) EventType() EventType {
+	return EventType_UserAccess
+}

@@ -8,10 +8,14 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/taco-labs/taco/go/app"
 	"github.com/taco-labs/taco/go/domain/entity"
 	"github.com/taco-labs/taco/go/domain/value"
+	"github.com/taco-labs/taco/go/domain/value/analytics"
+	"github.com/taco-labs/taco/go/repository"
 	"github.com/taco-labs/taco/go/server"
 	"github.com/taco-labs/taco/go/utils"
+	"github.com/uptrace/bun"
 )
 
 var skipSet = map[string]struct{}{
@@ -112,5 +116,50 @@ func UserIdChecker(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		return next(c)
+	}
+}
+
+type userAccessAnalyticsMiddleware struct {
+	app.Transactor
+	analytics repository.AnalyticsRepository
+}
+
+func NewUserAnalyticsMiddleware(transactor app.Transactor, analyticsRepository repository.AnalyticsRepository) *userAccessAnalyticsMiddleware {
+	return &userAccessAnalyticsMiddleware{
+		Transactor: transactor,
+		analytics:  analyticsRepository,
+	}
+}
+
+func (u userAccessAnalyticsMiddleware) Process(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) (err error) {
+		// TODO (taekyeom) user id 를 가져오기 위해서 일단은 skipset을 참조하도록 함
+		if _, ok := skipSet[c.Path()]; ok {
+			return next(c)
+		}
+
+		if err = next(c); err != nil {
+			c.Error(err)
+		}
+
+		ctx := c.Request().Context()
+		requestTime := utils.GetRequestTimeOrNow(ctx)
+		userId := utils.GetUserId(ctx)
+		path := c.Path()
+		method := c.Request().Method
+
+		err = u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
+			if err := u.analytics.Create(ctx, i, entity.NewAnalytics(requestTime, analytics.UserAccessPayload{
+				UserId: userId,
+				Path:   path,
+				Method: method,
+			})); err != nil {
+				return fmt.Errorf("middleware.user.access: error from analytics: %w", err)
+			}
+
+			return nil
+		})
+
+		return
 	}
 }

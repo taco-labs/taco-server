@@ -402,6 +402,8 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 
 	apiLatencyMiddleware := server.NewApiLatencyMetricMiddleware(metricService)
 
+	userAccessAnalyticsMiddleware := userserver.NewUserAnalyticsMiddleware(transactor, analyticsRepository)
+
 	// Init server extensions
 	userServerPaypleExtension, err := userpaypleextension.NewPaypleExtension(
 		userpaypleextension.WithPayplePaymentApp(userApp),
@@ -428,6 +430,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		userserver.WithMiddleware(userSessionMiddleware.Get()),
 		userserver.WithMiddleware(userserver.UserIdChecker),
 		userserver.WithMiddleware(apiLatencyMiddleware.Process),
+		userserver.WithMiddleware(userAccessAnalyticsMiddleware.Process),
 		userserver.WithExtension(userServerPaypleExtension.Apply),
 	)
 	if err != nil {
