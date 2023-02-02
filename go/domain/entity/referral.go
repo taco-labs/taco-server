@@ -26,6 +26,10 @@ type UserReferral struct {
 }
 
 func (u *UserReferral) UseReward(price int) int {
+	if price < 0 {
+		return 0
+	}
+
 	rewardCandidate := price * u.RewardRate / 100
 	if rewardCandidate+u.CurrentReward > u.RewardLimit {
 		rewardCandidate = u.RewardLimit - u.CurrentReward
@@ -46,6 +50,10 @@ type DriverReferral struct {
 }
 
 func (d *DriverReferral) UseReward(price int) int {
+	if price < 0 {
+		return 0
+	}
+
 	rewardCandidate := price * d.RewardRate / 100
 	if rewardCandidate+d.CurrentReward > d.RewardLimit {
 		rewardCandidate = d.RewardLimit - d.CurrentReward

@@ -154,6 +154,11 @@ func (u *UserPaymentPoint) UsePoint(price int) int {
 	if u.Point < MinimumPointToUse {
 		return 0
 	}
+
+	if price < 0 {
+		return 0
+	}
+
 	var pointToUse int
 	if u.Point >= price {
 		pointToUse = price

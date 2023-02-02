@@ -72,9 +72,9 @@ func (p paymentApp) handleTransactionRequest(ctx context.Context, event entity.E
 
 	isMockPayment := userPayment.PaymentType == enum.PaymentType_Mock
 	isSignupPromotionPayment := userPayment.PaymentType == enum.PaymentType_SignupPromition
-	isTrasactionAmountZero := cmd.TransactionAmount() == 0
+	isTrasactionUnderZero := cmd.TransactionAmount() <= 0
 
-	if isMockPayment || isSignupPromotionPayment || isTrasactionAmountZero {
+	if isMockPayment || isSignupPromotionPayment || isTrasactionUnderZero {
 		// orderId, paymentKey, receiptUrl string, createTime time.Time
 		successCmd := command.NewUserPaymentTransactionSuccessCommand(
 			transactionRequest.OrderId,
@@ -169,6 +169,18 @@ func (p paymentApp) handleTransactionSuccess(ctx context.Context, event entity.E
 		_, err = p.ApplyDriverReferralReward(ctx, transactionRequest.SettlementTargetId, transactionRequest.OrderId, transactionRequest.Amount)
 		if err != nil {
 			return fmt.Errorf("app.payment.handleTransactionSuccess: failed to apply driver referral: %w", err)
+		}
+
+		if transactionRequest.Amount < 0 {
+			userPaymentPoint, err := p.repository.payment.GetUserPaymentPoint(ctx, i, transactionRequest.UserId)
+			if err != nil {
+				return fmt.Errorf("app.payment.handleTransactionSuccess: failed to get user payment point: %w", err)
+			}
+			userPaymentPoint.Point -= transactionRequest.Amount
+			if err := p.repository.payment.UpdateUserPaymentPoint(ctx, i, userPaymentPoint); err != nil {
+				return fmt.Errorf("app.payment.handleTransactionSuccess: failed to add user payment point: %w", err)
+			}
+			events = append(events, NewUserPaymentPointAddNotification(transactionRequest.UserId, -transactionRequest.Amount))
 		}
 
 		if transactionRequest.SettlementTargetId != uuid.Nil.String() {

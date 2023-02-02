@@ -41,9 +41,16 @@ func (t taxiCallPushApp) handleUserTaxiCallRequestAccepted(ctx context.Context, 
 	}
 
 	messageTitle := "배차 완료, 기사님이 이동중입니다."
-	messageBody := fmt.Sprintf("예상운임 %d원 (서비스 이용료 %d원). "+
-		"1분 경과후 취소 또는 기사님 도착 후 3분이내 연락두절, 미탑승시 취소수수료가 부과될 수 있습니다.",
-		cmd.RequestBasePrice, cmd.AdditionalPrice)
+	var messageBody string
+	if cmd.AdditionalPrice > 0 {
+		messageBody = fmt.Sprintf("예상운임 %d원 (서비스 이용료 %d원). "+
+			"1분 경과후 취소 또는 기사님 도착 후 3분이내 연락두절, 미탑승시 취소수수료가 부과될 수 있습니다.",
+			cmd.RequestBasePrice, cmd.AdditionalPrice)
+	} else {
+		messageBody = fmt.Sprintf("예상운임 %d원 (서비스 이용 후 %d 타코 적립). "+
+			"1분 경과후 취소 또는 기사님 도착 후 3분이내 연락두절, 미탑승시 취소수수료가 부과될 수 있습니다.",
+			cmd.RequestBasePrice, -cmd.AdditionalPrice)
+	}
 
 	data := map[string]string{
 		"taxiCallRequestId":   cmd.TaxiCallRequestId,

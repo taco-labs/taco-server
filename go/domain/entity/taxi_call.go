@@ -19,6 +19,9 @@ const (
 )
 
 func CalculateDriverAdditionalPrice(additionalPrice int) int {
+	if additionalPrice < 0 {
+		return 0
+	}
 	return additionalPrice * 7 / 10
 }
 

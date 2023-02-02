@@ -138,7 +138,6 @@ func (d driversettlementApp) handleSettlementTransferRequest(ctx context.Context
 		return fmt.Errorf("app.driversettlementApp.handleSettlementTransferRequest: error while request transfer: %w", err)
 	}
 
-	// TODO (taekyeom) 현재 shutdown logic 은 중간에 context done 발생하면 중단 될 위험이 있음... gracefull하게 변경 필요
 	return d.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		inflightRequest.State = enum.SettlementTransferProcessState_REQUESTED
 		inflightRequest.ExecutionKey = transferRequest.ExecutionKey

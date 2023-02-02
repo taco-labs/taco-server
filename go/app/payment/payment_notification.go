@@ -38,3 +38,10 @@ func NewDriverReferralRewardNotification(driverId string, amount int) entity.Eve
 
 	return command.NewRawMessageCommand(driverId, value.NotificationCategory_Payment, messageTitle, messageBody, map[string]string{})
 }
+
+func NewUserPaymentPointAddNotification(userId string, amount int) entity.Event {
+	messageTitle := fmt.Sprintf("할인 시간대 이용으로 %d타코가 적립되었습니다", amount)
+	messageBody := fmt.Sprintf("할인 시간대 이용으로 %d타코가 적립되었니다. 다음 호출 시 호출료 할인에 활용해보세요.", amount)
+
+	return command.NewRawMessageCommand(userId, value.NotificationCategory_Payment, messageTitle, messageBody, map[string]string{})
+}
