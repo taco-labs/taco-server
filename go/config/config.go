@@ -101,3 +101,9 @@ type ServiceRegionConfig struct {
 	DriverServiceRegions []string `env:"TACO_DRIVER_SERVICE_REGIONS"`
 	UserServiceRegions   []string `env:"TACO_USER_SERVICE_REGIONS"`
 }
+
+type DryRunEstimatorConfig struct {
+	Type            string `env:"TACO_DRY_RUN_ESTIMATOR_TYPE,default=mock"`
+	MinPriceByHours []int  `env:"TACO_DRY_RUN_ESTIMATOR_MIN_PRICE_BY_HOURS"`
+	MaxPriceByHours []int  `env:"TACO_DRY_RUN_ESTIMATOR_MAX_PRICE_BY_HOURS"`
+}

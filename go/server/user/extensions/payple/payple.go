@@ -28,13 +28,11 @@ const (
 func (p *PaypleTimeFormat) UnmarshalJSON(b []byte) (err error) {
 	s := strings.Trim(string(b), "\"")
 
-	loc, _ := time.LoadLocation("Asia/Seoul")
-
 	if s == "null" || s == "" {
 		*p = PaypleTimeFormat(time.Time{})
 		return
 	}
-	t, err := time.ParseInLocation(paypleTimeLayout, s, loc)
+	t, err := time.ParseInLocation(paypleTimeLayout, s, value.Timezone_Kst)
 	*p = PaypleTimeFormat(t)
 	return
 }

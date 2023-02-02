@@ -76,6 +76,12 @@ func WithMetricService(svc service.MetricService) taxicallAppOption {
 	}
 }
 
+func WithDryRunEstimationService(svc service.DryRunEstimator) taxicallAppOption {
+	return func(ta *taxicallApp) {
+		ta.service.dryRunEstimator = svc
+	}
+}
+
 func (t taxicallApp) validateApp() error {
 	if t.Transactor == nil {
 		return errors.New("taxi call app needs transactor ")
@@ -119,6 +125,10 @@ func (t taxicallApp) validateApp() error {
 
 	if t.service.metric == nil {
 		return errors.New("taxi call app needs metric service")
+	}
+
+	if t.service.dryRunEstimator == nil {
+		return errors.New("taxi call app need dry run estimator service")
 	}
 
 	return nil

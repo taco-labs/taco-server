@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/taco-labs/taco/go/domain/value"
 	"github.com/taco-labs/taco/go/domain/value/enum"
 	"github.com/uptrace/bun"
 )
@@ -17,9 +18,8 @@ const (
 )
 
 var (
-	Kst, _                         = time.LoadLocation("Asia/Seoul")
-	DriverRewardPromotionTimeStart = time.Date(2023, 1, 1, 0, 0, 0, 0, Kst)
-	DriverRewardPromotionTimeEnd   = time.Date(2023, 3, 1, 0, 0, 0, 0, Kst)
+	DriverRewardPromotionTimeStart = time.Date(2023, 1, 1, 0, 0, 0, 0, value.Timezone_Kst)
+	DriverRewardPromotionTimeEnd   = time.Date(2023, 3, 1, 0, 0, 0, 0, value.Timezone_Kst)
 )
 
 func ExpectedSettlementAmountWithoutTax(amount int) int {
@@ -116,7 +116,7 @@ func (d DriverPromotionRewardHistory) PromotionValid() bool {
 }
 
 func NewDriverPromotionRewardHistory(driverId string, receiveTime time.Time) DriverPromotionRewardHistory {
-	receiveTimeInKst := receiveTime.In(Kst)
+	receiveTimeInKst := receiveTime.In(value.Timezone_Kst)
 	receiveDateInKst := time.Date(
 		receiveTimeInKst.Year(),
 		receiveTimeInKst.Month(),

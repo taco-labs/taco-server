@@ -39,5 +39,6 @@ type taxicallApp struct {
 		payment                  paymentAppInterface
 		userServiceRegionChecker service.ServiceRegionChecker
 		metric                   service.MetricService
+		dryRunEstimator          service.DryRunEstimator
 	}
 }

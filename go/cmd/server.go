@@ -180,6 +180,32 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		return fmt.Errorf("invalid settlement account service type '%s'", serverConfig.SettlementAccountService.Type)
 	}
 
+	var dryRunEstimatorService service.DryRunEstimator
+	switch serverConfig.DryRunEstimator.Type {
+	case "mock":
+		dryRunEstimatorService = service.NewMockDryRunEstimator()
+	case "hourly":
+		fmt.Printf("CONFIG:: %+v \n", serverConfig.DryRunEstimator)
+		if len(serverConfig.DryRunEstimator.MinPriceByHours) != 24 {
+			return fmt.Errorf("size of 'TACO_DRY_RUN_ESTIMATOR_MIN_PRICE_BY_HOURS' must be 24")
+		}
+
+		if len(serverConfig.DryRunEstimator.MaxPriceByHours) != 24 {
+			return fmt.Errorf("size of 'TACO_DRY_RUN_ESTIMATOR_MAX_PRICE_BY_HOURS' must be 24")
+		}
+
+		minPriceByHours := [24]int{}
+		maxPriceByHours := [24]int{}
+		for i := 0; i < 24; i++ {
+			minPriceByHours[i] = serverConfig.DryRunEstimator.MinPriceByHours[i]
+			maxPriceByHours[i] = serverConfig.DryRunEstimator.MaxPriceByHours[i]
+		}
+
+		dryRunEstimatorService = service.NewHourlySlicesStaticEstimator(minPriceByHours, maxPriceByHours)
+	default:
+		return fmt.Errorf("invalid dry run estimator service type '%s'", serverConfig.DryRunEstimator.Type)
+	}
+
 	eventStreamAntWorkerPool, err := ants.NewPool(serverConfig.EventStream.EventStreamWorkerPool.PoolSize,
 		ants.WithPreAlloc(serverConfig.EventStream.EventStreamWorkerPool.PreAlloc),
 	)
@@ -316,6 +342,7 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		taxicall.WithAnalyticsRepository(analyticsRepository),
 		taxicall.WithUserServiceRegionChecker(userServiceRegionChecker),
 		taxicall.WithMetricService(metricService),
+		taxicall.WithDryRunEstimationService(dryRunEstimatorService),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup taxi call app: %w", err)

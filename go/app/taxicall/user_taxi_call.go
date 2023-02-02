@@ -180,9 +180,25 @@ func (t taxicallApp) CreateTaxiCallRequest(ctx context.Context, user entity.User
 	}
 
 	if req.Dryrun {
-		// TODO (taekyeom) additional price 계산을 위한 별도 모듈로 빼야 함
-		minAdditionalPrice := 3000
-		maxAdditionalPrice := 10000
+		departureLocation := value.Location{
+			Point:   req.Departure,
+			Address: departure,
+		}
+
+		arrivalLocation := value.Location{
+			Point:   req.Arrival,
+			Address: arrival,
+		}
+
+		minAdditionalPrice, maxAdditionalPrice, err := t.service.dryRunEstimator.EstimateAdditionalPriceRange(
+			ctx, requestTime,
+			departureLocation,
+			arrivalLocation,
+			route)
+		if err != nil {
+			return entity.TaxiCallRequest{}, fmt.Errorf("app.taxiCall.CreateTaxiCallRequest: error while dry run estimation: %w", err)
+		}
+
 		taxiCallRequest := entity.TaxiCallRequest{
 			Dryrun: req.Dryrun,
 			UserId: user.Id,

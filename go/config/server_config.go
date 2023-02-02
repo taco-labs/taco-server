@@ -22,6 +22,7 @@ type ServerConfig struct {
 	Firebase                 FirebaseConfig
 	EventStream              EventStreamConfig
 	ServiceRegion            ServiceRegionConfig
+	DryRunEstimator          DryRunEstimatorConfig
 	ImageUploadUrlService    S3PresignedUrlConfig `env:",prefix=TACO_IMAGE_UPLOAD_URL_SERVICE_"`
 	ImageDownloadUrlService  S3PublicAccessConfig `env:",prefix=TACO_IMAGE_DOWNLOAD_URL_SERVICE_"`
 }
