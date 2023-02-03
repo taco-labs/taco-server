@@ -19,10 +19,12 @@ type UserTaxiCallRequestHistoryResponse struct {
 	CancelPenaltyPrice int                    `json:"cancelPenaltyPrice"`
 	TollFee            int                    `json:"tollFee"`
 	AdditionalPrice    int                    `json:"additionalPrice"`
-	UsedPoint          int                    `json:"used_point"`
-	CurrentState       string                 `json:"currentState"`
-	CreateTime         time.Time              `json:"createTime"`
-	UpdateTime         time.Time              `json:"updateTime"`
+	// Deprecated. use UsedPoint2 instead.
+	UsedPoint    int       `json:"used_point"`
+	UsedPoint2   int       `json:"usedPoint"`
+	CurrentState string    `json:"currentState"`
+	CreateTime   time.Time `json:"createTime"`
+	UpdateTime   time.Time `json:"updateTime"`
 }
 
 func UserTaxiCallRequestToHistoryResponse(taxiCallRequest entity.TaxiCallRequest) UserTaxiCallRequestHistoryResponse {
@@ -43,6 +45,7 @@ func UserTaxiCallRequestToHistoryResponse(taxiCallRequest entity.TaxiCallRequest
 		TollFee:            taxiCallRequest.TollFee,
 		AdditionalPrice:    taxiCallRequest.UserAdditionalPrice(),
 		UsedPoint:          taxiCallRequest.UserUsedPoint,
+		UsedPoint2:         taxiCallRequest.UserUsedPoint,
 		CancelPenaltyPrice: taxiCallRequest.CancelPenaltyPrice,
 		CurrentState:       string(taxiCallRequest.CurrentState),
 		CreateTime:         taxiCallRequest.CreateTime,
@@ -75,10 +78,12 @@ type UserTaxiCallRequestResponse struct {
 	CancelPenaltyPrice        int                    `json:"cancelPenaltyPrice"`
 	TollFee                   int                    `json:"tollFee"`
 	AdditionalPrice           int                    `json:"additionalPrice"`
-	UsedPoint                 int                    `json:"used_point"`
-	CurrentState              string                 `json:"currentState"`
-	CreateTime                time.Time              `json:"createTime"`
-	UpdateTime                time.Time              `json:"updateTime"`
+	// Deprecated. use UsedPoint2 instead.
+	UsedPoint    int       `json:"used_point"`
+	UsedPoint2   int       `json:"usedPoint"`
+	CurrentState string    `json:"currentState"`
+	CreateTime   time.Time `json:"createTime"`
+	UpdateTime   time.Time `json:"updateTime"`
 }
 
 func UserTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) UserTaxiCallRequestResponse {
@@ -107,6 +112,7 @@ func UserTaxiCallRequestToResponse(taxiCallRequest entity.TaxiCallRequest) UserT
 		TollFee:                   taxiCallRequest.TollFee,
 		AdditionalPrice:           taxiCallRequest.UserAdditionalPrice(),
 		UsedPoint:                 taxiCallRequest.UserUsedPoint,
+		UsedPoint2:                taxiCallRequest.UserUsedPoint,
 		CancelPenaltyPrice:        taxiCallRequest.CancelPenaltyPrice,
 		CurrentState:              string(taxiCallRequest.CurrentState),
 		CreateTime:                taxiCallRequest.CreateTime,
