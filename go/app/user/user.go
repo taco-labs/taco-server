@@ -365,6 +365,7 @@ func (u userApp) GetUser(ctx context.Context, userId string) (entity.User, error
 }
 
 func (u userApp) DeleteUser(ctx context.Context, userId string) error {
+	requestTime := utils.GetRequestTimeOrNow(ctx)
 	return u.Run(ctx, func(ctx context.Context, i bun.IDB) error {
 		user, err := u.repository.user.FindById(ctx, i, userId)
 		if err != nil {
@@ -382,6 +383,12 @@ func (u userApp) DeleteUser(ctx context.Context, userId string) error {
 		// Delete push token
 		if err := u.service.push.DeletePushToken(ctx, userId); err != nil {
 			return fmt.Errorf("app.User.DeleteUser: error while delete push token: %w", err)
+		}
+
+		// add analytics
+		deleteAnalytics := entity.NewAnalytics(requestTime, analytics.UserDeletePayload{UserId: userId})
+		if err := u.repository.analytics.Create(ctx, i, deleteAnalytics); err != nil {
+			return fmt.Errorf("app.User.DeleteUser: error while create delete analytics: %w", err)
 		}
 
 		return nil

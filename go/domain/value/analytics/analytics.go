@@ -38,6 +38,8 @@ const (
 	EventType_DriverReferralPointReceived EventType = "Driver_ReferralPointReceived"
 
 	EventType_UserAccess = "User_Access"
+
+	EventType_UserDelete = "User_Delete"
 )
 
 type AnalyticsEvent interface {

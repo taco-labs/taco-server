@@ -91,3 +91,11 @@ type UserAccessPayload struct {
 func (u UserAccessPayload) EventType() EventType {
 	return EventType_UserAccess
 }
+
+type UserDeletePayload struct {
+	UserId string
+}
+
+func (u UserDeletePayload) EventType() EventType {
+	return EventType_UserDelete
+}
