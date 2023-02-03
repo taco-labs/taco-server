@@ -20,6 +20,7 @@ type UserApp interface {
 	Signup(context.Context, request.UserSignupRequest) (entity.User, string, error)
 	GetUser(context.Context, string) (entity.User, error)
 	UpdateUser(context.Context, request.UserUpdateRequest) (entity.User, error)
+	DeleteUser(context.Context, string) error
 
 	ListUserPayment(context.Context, string) ([]entity.UserPayment, error)
 	TryRecoverUserPayment(context.Context, string) error
@@ -137,6 +138,18 @@ func (u userServer) UpdateUser(e echo.Context) error {
 	resp := response.UserToResponse(user)
 
 	return e.JSON(http.StatusOK, resp)
+}
+
+func (u userServer) DeleteUser(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	userId := e.Param("userId")
+	err := u.app.user.DeleteUser(ctx, userId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, struct{}{})
 }
 
 func (u userServer) ListUserPayment(e echo.Context) error {
