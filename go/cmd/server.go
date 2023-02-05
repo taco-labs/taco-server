@@ -202,6 +202,8 @@ func RunServer(ctx context.Context, serverConfig config.ServerConfig, logger *za
 		}
 
 		dryRunEstimatorService = service.NewHourlySlicesStaticEstimator(minPriceByHours, maxPriceByHours)
+	case "adhoc":
+		dryRunEstimatorService = service.NewAdhocStaticEstimator()
 	default:
 		return fmt.Errorf("invalid dry run estimator service type '%s'", serverConfig.DryRunEstimator.Type)
 	}
