@@ -19,7 +19,7 @@ const (
 
 var (
 	DriverRewardPromotionTimeStart = time.Date(2023, 1, 1, 0, 0, 0, 0, value.Timezone_Kst)
-	DriverRewardPromotionTimeEnd   = time.Date(2023, 3, 1, 0, 0, 0, 0, value.Timezone_Kst)
+	DriverRewardPromotionTimeEnd   = time.Date(2023, 2, 15, 0, 0, 0, 0, value.Timezone_Kst)
 )
 
 func ExpectedSettlementAmountWithoutTax(amount int) int {
