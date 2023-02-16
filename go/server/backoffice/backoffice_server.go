@@ -184,3 +184,16 @@ func (b backofficeServer) ListDriverTaxiCallContextInRadius(e echo.Context) erro
 
 	return e.JSON(http.StatusOK, resp)
 }
+
+func (b backofficeServer) GetExpectedDriverSetttlement(e echo.Context) error {
+	ctx := e.Request().Context()
+
+	driverId := e.Param("driverId")
+
+	resp, err := b.app.driver.GetExpectedDriverSettlement(ctx, driverId)
+	if err != nil {
+		return server.ToResponse(e, err)
+	}
+
+	return e.JSON(http.StatusOK, response.DriverTotalSettlementToResponse(resp))
+}
