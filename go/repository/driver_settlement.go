@@ -103,17 +103,11 @@ func (d driverSettlementRepository) GetDriverTotalSettlement(ctx context.Context
 }
 
 func (d driverSettlementRepository) UpdateTotalDriverSettlement(ctx context.Context, db bun.IDB, driverId string, amount int) error {
-	upsertStatement := db.NewInsert().
+
+	_, err := db.NewInsert().
 		Model(&entity.DriverTotalSettlement{DriverId: driverId, TotalAmount: amount}).
-		On("CONFLICT (driver_id) DO UPDATE")
-
-	if amount > 0 {
-		upsertStatement = upsertStatement.Set("total_amount = driver_total_settlement.total_amount + EXCLUDED.total_amount")
-	} else {
-		upsertStatement = upsertStatement.Set("total_amount = driver_total_settlement.total_amount - EXCLUDED.total_amount")
-	}
-
-	_, err := upsertStatement.Exec(ctx)
+		On("CONFLICT (driver_id) DO UPDATE").
+		Set("total_amount = driver_total_settlement.total_amount + EXCLUDED.total_amount").Exec(ctx)
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", value.ErrDBInternal, err)
