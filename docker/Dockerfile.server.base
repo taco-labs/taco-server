@@ -1,4 +1,4 @@
-FROM golang:1.19.2-bullseye as builder
+FROM public.ecr.aws/docker/library/golang:1.19.6-bullseye as builder
 
 WORKDIR /go/src/github.com/taco-labs/taco
 COPY ./go.mod ./go.sum ./

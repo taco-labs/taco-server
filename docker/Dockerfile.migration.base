@@ -1,9 +1,9 @@
-FROM alpine:3.17.0 as builder
+FROM public.ecr.aws/docker/library/alpine:3.17.2 as builder
 
 RUN apk add go gcc musl-dev
 RUN go install ariga.io/atlas/cmd/atlas@v0.8.3
 
-FROM alpine:3.17.0
+FROM public.ecr.aws/docker/library/alpine:3.17.2
 
 RUN apk add --no-cache postgresql14-client  musl-dev
 
