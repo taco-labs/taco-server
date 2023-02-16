@@ -71,8 +71,11 @@ func (d driversettlementApp) ApplyDriverSettlementRequest(ctx context.Context, d
 func getSettlementRequestableTime(t time.Time) time.Time {
 	timeInLocation := t.In(value.Timezone_Kst)
 
-	return time.Date(timeInLocation.Year(), timeInLocation.Month(), timeInLocation.Day(), 0, 0, 0, 0, timeInLocation.Location()).
-		AddDate(0, 0, -14).In(time.UTC)
+	// return time.Date(timeInLocation.Year(), timeInLocation.Month(), timeInLocation.Day(), 0, 0, 0, 0, timeInLocation.Location()).
+	// 	AddDate(0, 0, -14).In(time.UTC)
+
+	// TODO (taekyeom) 마지막 서비스 종료하면서 수동 정산 가능토록 모든 정산 가능 항목을 즉시 정산 하도록 수정해둚, 나중에 실 서비스 시에는 다시 원복 필요
+	return timeInLocation
 }
 
 func (d driversettlementApp) GetExpectedDriverSettlement(ctx context.Context, driverId string) (entity.DriverTotalSettlement, error) {
