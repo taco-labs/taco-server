@@ -160,19 +160,19 @@ table "driver_settlement_request" {
     ]
   }
 
-  foreign_key "settlement_taxi_call_request_id_fk" {
-    columns = [
-      column.taxi_call_request_id,
-    ]
-
-    ref_columns = [
-      table.taxi_call_request.column.id,
-    ]
-
-    on_delete = CASCADE
-
-    on_update = NO_ACTION
-  }
+  /* foreign_key "settlement_taxi_call_request_id_fk" { */
+  /*   columns = [ */
+  /*     column.taxi_call_request_id, */
+  /*   ] */
+  /**/
+  /*   ref_columns = [ */
+  /*     table.taxi_call_request.column.id, */
+  /*   ] */
+  /**/
+  /*   on_delete = CASCADE */
+  /**/
+  /*   on_update = NO_ACTION */
+  /* } */
 }
 
 table "driver_total_settlement" {
